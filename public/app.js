@@ -161,7 +161,7 @@ $('btn-search').onclick = async () => {
   wireTiles();
 };
 
-// Boot: Netflix-style. Token may restore the account, but always land on the profile picker.
+// Boot: CFLIX-style. Token may restore the account, but always land on the profile picker.
 if (state.token) {
   api('/api/profiles')
     .then(({ items }) => { state.account = { items }; show('view-profiles'); return loadProfiles(); })
