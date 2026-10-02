@@ -14,6 +14,8 @@
   .land__hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(0deg, #000 6%, transparent 40%); }
   .land__nav { position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center; padding: 22px 6%; z-index: 3; }
   .land__logo { color: var(--primary-red); font-size: 30px; font-weight: 800; letter-spacing: -1.5px; text-decoration: none; }
+  .land__logo svg { display: block; height: 1.15em; width: auto; }
+  .land__logo svg text { fill: var(--primary-red); font-weight: 800; font-size: 30px; font-family: inherit; letter-spacing: 0.5px; }
   .land__nav .nav__spacer { flex: 1; }
   .land__cta-in { border: 1px solid var(--grey-500); border-radius: var(--r-md); padding: 8px 18px; color: #fff; font-size: 14px; font-weight: 700; text-decoration: none; transition: border-color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out); }
   .land__cta-in:hover { background: rgba(255,255,255,.08); }
@@ -48,7 +50,7 @@
 
 <div class="land__hero">
   <nav class="land__nav">
-    <a class="land__logo" href="index.html">CFLIX</a>
+    <a class="land__logo" href="index.html"><svg viewBox="0 0 124 44" aria-hidden="true"><defs><path id="arc-land" d="M4 38 Q62 10 120 38"/></defs><text><textPath href="#arc-land" startOffset="50%" text-anchor="middle">CFLIX</textPath></text></svg></a>
     <span class="nav__spacer"></span>
     <a class="land__cta-in" href="screens/02-sign-in.html">Sign In</a>
   </nav>
