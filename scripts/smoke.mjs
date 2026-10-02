@@ -1,5 +1,5 @@
 // Smoke test: run with the server on :3000. `node server.js & node scripts/smoke.mjs`
-const B = 'http://localhost:3000';
+const B = process.env.PORT ? `http://localhost:${process.env.PORT}` : 'http://localhost:3000';
 let failures = 0;
 function check(name, cond) {
   console.log(`${cond ? 'PASS' : 'FAIL'}  ${name}`);
