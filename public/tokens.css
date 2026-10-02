@@ -82,8 +82,9 @@
   --fs-hero: 50px;
 
   /* Inferred geometry. Not printed in the source file. */
-  --r-sm: 2px;
-  --r-md: 4px;
+  --r-sm: 4px;
+  --r-md: 6px;
+  --r-lg: 12px;
   --h-control: 48px;
   --page: #000;
   --panel: #141414;
@@ -91,4 +92,17 @@
   --panel-3: #2a2a2a;
   --nav-h: 68px;
   --shell-w: 1440px;
+
+  /* Elevation. Borders carry structure; shadows carry depth. */
+  --shadow-card: 0 8px 24px rgba(0, 0, 0, 0.45);
+  --shadow-lift: 0 16px 40px rgba(0, 0, 0, 0.55);
+  --shadow-modal: 0 24px 80px rgba(0, 0, 0, 0.6);
+
+  /* Motion. Explicit, interruptible, restrained. */
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --dur-fast: 140ms;
+  --dur-base: 200ms;
+
+  --focus-ring: 0 0 0 2px #000, 0 0 0 4px var(--primary-red);
+  accent-color: var(--primary-red);
 }

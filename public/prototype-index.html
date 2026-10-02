@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CFLIX</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="base.css">
+<style>
+  body { background: #0a0a0a; }
+  .wrap { max-width: 1180px; padding: 64px 5% 120px; }
+  .idx__head { margin-bottom: 44px; }
+  .idx__kicker { color: var(--primary-red); font-size: 13px; font-weight: 600; letter-spacing: 1.4px; text-transform: uppercase; }
+  .idx__head h1 { margin: 12px 0 0; color: #fff; font-size: 44px; font-weight: 800; letter-spacing: -1.4px; line-height: 1.05; }
+  .idx__head p { max-width: 68ch; margin: 16px 0 0; color: var(--grey-250); font-size: 14px; line-height: 1.6; }
+  .idx__note { margin: 20px 0 0; padding: 14px 16px; border: 1px solid var(--grey-500); border-radius: var(--r-md); color: var(--grey-200); font-size: 13px; line-height: 1.6; }
+  .idx__note b { color: var(--grey-100); }
+  .idx__src { margin-top: 26px; }
+  .idx__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(268px, 1fr)); gap: 16px; }
+  .idx__card { display: flex; flex-direction: column; gap: 7px; padding: 18px; border: 1px solid var(--grey-600); border-radius: var(--r-md); background: var(--panel); text-decoration: none; }
+  .idx__card:hover { border-color: var(--grey-400); background: var(--panel-2); }
+  .idx__n { color: var(--primary-red); font-family: ui-monospace, Menlo, monospace; font-size: 12px; font-weight: 700; }
+  .idx__name { color: #fff; font-size: 17px; font-weight: 700; }
+  .idx__page { color: var(--grey-300); font-size: 12px; font-family: ui-monospace, Menlo, monospace; }
+  .idx__h2 { margin: 46px 0 16px; color: #fff; font-size: 20px; font-weight: 700; }
+</style>
+</head>
+<body class="shell">
+<style>
+  html { scroll-behavior: smooth; }
+  .idx__card { transition: transform .18s ease-out, border-color .18s ease-out, background-color .18s ease-out; }
+  .idx__card:hover { transform: translateY(-3px); }
+  .view-fade { opacity: 0; transform: translateY(14px); transition: opacity .5s ease-out, transform .5s ease-out; }
+  .view-fade.in { opacity: 1; transform: none; }
+  .cta-start { display:inline-block;margin-top:22px;background:#e50914;color:#fff;font-weight:800;padding:12px 26px;border-radius:6px;text-decoration:none;transition:transform .15s ease-out, background .15s; }
+  .cta-start:hover { transform: scale(1.04); background:#f6121d; }
+</style>
+<div class="wrap">
+
+  <header class="idx__head">
+    <div class="idx__kicker">Static prototype, throwaway</div>
+    <h1>CFLIX</h1>
+    <a class="cta-start" href="screens/02-sign-in.html">Start watching</a>
+    <p>Every screen template found in the community Figma file <em>CFLIX Design System 2024 (Website ver.) 🎥 (Community)</em>, built in the order the frames appear in that file. Static HTML and CSS. No JavaScript, no framework, no business logic.</p>
+
+    <div class="idx__note">
+      <b>What is measured.</b> Colors and type values were read as literal text off the Figma canvas and live in <code>tokens.css</code>.<br>
+      <b>What is inferred.</b> Component geometry (radii, heights, borders, gaps) is printed nowhere in that file and is read off the artwork.<br>
+      <b>What is placeholder.</b> Poster art and video stills are baked into the Figma canvas and cannot be extracted anonymously, so every image is a gradient block carrying the real printed title.<br>
+      <b>Fonts.</b> The file names CFLIX Sans Font and Bebas Neue. Neither is available here, so a system sans stack stands in.<br>
+      <b>Left for production.</b> The <code>Profile</code> section on UserProfileAvatar was unreadable at every zoom tried, and the <code>About</code> page is a credits frame rather than a screen.
+    </div>
+  </header>
+
+  <div class="idx__src">
+    <div class="idx__h2">Source</div>
+    <a class="idx__card" href="https://www.figma.com/design/HTa0LpY3JKlLwzlu60lgNF/CFLIX-Design-System-2024--Website-ver.--%F0%9F%8E%A5--Community-" target="_blank" rel="noopener">
+      <span class="idx__n">SOURCE</span>
+      <span class="idx__name">CFLIX Design System 2024 (Website ver.)</span>
+      <span class="idx__page">figma.com · community file · 12 pages</span>
+    </a>
+  </div>
+
+  <div class="idx__h2">Authentication</div>
+  <div class="idx__grid">
+    <a class="idx__card" href="screens/01-signup-strip.html"><span class="idx__n">01</span><span class="idx__name">Signup strip</span><span class="idx__page">InputFields › Patterns</span></a>
+    <a class="idx__card" href="screens/02-sign-in.html"><span class="idx__n">02</span><span class="idx__name">Sign In</span><span class="idx__page">InputFields › Patterns</span></a>
+    <a class="idx__card" href="screens/14-bigrow-auth.html"><span class="idx__n">14</span><span class="idx__name">Big Row on Authentication</span><span class="idx__page">HeroBanners › Big Rows</span></a>
+  </div>
+
+  <div class="idx__h2">Landing page blocks</div>
+  <div class="idx__grid">
+    <a class="idx__card" href="screens/03-enjoy-on-your-tv.html"><span class="idx__n">03</span><span class="idx__name">Enjoy on your TV</span><span class="idx__page">ContentBlocks › Landing Page Blocks</span></a>
+    <a class="idx__card" href="screens/04-watch-everywhere.html"><span class="idx__n">04</span><span class="idx__name">Watch everywhere</span><span class="idx__page">ContentBlocks › Landing Page Blocks</span></a>
+  </div>
+
+  <div class="idx__h2">Home page and hero</div>
+  <div class="idx__grid">
+    <a class="idx__card" href="screens/05-home-page.html"><span class="idx__n">05</span><span class="idx__name">Home Page</span><span class="idx__page">HeroBanners › Patterns</span></a>
+    <a class="idx__card" href="screens/07-movie-blocks-home.html"><span class="idx__n">07</span><span class="idx__name">Movie Blocks, five rows</span><span class="idx__page">MoviePreview › Patterns</span></a>
+  </div>
+
+  <div class="idx__h2">Preview and detail</div>
+  <div class="idx__grid">
+    <a class="idx__card" href="screens/06-movie-preview-modal.html"><span class="idx__n">06</span><span class="idx__name">Movie Preview modal</span><span class="idx__page">HeroBanners › Patterns</span></a>
+    <a class="idx__card" href="screens/09-title-detail.html"><span class="idx__n">09</span><span class="idx__name">Title detail panel</span><span class="idx__page">MoviePreview › Patterns</span></a>
+    <a class="idx__card" href="screens/08-list-of-episodes.html"><span class="idx__n">08</span><span class="idx__name">List of Episodes</span><span class="idx__page">MoviePreview › Patterns</span></a>
+  </div>
+
+  <div class="idx__h2">Video player</div>
+  <div class="idx__grid">
+    <a class="idx__card" href="screens/10-player-scroll.html"><span class="idx__n">10</span><span class="idx__name">Player, Scroll Preview</span><span class="idx__page">VideoPlayer › Patterns</span></a>
+    <a class="idx__card" href="screens/11-player-next.html"><span class="idx__n">11</span><span class="idx__name">Player, Next Preview</span><span class="idx__page">VideoPlayer › Patterns</span></a>
+    <a class="idx__card" href="screens/12-player-list.html"><span class="idx__n">12</span><span class="idx__name">Player, List Preview</span><span class="idx__page">VideoPlayer › Patterns</span></a>
+  </div>
+
+  <div class="idx__h2">Big rows</div>
+  <div class="idx__grid">
+    <a class="idx__card" href="screens/13-bigrow-landing-a.html"><span class="idx__n">13</span><span class="idx__name">Big Row A</span><span class="idx__page">HeroBanners › Big Rows · Landing Page</span></a>
+    <a class="idx__card" href="screens/15-bigrow-landing-b.html"><span class="idx__n">15</span><span class="idx__name">Big Row B</span><span class="idx__page">HeroBanners › Big Rows · Landing Page</span></a>
+    <a class="idx__card" href="screens/16-bigrow-landing-c.html"><span class="idx__n">16</span><span class="idx__name">Big Row C, with FAQ</span><span class="idx__page">HeroBanners › Big Rows · annotation unreadable</span></a>
+  </div>
+
+  <p class="idx__note" style="margin-top:56px">Throwaway prototype. <code>tokens.css</code> is the one file worth carrying forward, and even it should be regenerated from a Figma token export rather than trusted from hand-read hex values.</p>
+
+</div>
+<script>
+// Inertia scroll: lerp-based wheel smoothing.
+(() => {
+  let target = window.scrollY, current = window.scrollY, raf = null;
+  window.addEventListener('wheel', (e) => {
+    target += e.deltaY;
+    target = Math.max(0, Math.min(target, document.body.scrollHeight - innerHeight));
+    if (!raf) raf = requestAnimationFrame(step);
+    e.preventDefault();
+  }, { passive: false });
+  function step() {
+    current += (target - current) * 0.12;
+    window.scrollTo(0, current);
+    if (Math.abs(target - current) > 0.5) raf = requestAnimationFrame(step);
+    else raf = null;
+  }
+  // Fade-in on scroll.
+  const io = new IntersectionObserver((es) => es.forEach((e) => e.target.classList.toggle('in', e.isIntersecting)), { threshold: 0.1 });
+  document.querySelectorAll('.idx__h2, .idx__card').forEach((el) => { el.classList.add('view-fade'); io.observe(el); });
+})();
+</script>
+</body>
+</html>
