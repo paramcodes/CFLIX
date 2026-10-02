@@ -299,3 +299,5 @@ a { color: inherit; }
 .center { display: flex; align-items: center; justify-content: center; }
 .muted { color: var(--grey-250); }
 .tiny { font-size: var(--fs-caption-2); color: var(--grey-300); }
+.nav__logo svg, .detail__mark svg { display: block; height: 1.15em; width: auto; }
+.nav__logo svg text, .detail__mark svg text { fill: var(--primary-red); font-weight: 800; font-size: 30px; font-family: inherit; letter-spacing: 0.5px; }
