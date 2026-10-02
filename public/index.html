@@ -8,7 +8,8 @@
 <link rel="stylesheet" href="base.css">
 <style>
   body { background: #000; }
-  .land { scroll-behavior: smooth; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
   .land__hero { position: relative; min-height: 92vh; display: flex; flex-direction: column; justify-content: center; padding: 0 6%; overflow: hidden; }
   .land__hero::before { content: ""; position: absolute; inset: 0; background: radial-gradient(130% 90% at 72% 12%, #5a1018 0%, #24070b 48%, #000 82%); }
   .land__hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(0deg, #000 6%, transparent 40%); }
