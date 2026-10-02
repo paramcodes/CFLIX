@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>15 · Big Row Landing B</title>
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="../base.css">
+<style>
+  /* 15 · Landing Page · big row 3 of 4 */
+  .br15 .bigrow { padding: 7% 0; }
+  .br15 .bigrow__inner { max-width: 1080px; }
+  .br15 .bigrow__rail { grid-auto-columns: minmax(200px, 1fr); }
+  .br15 .bigrow__inner::after { content: ""; display: block; margin-top: 26px; height: 3px; background: linear-gradient(90deg, var(--blue-300), rgba(84,185,197,0)); }
+  .br15 .foot-wrap { padding: 0 4%; }
+  .br15 .nav__links { list-style: none; margin: 0; padding: 0; }
+</style>
+</head>
+<body class="shell br15">
+<div class="screen-tag">15 · big row landing B — HeroBanners</div>
+
+<nav class="nav nav--solid">
+  <span class="nav__logo">NETFLIX</span>
+  <ul class="nav__links">
+    <li><a class="nav__link" href="#">Home</a></li>
+    <li><a class="nav__link nav__link--active" href="#">TV Shows</a></li>
+    <li><a class="nav__link" href="#">Movies</a></li>
+    <li><a class="nav__link" href="#">New &amp; Popular</a></li>
+    <li><a class="nav__link" href="#">My List</a></li>
+  </ul>
+  <span class="nav__spacer"></span>
+  <div class="nav__tools">
+    <svg class="nav__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M16.5 16.5 21 21"></path></svg>
+    <svg class="nav__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path d="M12 3a6 6 0 0 0-6 6v4"></path><path d="M6 13h12v6a2 2 0 0 1-2 2h-2"></path><path d="M18 13v3"></path></svg>
+    <span class="nav__avatar"></span>
+  </div>
+</nav>
+
+<section class="bigrow">
+  <div class="bigrow__bg bigrow__bg--teal"></div>
+  <div class="bigrow__inner">
+    <h2 class="bigrow__title">Watch everywhere you go</h2>
+    <p class="bigrow__copy">Stream on your phone, tablet, laptop and TV. Switch devices without losing your place.</p>
+    <div class="bigrow__rail">
+      <div class="card card--landscape"><div class="card__art ph ph--g"></div><span class="card__title">WEDNESDAY</span></div>
+      <div class="card card--landscape"><div class="card__art ph ph--d"></div><span class="card__title">minions</span></div>
+      <div class="card card--landscape"><div class="card__art ph ph--c"></div><span class="card__title">GRISELDA</span></div>
+      <div class="card card--landscape"><div class="card__art ph ph--h"></div><span class="card__title">SONIC PRIME</span></div>
+      <div class="card card--landscape"><div class="card__art ph ph--e"></div><span class="card__title">THE CREATURES</span></div>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="foot-wrap">
+    <div class="footer__cols">
+      <div class="footer__col"><span class="footer__mark">NETFLIX</span><a href="#">Audio Description</a><a href="#">Investor Relations</a><a href="#">Jobs</a><a href="#">Gift Cards</a></div>
+      <div class="footer__col"><a href="#">Terms of Use</a><a href="#">Privacy</a><a href="#">Cookie Preferences</a><a href="#">Legal Notices</a></div>
+      <div class="footer__col"><a href="#">Help Center</a><a href="#">Media Center</a><a href="#">Sustainability</a><a href="#">Speed Test</a></div>
+      <div class="footer__col"><a href="#">Netflix Shop</a><a href="#">Redeem a Gift Card</a><a href="#">Ways to Watch</a><a href="#">A notice for screen readers</a></div>
+    </div>
+    <p class="footer__note">Netflix and the Netflix logo are trademarks of Netflix, Inc.</p>
+  </div>
+</footer>
+<p class="tiny" style="padding:0 4% 28px">Big Rows 3 of 4 · Landing Page</p>
+
+</body>
+</html>

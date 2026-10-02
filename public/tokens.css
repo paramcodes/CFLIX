@@ -1,0 +1,94 @@
+/*
+ * Netflix Design System 2024 (Website ver.) - token layer.
+ *
+ * PROVENANCE. Every value in the :root block below was read as literal text off
+ * the Colors and Typography frames of the source Figma file. Component values
+ * (radii, heights, border weights, gaps) are NOT printed anywhere in that file
+ * and are inferred from the artwork. Do not treat those as spec.
+ *
+ * Fonts. The Typography frame names "Netflix Sans Font" and "Bebas Neue", neither
+ * of which is available here, so this prototype uses a system sans stack.
+ *
+ * Still not captured from the source: nothing in the Secondary group beyond the
+ * seven cards listed below, and no Grey-950, because neither exists in the file.
+ * The LOGO - BEBAS NEUE section prints no values.
+ */
+
+:root {
+  /* Measured. Printed as "#hex - RGB (r, g, b)". */
+  --grey-10: #e5e5e5;
+  --grey-20: #dcdcdc;
+  --grey-25: #d2d2d2;
+  --grey-50: #bcbcbc;
+  --grey-100: #b3b3b3;
+  --grey-150: #979797;
+  --grey-200: #808080;
+  --grey-250: #777777;
+  --grey-300: #6d6d6e;
+  --grey-350: #545454;
+  --grey-400: #414141;
+  --grey-450: #404040;
+  --grey-500: #3a3a3a;
+  --grey-550: #363636;
+  --grey-600: #333333;
+
+  --red-100: #eb3942;
+  --red-200: #c11119;
+  --red-300: #f50723;
+  --blue-100: #0071eb;
+  --blue-200: #448ef4;
+  --blue-300: #54b9c5;
+  --green: #46d369;
+
+  /* Primary group. Measured. NOTE the source file prints the red card with the
+   * label "Primary / Black", so two cards in that frame share that name. The
+   * value below is the red the frame actually renders. */
+  --primary-black: #000000;
+  --primary-red: #e50914;
+  --primary-white: #ffffff;
+
+  /* Neutral tail, measured on a second pass. There is no plain Grey-300 card
+   * in the source, only Grey-300T40 and Grey-300T70 over the #6d6d6e base. */
+  --grey-650: #2f2f2f;
+  --grey-700: #2a2a2a;
+  --grey-750: #262626;
+  --grey-800: #232323;
+  --grey-850: #181818;
+  --grey-900: #141414;
+
+  /* Transparent groups, measured. Percentage is alpha over any backdrop. */
+  --tw-15: rgba(255, 255, 255, 0.15);
+  --tw-20: rgba(255, 255, 255, 0.2);
+  --tw-30: rgba(255, 255, 255, 0.3);
+  --tw-35: rgba(255, 255, 255, 0.35);
+  --tw-50: rgba(255, 255, 255, 0.5);
+  --tw-70: rgba(255, 255, 255, 0.7);
+  --tb-30: rgba(0, 0, 0, 0.3);
+  --tb-60: rgba(0, 0, 0, 0.6);
+  --tb-90: rgba(0, 0, 0, 0.9);
+
+  /* Measured. Printed as "Name / Npx". */
+  --fs-caption-2: 12px;
+  --fs-caption-1: 13px;
+  --fs-small-body: 14px;
+  --fs-body: 16px;
+  --fs-headline-2: 20px;
+  --fs-headline-1: 21px;
+  --fs-title-4: 22px;
+  --fs-title-3: 24px;
+  --fs-title-2: 28px;
+  --fs-title-1: 30px;
+  --fs-large-title: 33px;
+  --fs-hero: 50px;
+
+  /* Inferred geometry. Not printed in the source file. */
+  --r-sm: 2px;
+  --r-md: 4px;
+  --h-control: 48px;
+  --page: #000;
+  --panel: #141414;
+  --panel-2: #1f1f1f;
+  --panel-3: #2a2a2a;
+  --nav-h: 68px;
+  --shell-w: 1440px;
+}
