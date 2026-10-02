@@ -68,14 +68,45 @@ const pages = {
           location.href = 'screens/05-home-page.html';
         };
       }
-      document.querySelector('#add-profile').onclick = async () => {
-        const name = prompt('Profile name?');
-        if (!name) return;
-        const maturity = prompt('Maturity: child, teen, or adult?', 'adult') || 'adult';
-        await api('/api/profiles', { method: 'POST', body: { name, maturity } });
-        load();
+      document.querySelector('#add-profile').onclick = () => openAddDialog();
+    }
+    const backdrop = document.querySelector('#dlg-add');
+    const nameEl = document.querySelector('#dlg-name');
+    const errEl = document.querySelector('#dlg-error');
+    const seg = document.querySelector('#dlg-maturity');
+    let maturity = 'adult';
+    for (const b of seg.querySelectorAll('button')) {
+      b.onclick = () => {
+        maturity = b.dataset.m;
+        for (const x of seg.querySelectorAll('button')) x.classList.toggle('is-active', x === b);
       };
     }
+    function openAddDialog() {
+      nameEl.value = '';
+      errEl.textContent = '';
+      maturity = 'adult';
+      for (const x of seg.querySelectorAll('button')) x.classList.toggle('is-active', x.dataset.m === 'adult');
+      backdrop.hidden = false;
+      requestAnimationFrame(() => requestAnimationFrame(() => backdrop.classList.add('is-open')));
+      nameEl.focus();
+    }
+    function closeAddDialog() {
+      backdrop.classList.remove('is-open');
+      setTimeout(() => { backdrop.hidden = true; }, 200);
+    }
+    document.querySelector('#dlg-cancel').onclick = closeAddDialog;
+    backdrop.addEventListener('click', (e) => { if (e.target === backdrop) closeAddDialog(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !backdrop.hidden) closeAddDialog(); });
+    document.querySelector('#dlg-create').onclick = async () => {
+      const name = nameEl.value.trim();
+      if (!name) { errEl.textContent = 'Name is required.'; nameEl.focus(); return; }
+      try {
+        await api('/api/profiles', { method: 'POST', body: { name, maturity } });
+        closeAddDialog();
+        load();
+      } catch (e) { errEl.textContent = e.message; }
+    };
+    nameEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') document.querySelector('#dlg-create').click(); });
     load().catch(() => { location.href = 'screens/02-sign-in.html'; });
   },
 
