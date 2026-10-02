@@ -12,7 +12,7 @@
   .speed__ticks span, .speed__ticks b { white-space: nowrap; }
 </style>
 </head>
-<body class="shell">
+<body class="shell" data-page="player">
 <div class="screen-tag">10 · player at rest — VideoPlayer</div>
 
 <main class="player">
@@ -61,8 +61,9 @@
     </svg>
   </div>
 
-  <div class="tiny note">Scroll Preview</div>
+  <button class="btn btn--ghost btn--sm note" id="btn-finish">Mark watched & exit</button>
 </main>
 
+<script src="../wire.js"></script>
 </body>
 </html>

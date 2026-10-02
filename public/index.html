@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>CFLIX Design System 2024 — 16 screen prototypes</title>
+<title>CFLIX</title>
 <link rel="stylesheet" href="tokens.css">
 <link rel="stylesheet" href="base.css">
 <style>
@@ -26,11 +26,21 @@
 </style>
 </head>
 <body class="shell">
+<style>
+  html { scroll-behavior: smooth; }
+  .idx__card { transition: transform .18s ease-out, border-color .18s ease-out, background-color .18s ease-out; }
+  .idx__card:hover { transform: translateY(-3px); }
+  .view-fade { opacity: 0; transform: translateY(14px); transition: opacity .5s ease-out, transform .5s ease-out; }
+  .view-fade.in { opacity: 1; transform: none; }
+  .cta-start { display:inline-block;margin-top:22px;background:#e50914;color:#fff;font-weight:800;padding:12px 26px;border-radius:6px;text-decoration:none;transition:transform .15s ease-out, background .15s; }
+  .cta-start:hover { transform: scale(1.04); background:#f6121d; }
+</style>
 <div class="wrap">
 
   <header class="idx__head">
     <div class="idx__kicker">Static prototype, throwaway</div>
-    <h1>CFLIX Design System 2024<br>16 screen prototypes</h1>
+    <h1>CFLIX</h1>
+    <a class="cta-start" href="screens/02-sign-in.html">Start watching</a>
     <p>Every screen template found in the community Figma file <em>CFLIX Design System 2024 (Website ver.) 🎥 (Community)</em>, built in the order the frames appear in that file. Static HTML and CSS. No JavaScript, no framework, no business logic.</p>
 
     <div class="idx__note">
@@ -94,5 +104,26 @@
   <p class="idx__note" style="margin-top:56px">Throwaway prototype. <code>tokens.css</code> is the one file worth carrying forward, and even it should be regenerated from a Figma token export rather than trusted from hand-read hex values.</p>
 
 </div>
+<script>
+// Inertia scroll: lerp-based wheel smoothing.
+(() => {
+  let target = window.scrollY, current = window.scrollY, raf = null;
+  window.addEventListener('wheel', (e) => {
+    target += e.deltaY;
+    target = Math.max(0, Math.min(target, document.body.scrollHeight - innerHeight));
+    if (!raf) raf = requestAnimationFrame(step);
+    e.preventDefault();
+  }, { passive: false });
+  function step() {
+    current += (target - current) * 0.12;
+    window.scrollTo(0, current);
+    if (Math.abs(target - current) > 0.5) raf = requestAnimationFrame(step);
+    else raf = null;
+  }
+  // Fade-in on scroll.
+  const io = new IntersectionObserver((es) => es.forEach((e) => e.target.classList.toggle('in', e.isIntersecting)), { threshold: 0.1 });
+  document.querySelectorAll('.idx__h2, .idx__card').forEach((el) => { el.classList.add('view-fade'); io.observe(el); });
+})();
+</script>
 </body>
 </html>

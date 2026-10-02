@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Who's watching?</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="base.css">
+<style>
+  body { background: #141414; color: #fff; font-family: Helvetica, Arial, sans-serif; }
+  .stage { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; }
+  h1 { font-weight: 500; font-size: 32px; }
+  .tiles { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
+  .avatar-tile { display: flex; flex-direction: column; align-items: center; gap: 8px; background: none; border: 0; color: #b3b3b3; cursor: pointer; font-size: 14px; }
+  .avatar-tile:hover { color: #fff; }
+  .avatar-tile__pic { width: 90px; height: 90px; border-radius: 6px; }
+  .avatar-tile__pic--add { display: flex; align-items: center; justify-content: center; background: #333; color: #b3b3b3; font-size: 40px; }
+  .btn--ghost { padding: 8px 20px; }
+</style>
+</head>
+<body data-page="profiles">
+<div class="stage">
+  <h1>Who's watching?</h1>
+  <div class="tiles" id="profile-list"></div>
+  <button class="btn btn--ghost" id="btn-manage" onclick="location.href='screens/02-sign-in.html'">Switch account</button>
+</div>
+<script src="wire.js"></script>
+</body>
+</html>

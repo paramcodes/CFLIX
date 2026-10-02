@@ -13,7 +13,7 @@
   .auth-cta a { color: #fff; text-decoration: none; }
 </style>
 </head>
-<body class="shell">
+<body class="shell" data-page="sign-in">
 <div class="screen-tag">02 · sign-in panel — InputFields</div>
 
 <section class="auth-stage">
@@ -23,22 +23,23 @@
 
       <div class="field field--focus">
         <div class="field__box">
-          <span>Email or phone number</span>
-          <i class="field__caret"></i>
+          <input id="in-email" placeholder="Email or phone number" style="background:transparent;border:0;color:#fff;width:100%;outline:none;font-size:inherit">
         </div>
       </div>
 
       <div class="field">
         <div class="field__box">
-          <span>Password</span>
+          <input id="in-password" type="password" placeholder="Password" style="background:transparent;border:0;color:#fff;width:100%;outline:none;font-size:inherit">
         </div>
       </div>
 
-      <button class="btn btn--red btn--full" type="button">Sign In</button>
+      <button class="btn btn--red btn--full" id="btn-signin" type="button">Sign In</button>
 
       <div class="auth-divider">OR</div>
 
-      <button class="btn btn--ghost btn--full" type="button">Use a Sign-In Code</button>
+      <button class="btn btn--ghost btn--full" id="btn-signup" type="button">Sign Up</button>
+      <button class="btn btn--ghost btn--full" id="btn-google" type="button" style="margin-top:8px">Sign in with Google</button>
+      <p id="in-error" style="color:#eb3942;min-height:1em"></p>
 
       <div class="auth-row">
         <a class="auth-link" href="#">Forgot Password?</a>
@@ -56,5 +57,6 @@
   </div>
 </section>
 
+<script src="../wire.js"></script>
 </body>
 </html>

@@ -18,7 +18,7 @@
   .detail__plus svg { width: 16px; height: 16px; stroke: #fff; fill: none; stroke-width: 1.9; stroke-linecap: round; }
 </style>
 </head>
-<body class="shell">
+<body class="shell" data-page="detail">
 <div class="screen-tag">09 · title detail — MoviePreview</div>
 
 <main class="detail">
@@ -68,9 +68,12 @@
       </div>
     </div>
 
+    <button class="btn btn--play" id="btn-play" style="margin:12px 0">Play</button>
     <p class="detail__synopsis">Before he was a protector, Kenshin was a fearsome assassin known as Battosai. But when he meets the gentle Tomoe Yukishiro, his story begins to change.</p>
   </div>
+<div id="episodes" style="padding:0 4%;max-width:640px"></div>
 </main>
 
+<script src="../wire.js"></script>
 </body>
 </html>
