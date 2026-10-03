@@ -23,7 +23,7 @@ p { text-wrap: pretty; }
 
 ::selection { background: var(--primary-red); color: #fff; }
 
-a { color: inherit; }
+a { color: inherit; text-decoration: none; }
 
 .shell { width: 100%; min-height: 100vh; background: var(--page); }
 .shell--phone { width: 390px; margin: 0 auto; border-left: 1px solid var(--grey-600); border-right: 1px solid var(--grey-600); }
