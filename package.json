@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "description": "CFLIX streaming platform prototype and services",
   "type": "module",
-  "main": "server.js",
+  "main": "server/index.js",
   "scripts": {
-    "start": "node server.js",
+    "start": "node server/index.js",
     "test": "node scripts/smoke.mjs",
     "capture": "node scripts/capture.mjs",
     "format": "prettier --write .",

@@ -4,7 +4,7 @@ import { join, extname, normalize } from 'node:path';
 import { AuthService, ProfileService, CatalogService } from './src/services.js';
 
 const PORT = process.env.PORT || 3000;
-const PUBLIC_DIR = new URL('./public/', import.meta.url).pathname;
+const PUBLIC_DIR = new URL('../public/', import.meta.url).pathname;
 
 const MIME = {
   '.html': 'text/html',

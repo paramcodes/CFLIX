@@ -2,8 +2,8 @@
 
 ## Repo layout
 
-- `server.js` — Node static server and JSON API entrypoint.
-- `src/` — server-side modules (`store.js`, `services.js`, `catalog-data.js`, `types.js`).
+- `server/index.js` — Node static server and JSON API entrypoint.
+- `server/src/` — server-side modules (`store.js`, `services.js`, `catalog-data.js`, `types.js`).
 - `public/` — static assets; `public/screens/` holds the 4 HTML/CSS/JS screens.
 - `scripts/smoke.mjs` — smoke test against a running server.
 - `scripts/capture.mjs` — Playwright capture of screenshots and a tour video.
@@ -13,13 +13,13 @@
 ## Run the server
 
 ```sh
-node server.js        # default port 3000; override with PORT
+node server/index.js        # default port 3000; override with PORT
 ```
 
 ## Run the smoke test
 
 ```sh
-PORT=3000 node server.js &
+PORT=3000 node server/index.js &
 PORT=3000 node scripts/smoke.mjs
 ```
 
