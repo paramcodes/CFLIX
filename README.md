@@ -34,3 +34,4 @@ NODE_PATH=/tmp/opencode/node_modules node scripts/capture.mjs <outdir> [baseUrl]
 ![Index](https://raw.githubusercontent.com/paramcodes/CFLIX/main/docs/revamp/index-after.png)
 
 ![Home](https://raw.githubusercontent.com/paramcodes/CFLIX/main/docs/revamp/home-after.png)
+
