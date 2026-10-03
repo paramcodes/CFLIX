@@ -1,5 +1,5 @@
 import { createServer } from 'node:http';
-import { readFile } from 'node:fs/promises';
+import { readFile, stat } from 'node:fs/promises';
 import { join, extname, normalize } from 'node:path';
 import { AuthService, ProfileService, CatalogService } from './src/services.js';
 
@@ -23,10 +23,14 @@ const MIME = {
   '.jpg': 'image/jpeg',
   '.svg': 'image/svg+xml',
   '.json': 'application/json',
+  '.webp': 'image/webp',
 };
 
 function json(res, status, body) {
-  res.writeHead(status, { 'content-type': 'application/json' });
+  res.writeHead(status, {
+    'content-type': 'application/json',
+    'cache-control': 'no-store',
+  });
   res.end(JSON.stringify(body));
 }
 
@@ -129,9 +133,22 @@ const server = createServer(async (req, res) => {
     return;
   }
   try {
-    const data = await readFile(join(PUBLIC_DIR, path));
+    const file = join(PUBLIC_DIR, path);
+    const info = await stat(file);
+    const etag = `W/"${info.size}-${info.mtimeMs}"`;
+    const candidates = (req.headers['if-none-match'] || '')
+      .split(',')
+      .map((s) => s.trim());
+    if (candidates.includes(etag) || candidates.includes('*')) {
+      res.writeHead(304);
+      res.end();
+      return;
+    }
+    const data = await readFile(file);
     res.writeHead(200, {
       'content-type': MIME[extname(path)] || 'application/octet-stream',
+      etag,
+      'cache-control': 'no-cache',
     });
     res.end(data);
   } catch {
