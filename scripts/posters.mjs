@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { movies, series } from '../src/catalog-data.js';
+import { movies, series } from '../server/src/catalog-data.js';
 
 const MAGICK = 'magick';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');

@@ -9,7 +9,7 @@ See [design.md](design.md) for the domain model and types.
 ## Quick start
 
 ```sh
-node server.js
+node server/index.js
 ```
 
 Open http://localhost:3000.
@@ -17,7 +17,7 @@ Open http://localhost:3000.
 ## Smoke test
 
 ```sh
-PORT=3000 node server.js &
+PORT=3000 node server/index.js &
 PORT=3000 node scripts/smoke.mjs
 ```
 
