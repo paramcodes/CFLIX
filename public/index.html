@@ -137,5 +137,27 @@
   </div>
 </footer>
 
+<script>
+// Wheel inertia: lerp-based smoothing. Skipped entirely under reduced motion.
+(() => {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  let target = window.scrollY, current = window.scrollY, raf = null;
+  window.addEventListener('wheel', (e) => {
+    if (!raf) current = window.scrollY, target = window.scrollY;
+    target += e.deltaY;
+    const max = document.documentElement.scrollHeight - window.innerHeight;
+    target = Math.max(0, Math.min(target, max));
+    if (!raf) raf = requestAnimationFrame(step);
+    e.preventDefault();
+  }, { passive: false });
+  function step() {
+    current += (target - current) * 0.12;
+    window.scrollTo({ top: current, behavior: 'auto' });
+    if (Math.abs(target - current) > 0.5) raf = requestAnimationFrame(step);
+    else { window.scrollTo({ top: target, behavior: 'auto' }); raf = null; }
+  }
+})();
+</script>
+
 </body>
 </html>
