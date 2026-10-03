@@ -51,11 +51,17 @@ const pages = {
 
   'profiles': async () => {
     const list = document.querySelector('#profile-list');
+    const avatarStyle = (id) => {
+      let h = 2166136261;
+      for (const ch of id) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+      const hue = (h >>> 0) % 360;
+      return `--tint-a:${hue};--tint-b:${(hue + 47) % 360}`;
+    };
     async function load() {
       const { items } = await api('/api/profiles');
-      list.innerHTML = items.map((p) =>
+      list.innerHTML = items.map((p, i) =>
         `<button class="avatar-tile" data-id="${p.id}" data-name="${p.name}">
-           <span class="avatar-tile__pic" style="background:linear-gradient(160deg,#e0218a,#7b2ff7)"></span>
+           <span class="avatar-tile__pic${i === 0 ? '' : ' avatar-tile__pic--tint'}" style="${i === 0 ? '' : avatarStyle(p.id)}"></span>
            <span>${p.name} · ${p.maturity}</span>
          </button>`).join('') +
         `<button class="avatar-tile" id="add-profile"><span class="avatar-tile__pic avatar-tile__pic--add">+</span><span>Add</span></button>`;

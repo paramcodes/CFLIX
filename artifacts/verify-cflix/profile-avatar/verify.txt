@@ -1,0 +1,13 @@
+PASS signed up fresh account :: avatar-1791009910327@example.com -> http://localhost:3103/profiles.html
+PASS three profiles created :: Profile 1, Profile 2, Profile 3
+PASS three profile tiles rendered :: 3 profile tiles (+ Add)
+PASS first tile is untreated :: tile 1 style="" class="avatar-tile__pic" filter=none
+PASS later tiles carry a tint :: --tint-a:314;--tint-b:1 | --tint-a:133;--tint-b:180
+PASS later tiles differ from the first :: tile 1 bg differs from 2 tinted tiles
+PASS later tiles differ from each other :: tile 2 --tint-a:314;--tint-b:1 vs tile 3 --tint-a:133;--tint-b:180
+PASS per-profile look stable across reload :: [["Profile 1 · adult",""],["Profile 2 · adult","--tint-a:314;--tint-b:1"],["Profile 3 · adult","--tint-a:133;--tint-b:180"]]
+PASS screenshot pipeline is deterministic :: back-to-back pngs 38386 vs 38386 bytes
+PASS page pixels identical after reload :: png bytes 38386 vs 38386
+PASS Add tile untouched :: style=null background=rgb(51, 51, 51)
+PASS hover ring preserved :: rgb(255, 255, 255) 0px 0px 0px 2px at tile2 rect {"x":344,"y":220,"w":90}
+PASS wire.js still drives the home screen :: Watching as Profile 1
