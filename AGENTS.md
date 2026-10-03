@@ -4,7 +4,7 @@
 
 - `server/index.js` — Node static server and JSON API entrypoint.
 - `server/src/` — server-side modules (`store.js`, `services.js`, `catalog-data.js`, `types.js`).
-- `public/` — static assets; `public/screens/` holds the 4 HTML/CSS/JS screens.
+- `public/` — static assets. Pages live at the root (`index.html`, `profiles.html`, `home.html`, `title.html`, `watch.html`) plus `public/(auth)/signin.html`, served through clean URLs via `PAGE_MAP` in `server/index.js` (`/`, `/signin`, `/profiles`, `/home`, `/title`, `/watch`).
 - `scripts/smoke.mjs` — smoke test against a running server.
 - `scripts/capture.mjs` — Playwright capture of screenshots and a tour video.
 - `docs/revamp/` — before/after media.

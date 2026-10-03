@@ -4,8 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Who's watching?</title>
-    <link rel="stylesheet" href="tokens.css" />
-    <link rel="stylesheet" href="base.css" />
+    <link rel="stylesheet" href="/tokens.css" />
+    <link rel="stylesheet" href="/base.css" />
     <style>
       body {
         background: #141414;
@@ -60,7 +60,7 @@
         width: 90px;
         height: 90px;
         border-radius: 6px;
-        background: url(avatar.png) center / cover no-repeat;
+        background: url(/avatar.png) center / cover no-repeat;
       }
       .avatar-tile__pic--tint {
         background-image:
@@ -69,7 +69,7 @@
             hsl(var(--tint-a) 75% 55% / 0.7),
             hsl(var(--tint-b) 75% 50% / 0.7)
           ),
-          url(avatar.png);
+          url(/avatar.png);
         background-blend-mode: color;
       }
       .avatar-tile__pic--add {
@@ -185,7 +185,7 @@
       <button
         class="btn btn--ghost"
         id="btn-manage"
-        onclick="location.href = 'screens/02-sign-in.html'"
+        onclick="location.href = '/signin'"
       >
         Switch account
       </button>
@@ -218,6 +218,6 @@
         </div>
       </div>
     </div>
-    <script src="wire.js"></script>
+    <script src="/wire.js"></script>
   </body>
 </html>

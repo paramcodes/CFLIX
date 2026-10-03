@@ -3,7 +3,7 @@ import { mkdir } from 'node:fs/promises';
 
 const base = process.env.BASE || 'http://localhost:3104';
 const outDir = new URL('.', import.meta.url).pathname;
-const url = `${base}/screens/05-home-page.html`;
+const url = `${base}/home`;
 const viewports = [
   { tag: 'desktop-1440x900', width: 1440, height: 900 },
   { tag: 'wide-1920x1080', width: 1920, height: 1080 },

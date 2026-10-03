@@ -33,12 +33,12 @@ const readTiles = () => page.$$eval('#profile-list .avatar-tile[data-id]', (els)
   }));
 
 const email = `avatar-${Date.now()}@example.com`;
-await page.goto(`${base}/screens/02-sign-in.html`);
+await page.goto(`${base}/signin`);
 await page.fill('#in-email', email);
 await page.fill('#in-password', 'pw123456');
 await page.click('#btn-signup');
-await page.waitForURL('**/profiles.html');
-check('signed up fresh account', page.url().endsWith('/profiles.html'), `${email} -> ${page.url()}`);
+await page.waitForURL('**/profiles');
+check('signed up fresh account', page.url().endsWith('/profiles'), `${email} -> ${page.url()}`);
 
 for (let n = 1; n <= 3; n++) {
   await page.click('#add-profile');
@@ -93,7 +93,7 @@ await page.screenshot({ path: `${outDir}profiles-hover.png`, fullPage: true });
 
 await page.mouse.move(0, 0);
 await page.click('#profile-list .avatar-tile[data-id]');
-await page.waitForURL('**/05-home-page.html');
+await page.waitForURL('**/home');
 await page.waitForSelector('#who');
 const who = await page.textContent('#who');
 check('wire.js still drives the home screen', who.trim().startsWith('Watching as'), who.trim());

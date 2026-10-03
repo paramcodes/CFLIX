@@ -1,4 +1,4 @@
-PASS signed up fresh account :: avatar-1791009910327@example.com -> http://localhost:3103/profiles.html
+PASS signed up fresh account :: avatar-1791009910327@example.com -> http://localhost:3103/profiles
 PASS three profiles created :: Profile 1, Profile 2, Profile 3
 PASS three profile tiles rendered :: 3 profile tiles (+ Add)
 PASS first tile is untreated :: tile 1 style="" class="avatar-tile__pic" filter=none

@@ -20,13 +20,13 @@ From the detail view the user starts playback of a movie, episode, or series; th
 Preconditions:
 
 - Signed in, profile selected, catalog seeded.
-- Open `/screens/05-home-page.html`.
+- Open `/home`.
 
-- **Open detail.** Click a movie card. Run `page.click('#row-movies .card').first()`. URL becomes `screens/09-title-detail.html?id=...` and `.detail__artwork span` shows the title.
-- **Episodes for series.** Open a series card. Run `page.click('#row-series .card').first()`. `#episodes` lists `.episode-link` entries with `S x E` numbering.
-- **Start playback.** Click play. Run `page.click('#btn-play')`. URL becomes `screens/10-player-scroll.html`, `.player__title` matches the resolved item.
+- **Open detail.** Click a movie card. Run `page.locator('#row-movies .card').first().click()`. URL becomes `/title?id=...` and `.detail__artwork span` shows the title.
+- **Episodes for series.** Open a series card. Run `page.locator('#row-series .card').first().click()`. `#episodes` lists `.episode-link` entries with `S x E` numbering.
+- **Start playback.** Click play. Run `page.click('#btn-play')`. URL becomes `/watch`, `.player__title` matches the resolved item.
 - **Progress.** Wait about 12 seconds on the player page; `GET /api/history` (with the same token and `x-cflix-profile`) then returns the item with `seconds > 0`.
-- **Finish.** Run `page.click('#btn-finish')`. The browser returns to `screens/05-home-page.html` and `#row-continue` may be empty (finish resets progress to 0) — the meaningful proof is the `/api/history` read before finishing.
+- **Finish.** Run `page.click('#btn-finish')`. The browser returns to `/home` and `#row-continue` may be empty (finish resets progress to 0) — the meaningful proof is the `/api/history` read before finishing.
 - **Proof.** Screenshot the player title and the history API response saved under `artifacts/verify-cflix/`.
 
 ## Gotchas

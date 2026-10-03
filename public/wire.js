@@ -54,7 +54,7 @@ const pages = {
         });
         ses.token = session.token;
         ses.profile = null;
-        location.href = '../profiles.html';
+        location.href = '/profiles';
       } catch (e) {
         errEl.textContent = e.message;
       }
@@ -68,7 +68,7 @@ const pages = {
         });
         ses.token = session.token;
         ses.profile = null;
-        location.href = '../profiles.html';
+        location.href = '/profiles';
       } catch (e) {
         errEl.textContent = e.message;
       }
@@ -83,7 +83,7 @@ const pages = {
           body: { idToken: `google:${email}` },
         });
         ses.token = session.token;
-        location.href = '../profiles.html';
+        location.href = '/profiles';
       } catch (e) {
         errEl.textContent = e.message;
       }
@@ -114,7 +114,7 @@ const pages = {
       for (const b of list.querySelectorAll('.avatar-tile[data-id]')) {
         b.onclick = () => {
           ses.profile = { id: b.dataset.id, name: b.dataset.name };
-          location.href = 'screens/05-home-page.html';
+          location.href = '/home';
         };
       }
       document.querySelector('#add-profile').onclick = () => openAddDialog();
@@ -178,13 +178,13 @@ const pages = {
       if (e.key === 'Enter') document.querySelector('#dlg-create').click();
     });
     load().catch(() => {
-      location.href = 'screens/02-sign-in.html';
+      location.href = '/signin';
     });
   },
 
   home: async () => {
     if (!ses.profile) {
-      location.href = '../profiles.html';
+      location.href = '/profiles';
       return;
     }
     document.querySelector('#who').textContent =
@@ -203,7 +203,7 @@ const pages = {
     );
     document.querySelector('#btn-switch').onclick = () => {
       ses.profile = null;
-      location.href = '../profiles.html';
+      location.href = '/profiles';
     };
     document.querySelector('#search-form').onsubmit = async (ev) => {
       ev.preventDefault();
@@ -220,7 +220,7 @@ const pages = {
   detail: async () => {
     const id = new URLSearchParams(location.search).get('id');
     if (!id) {
-      location.href = '05-home-page.html';
+      location.href = '/home';
       return;
     }
     const item = await api(`/api/catalog/get?id=${id}`);
@@ -261,7 +261,7 @@ const pages = {
   player: async () => {
     const refRaw = sessionStorage.getItem('cflix_play_ref');
     if (!refRaw) {
-      location.href = '05-home-page.html';
+      location.href = '/home';
       return;
     }
     const playback = await api('/api/play', {
@@ -290,7 +290,7 @@ const pages = {
         method: 'POST',
         body: { itemId: playback.item.id, seconds: 0 },
       }).catch(() => {});
-      location.href = '05-home-page.html';
+      location.href = '/home';
     };
   },
 };
@@ -309,14 +309,14 @@ function fillRow(id, items, short = false) {
     .join('');
   for (const c of el.children) {
     c.onclick = () => {
-      location.href = `09-title-detail.html?id=${c.dataset.id}`;
+      location.href = `/title?id=${c.dataset.id}`;
     };
   }
 }
 
 async function startPlay(ref) {
   sessionStorage.setItem('cflix_play_ref', JSON.stringify(ref));
-  location.href = '10-player-scroll.html';
+  location.href = '/watch';
 }
 
 function fmt(s) {

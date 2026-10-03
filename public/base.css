@@ -341,7 +341,7 @@ a {
       rgba(0, 0, 0, 0.45) 58%,
       rgba(0, 0, 0, 0.15)
     ),
-    #000 url('house-of-ninjas.webp') center top/cover no-repeat;
+    #000 url('/house-of-ninjas.webp') center top/cover no-repeat;
 }
 .hero__bg--car {
   background:

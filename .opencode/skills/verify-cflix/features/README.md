@@ -4,7 +4,7 @@ This directory is the maintained source for verifying the user-facing behavior o
 
 ## Baseline preconditions
 
-- Launch CFLIX at a free port (example `PORT=3100 node server.js`).
+- Launch CFLIX at a free port (example `PORT=3100 node server/index.js`).
 - Run the Doctor checks from `../SKILL.md` before driving.
 - Restart the server between runs for a clean in-memory store unless a feature says otherwise.
 - Drive the UI through Playwright; drive the API with plain HTTP. Never trust `scripts/smoke.mjs` alone as UI proof.
