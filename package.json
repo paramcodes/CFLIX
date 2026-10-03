@@ -1,0 +1,14 @@
+{
+  "name": "netflix-prototype",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Netflix prototype with Playwright testing and capture scripts",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node smoke.mjs",
+    "capture": "node scripts/capture.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.40.0"
+  }
+}
