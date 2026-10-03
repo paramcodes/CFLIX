@@ -116,11 +116,13 @@ const pages = {
   'home': async () => {
     if (!ses.profile) { location.href = '../profiles.html'; return; }
     document.querySelector('#who').textContent = `Watching as ${ses.profile.name}`;
-    const movies = await api('/api/catalog/browse?kind=movie');
-    const series = await api('/api/catalog/browse?kind=series');
+    const [movies, series, history] = await Promise.all([
+      api('/api/catalog/browse?kind=movie'),
+      api('/api/catalog/browse?kind=series'),
+      api('/api/history'),
+    ]);
     fillRow('row-movies', movies.items);
     fillRow('row-series', series.items);
-    const history = await api('/api/history');
     fillRow('row-continue', history.items.map((h) => h.item).filter(Boolean), true);
     document.querySelector('#btn-switch').onclick = () => { ses.profile = null; location.href = '../profiles.html'; };
     document.querySelector('#search-form').onsubmit = async (ev) => {
