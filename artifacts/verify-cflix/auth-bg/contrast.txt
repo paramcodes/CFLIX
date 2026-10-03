@@ -1,0 +1,18 @@
+1440x900	Sign In heading	text #ffffff	worst bg L 0.0025	contrast 20.02:1	baseline on #0a0a0a 19.80:1
+1440x900	OR divider	text #808080	worst bg L 0.0028	contrast 5.04:1	baseline on #0a0a0a 5.01:1
+1440x900	error text	text #eb3942	worst bg L 0.0027	contrast 4.93:1	baseline on #0a0a0a 4.90:1
+1440x900	Forgot Password link	text #b3b3b3	worst bg L 0.0024	contrast 9.56:1	baseline on #0a0a0a 9.44:1
+1440x900	Remember me label	text #b3b3b3	worst bg L 0.0019	contrast 9.66:1	baseline on #0a0a0a 9.44:1
+1440x900	CFLIX sign up line	text #ffffff	worst bg L 0.0021	contrast 20.14:1	baseline on #0a0a0a 19.80:1
+1440x900	terms fine print	text #6d6d6e	worst bg L 0.0016	contrast 3.94:1	baseline on #0a0a0a 3.83:1
+1440x900	red Sign In button	fill #e50914	nearest ring L 0.0000	contrast 4.13:1	baseline on #0a0a0a 4.13:1
+1440x900	input field box	fill #1f1f1f	nearest ring L 0.0000	contrast 1.20:1	baseline on #0a0a0a 1.20:1
+1920x1080	Sign In heading	text #ffffff	worst bg L 0.0024	contrast 20.03:1	baseline on #0a0a0a 19.80:1
+1920x1080	OR divider	text #808080	worst bg L 0.0027	contrast 5.04:1	baseline on #0a0a0a 5.01:1
+1920x1080	error text	text #eb3942	worst bg L 0.0028	contrast 4.92:1	baseline on #0a0a0a 4.90:1
+1920x1080	Forgot Password link	text #b3b3b3	worst bg L 0.0027	contrast 9.50:1	baseline on #0a0a0a 9.44:1
+1920x1080	Remember me label	text #b3b3b3	worst bg L 0.0027	contrast 9.50:1	baseline on #0a0a0a 9.44:1
+1920x1080	CFLIX sign up line	text #ffffff	worst bg L 0.0027	contrast 19.91:1	baseline on #0a0a0a 19.80:1
+1920x1080	terms fine print	text #6d6d6e	worst bg L 0.0024	contrast 3.88:1	baseline on #0a0a0a 3.83:1
+1920x1080	red Sign In button	fill #e50914	nearest ring L 0.0000	contrast 4.13:1	baseline on #0a0a0a 4.13:1
+1920x1080	input field box	fill #1f1f1f	nearest ring L 0.0000	contrast 1.21:1	baseline on #0a0a0a 1.20:1
