@@ -36,7 +36,11 @@
   .land__feature--flip > * { direction: ltr; }
   .land__f-title { margin: 0 0 14px; color: #fff; font-size: clamp(26px, 3.4vw, 40px); font-weight: 800; letter-spacing: -1px; text-wrap: balance; }
   .land__f-copy { margin: 0; color: var(--grey-100); font-size: 17px; line-height: 1.55; max-width: 46ch; }
-  .land__mock { aspect-ratio: 16/10; border-radius: var(--r-lg); border: 1px solid var(--grey-600); box-shadow: var(--shadow-lift); }
+  .land__mock { aspect-ratio: 16/10; }
+  .land__mock--tv { background: #000 url(mock-tv.jpg) center/cover no-repeat; }
+  .land__mock--download { background: #000 url(mock-download.jpg) center/cover no-repeat; }
+  .land__mock--everywhere { background: #000 url(mock-everywhere.webp) center/contain no-repeat; }
+  .land__mock--kids { background: #000 url(mock-kids.jpg) center/cover no-repeat; }
   .land__faq-wrap { padding: 8% 6%; }
   .land__faq-h { margin: 0 0 28px; color: #fff; font-size: clamp(26px, 3.4vw, 40px); font-weight: 800; letter-spacing: -1px; }
   .faq__item details summary { cursor: pointer; list-style: none; }
@@ -73,28 +77,28 @@
       <h2 class="land__f-title">Enjoy on your TV</h2>
       <p class="land__f-copy">Stream CFLIX on smart TVs, PlayStation, Xbox, Chromecast, Apple TV, Blu-ray players, and more.</p>
     </div>
-    <div class="land__mock" style="background:linear-gradient(150deg,#123a5c,#060b14)"></div>
+    <div class="land__mock land__mock--tv"></div>
   </section>
   <section class="land__feature land__feature--flip">
     <div>
       <h2 class="land__f-title">Download your shows to watch offline</h2>
       <p class="land__f-copy">Save your favorites easily and always have something to watch, even when you are offline.</p>
     </div>
-    <div class="land__mock" style="background:linear-gradient(150deg,#3a1230,#150610)"></div>
+    <div class="land__mock land__mock--download"></div>
   </section>
   <section class="land__feature">
     <div>
       <h2 class="land__f-title">Watch everywhere</h2>
       <p class="land__f-copy">Stream unlimited movies and TV shows on your phone, tablet, laptop, and TV.</p>
     </div>
-    <div class="land__mock" style="background:linear-gradient(150deg,#3a2f10,#131004)"></div>
+    <div class="land__mock land__mock--everywhere"></div>
   </section>
   <section class="land__feature land__feature--flip">
     <div>
       <h2 class="land__f-title">Create profiles for kids</h2>
       <p class="land__f-copy">Send kids on adventures with their favorite characters in a space made just for them, filtered by maturity.</p>
     </div>
-    <div class="land__mock" style="background:linear-gradient(150deg,#10193a,#060916)"></div>
+    <div class="land__mock land__mock--kids"></div>
   </section>
 </div>
 
