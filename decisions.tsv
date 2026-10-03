@@ -1,0 +1,2 @@
+ts	phase	decision	why	evidence	result
+2026-10-03T09:41:27Z	start	branched p1-dead-prototype from main 9081c34 in worktree .worktrees/p1-dead-prototype	own isolated write target for PR P1, one writer per tree	git rev-parse HEAD	9081c34
