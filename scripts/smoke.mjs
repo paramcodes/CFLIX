@@ -136,4 +136,41 @@ for (const p of [
   check(`old route ${p} returns 404`, res.status === 404);
 }
 
+{
+  const res = await fetch(B + '/base.css');
+  const etag = res.headers.get('etag');
+  check('static 200 carries etag', !!etag);
+  check(
+    'static 200 carries no-cache',
+    res.headers.get('cache-control') === 'no-cache',
+  );
+  const again = await fetch(B + '/base.css', {
+    headers: { 'if-none-match': etag },
+  });
+  const againBody = await again.text();
+  check(
+    'matching If-None-Match returns 304 with empty body',
+    again.status === 304 && againBody === '',
+  );
+}
+
+{
+  const res = await fetch(B + '/api/profiles', {
+    headers: { authorization: 'Bearer bogus' },
+  });
+  check(
+    'api response carries no-store',
+    res.headers.get('cache-control') === 'no-store',
+  );
+}
+
+{
+  const res = await fetch(B + '/auth-bg.webp');
+  check(
+    'webp serves image/webp',
+    res.status === 200 &&
+      (res.headers.get('content-type') || '').startsWith('image/webp'),
+  );
+}
+
 process.exit(failures ? 1 : 0);
