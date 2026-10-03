@@ -105,7 +105,6 @@
 
 </div>
 <script>
-// Inertia scroll: lerp-based wheel smoothing.
 (() => {
   let target = window.scrollY, current = window.scrollY, raf = null;
   window.addEventListener('wheel', (e) => {
@@ -120,7 +119,6 @@
     if (Math.abs(target - current) > 0.5) raf = requestAnimationFrame(step);
     else raf = null;
   }
-  // Fade-in on scroll.
   const io = new IntersectionObserver((es) => es.forEach((e) => e.target.classList.toggle('in', e.isIntersecting)), { threshold: 0.1 });
   document.querySelectorAll('.idx__h2, .idx__card').forEach((el) => { el.classList.add('view-fade'); io.observe(el); });
 })();

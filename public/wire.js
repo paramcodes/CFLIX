@@ -1,6 +1,3 @@
-// Shared wiring for the CFLIX prototype screens. Each screen sets
-// <body data-page="..."> and this script hooks the DOM to the JSON API.
-
 const ses = {
   get token() { return sessionStorage.getItem('cflix_token'); },
   set token(v) { v ? sessionStorage.setItem('cflix_token', v) : sessionStorage.removeItem('cflix_token'); },

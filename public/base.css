@@ -1,10 +1,3 @@
-/*
- * Shared shell for the sixteen screen prototypes. Consumed by every screen file.
- * Only class names defined here (or in the screen's own <style>) may be used.
- * Anything screen-specific belongs in that screen's own <style> block so screens
- * cannot collide with each other.
- */
-
 * { box-sizing: border-box; }
 html { color-scheme: dark; }
 
@@ -32,14 +25,12 @@ p { text-wrap: pretty; }
 
 a { color: inherit; }
 
-/* Screen frame. Set --shell-w per screen to fake a device width. */
 .shell { width: 100%; min-height: 100vh; background: var(--page); }
 .shell--phone { width: 390px; margin: 0 auto; border-left: 1px solid var(--grey-600); border-right: 1px solid var(--grey-600); }
 
 .wrap { max-width: var(--shell-w); margin: 0 auto; padding: 0 4%; }
 .wrap--wide { max-width: none; padding: 0 3%; }
 
-/* ---------- nav ---------- */
 
 .nav {
   display: flex;
@@ -66,7 +57,6 @@ a { color: inherit; }
 .nav__avatar { width: 30px; height: 30px; border-radius: var(--r-sm); background: linear-gradient(160deg, #e0218a, #7b2ff7); }
 .nav__lang { display: flex; align-items: center; gap: 7px; color: #fff; font-size: var(--fs-small-body); }
 
-/* ---------- buttons ---------- */
 
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 10px;
@@ -84,7 +74,6 @@ a { color: inherit; }
 .btn--ghost { background: transparent; color: var(--grey-100); border: 1px solid var(--grey-500); }
 .btn--full { width: 100%; }
 
-/* ---------- form fields ---------- */
 
 .field { position: relative; }
 .field__box {
@@ -102,7 +91,6 @@ a { color: inherit; }
 .field__help svg { width: 15px; height: 15px; flex: none; margin-top: 3px; }
 .field__float { position: absolute; top: 6px; left: 15px; color: var(--grey-200); font-size: var(--fs-caption-2); }
 
-/* ---------- auth panels ---------- */
 
 .auth { display: flex; flex-direction: column; gap: 14px; }
 .auth--center { align-items: stretch; }
@@ -116,7 +104,6 @@ a { color: inherit; }
 .auth-note { margin: 4px 0 0; color: var(--grey-150); font-size: var(--fs-caption-1); }
 .auth-fine { margin: 6px 0 0; color: var(--grey-300); font-size: var(--fs-caption-2); line-height: 1.5; }
 
-/* ---------- hero banner ---------- */
 
 .hero { position: relative; min-height: 78vh; display: flex; align-items: flex-end; overflow: hidden; }
 .hero__bg { position: absolute; inset: 0; }
@@ -130,7 +117,6 @@ a { color: inherit; }
 .hero__actions { display: flex; gap: 12px; flex-wrap: wrap; }
 .hero__rating { position: absolute; right: 4%; bottom: 9%; }
 
-/* ---------- badges and chips ---------- */
 
 .badge-top10 {
   display: inline-flex; flex-direction: column; justify-content: center; align-items: center;
@@ -144,7 +130,6 @@ a { color: inherit; }
 .badge-maturity { padding: 2px 8px; border: 1px solid var(--grey-150); border-radius: var(--r-sm); color: var(--grey-50); font-size: var(--fs-caption-1); font-weight: 600; }
 .badge-quality { padding: 2px 8px; border: 1px solid var(--grey-100); border-radius: var(--r-sm); color: var(--grey-25); font-size: var(--fs-caption-1); font-weight: 700; }
 
-/* ---------- content rows ---------- */
 
 .rows { padding: 0 0 60px; }
 .row { margin: 0 0 34px; }
@@ -165,10 +150,9 @@ a { color: inherit; }
 .card__num { margin-right: -10px; color: #000; font-size: 96px; font-weight: 800; line-height: .72; -webkit-text-stroke: 3px var(--grey-25); }
 .card__art { position: absolute; inset: 0; }
 .card__body { position: relative; z-index: 1; }
-.card__badges { display: flex; gap: 6px; padding: 8px; }
+.card__badges { position: relative; z-index: 1; display: flex; gap: 6px; padding: 8px; }
 .card__title { position: absolute; left: 0; right: 0; bottom: 0; padding: 8px 10px; background: linear-gradient(180deg, transparent, rgba(0,0,0,.9)); color: #fff; font-size: var(--fs-caption-1); font-weight: 700; }
 
-/* ---------- placeholder art ---------- */
 
 .ph { position: absolute; inset: 0; }
 .ph--a { background: linear-gradient(150deg, #123a5c, #060b14); }
@@ -182,7 +166,6 @@ a { color: inherit; }
 .ph--still { background: linear-gradient(160deg, #1b1b1b, #060606); }
 .ph--photo { background: linear-gradient(150deg, #4a4a4a, #1a1a1a); }
 
-/* ---------- footer ---------- */
 
 .footer { border-top: 1px solid var(--grey-600); padding: 48px 0 40px; color: var(--grey-250); }
 .footer__cols { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
@@ -190,7 +173,6 @@ a { color: inherit; }
 .footer__note { margin: 32px 0 0; color: var(--grey-300); font-size: var(--fs-caption-1); }
 .footer__mark { color: var(--grey-250); font-size: 20px; font-weight: 800; }
 
-/* ---------- faq ---------- */
 
 .faq { display: flex; flex-direction: column; gap: 10px; }
 .faq__item { background: var(--panel-3); border-radius: var(--r-md); overflow: hidden; }
@@ -198,7 +180,6 @@ a { color: inherit; }
 .faq__q i { color: #fff; font-style: normal; font-size: 22px; line-height: 1; }
 .faq__a { padding: 0 20px 20px; color: var(--grey-50); font-size: var(--fs-small-body); line-height: 1.55; }
 
-/* ---------- video player ---------- */
 
 .player { position: relative; width: 100%; aspect-ratio: 16/9; background: #000; overflow: hidden; }
 .player__still { position: absolute; inset: 0; }
@@ -236,7 +217,6 @@ a { color: inherit; }
 .speed__ticks { display: flex; justify-content: space-between; color: var(--grey-200); font-size: var(--fs-caption-2); }
 .speed__ticks b { color: #fff; }
 
-/* ---------- modal ---------- */
 
 .modal-stage { position: relative; min-height: 100vh; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.6); padding: 5%; }
 .modal { position: relative; width: min(860px, 92%); background: #000; border-radius: var(--r-sm); overflow: hidden; }
@@ -248,7 +228,6 @@ a { color: inherit; }
 .modal__act { display: flex; align-items: center; gap: 9px; color: #fff; font-size: var(--fs-small-body); }
 .modal__act svg { width: 25px; height: 25px; stroke: #fff; fill: none; stroke-width: 1.7; stroke-linecap: round; }
 
-/* ---------- title detail ---------- */
 
 .detail { display: grid; grid-template-columns: 42% 58%; gap: 0; min-height: 92vh; }
 .detail__left { position: relative; background: #0a0a0a; }
@@ -265,7 +244,6 @@ a { color: inherit; }
 .detail__synopsis { color: var(--grey-100); font-size: var(--fs-body); line-height: 1.55; max-width: 60ch; }
 .detail__plus { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--grey-100); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 20px; }
 
-/* ---------- landing blocks ---------- */
 
 .lblock { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 6%; padding: 9% 6%; }
 .lblock--flip { direction: rtl; }
@@ -277,7 +255,6 @@ a { color: inherit; }
 .device--phone { aspect-ratio: 9/19; width: 200px; border-radius: 22px; }
 .device__screen { position: absolute; inset: 0; }
 
-/* ---------- big rows (landing / auth surfaces) ---------- */
 
 .bigrow { position: relative; padding: 8% 0; }
 .bigrow__bg { position: absolute; inset: 0; }
@@ -290,7 +267,6 @@ a { color: inherit; }
 .bigrow__copy { margin: 0 0 20px; color: var(--grey-50); font-size: var(--fs-body); line-height: 1.55; }
 .bigrow__rail { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(160px, 1fr); gap: 10px; }
 
-/* ---------- misc ---------- */
 
 .screen-tag { position: fixed; left: 0; bottom: 0; z-index: 40; background: rgba(0,0,0,.82); border: 1px solid var(--grey-500); border-left: 0; border-bottom: 0; padding: 5px 12px; color: var(--grey-150); font-size: var(--fs-caption-2); font-family: ui-monospace, Menlo, monospace; letter-spacing: .3px; }
 .stack { display: flex; flex-direction: column; }

@@ -76,7 +76,7 @@ function requireAccount(token) {
     err.code = 'UNAUTHORIZED';
     throw err;
   }
-  return AuthService.accountForToken(token); // throws SESSION_EXPIRED on bad token
+  return AuthService.accountForToken(token);
 }
 
 const server = createServer(async (req, res) => {
@@ -97,7 +97,6 @@ const server = createServer(async (req, res) => {
     return;
   }
 
-  // Static files.
   let path = normalize(url.pathname === '/' ? '/index.html' : url.pathname);
   if (path.includes('..')) { res.writeHead(403); res.end(); return; }
   try {

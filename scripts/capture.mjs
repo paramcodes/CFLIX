@@ -1,5 +1,3 @@
-// Capture screenshots and a short tour video of a running CFLIX server.
-// Usage: NODE_PATH=/tmp/opencode/node_modules node scripts/capture.mjs <outdir> [baseUrl]
 import { chromium } from 'playwright';
 import { mkdirSync } from 'node:fs';
 
