@@ -13,7 +13,7 @@
 ## Run the server
 
 ```sh
-node server/index.js        # default port 3000; override with PORT
+node server/index.js  # default port 3000; override with PORT
 ```
 
 ## Run the smoke test
