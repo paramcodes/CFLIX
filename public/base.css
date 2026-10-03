@@ -107,7 +107,7 @@ a { color: inherit; }
 
 .hero { position: relative; min-height: 78vh; display: flex; align-items: flex-end; overflow: hidden; }
 .hero__bg { position: absolute; inset: 0; }
-.hero__bg--ninja { background: linear-gradient(90deg, rgba(0,0,0,.94) 26%, rgba(0,0,0,.45) 58%, rgba(0,0,0,.15)), radial-gradient(120% 90% at 78% 34%, #6b4a2e 0%, #3a2416 42%, #150c06 78%); }
+.hero__bg--ninja { background: linear-gradient(90deg, rgba(0,0,0,.94) 26%, rgba(0,0,0,.45) 58%, rgba(0,0,0,.15)), #000 url("house-of-ninjas.webp") center top/cover no-repeat; }
 .hero__bg--car { background: linear-gradient(90deg, rgba(0,0,0,.94) 26%, rgba(0,0,0,.42) 60%, rgba(0,0,0,.12)), radial-gradient(120% 90% at 76% 40%, #93a7ae 0%, #4a565c 45%, #12171a 82%); }
 .hero__bg--device { background: linear-gradient(90deg, rgba(0,0,0,.92) 34%, rgba(0,0,0,.2)), radial-gradient(120% 90% at 74% 40%, #1d5a86 0%, #123a5c 45%, #05070c 82%); }
 .hero__inner { position: relative; padding: 0 4% 9%; max-width: 640px; }
