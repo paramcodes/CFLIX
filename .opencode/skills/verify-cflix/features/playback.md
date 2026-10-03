@@ -22,8 +22,8 @@ Preconditions:
 - Signed in, profile selected, catalog seeded.
 - Open `/home`.
 
-- **Open detail.** Click a movie card. Run `page.click('#row-movies .card').first()`. URL becomes `/title?id=...` and `.detail__artwork span` shows the title.
-- **Episodes for series.** Open a series card. Run `page.click('#row-series .card').first()`. `#episodes` lists `.episode-link` entries with `S x E` numbering.
+- **Open detail.** Click a movie card. Run `page.locator('#row-movies .card').first().click()`. URL becomes `/title?id=...` and `.detail__artwork span` shows the title.
+- **Episodes for series.** Open a series card. Run `page.locator('#row-series .card').first().click()`. `#episodes` lists `.episode-link` entries with `S x E` numbering.
 - **Start playback.** Click play. Run `page.click('#btn-play')`. URL becomes `/watch`, `.player__title` matches the resolved item.
 - **Progress.** Wait about 12 seconds on the player page; `GET /api/history` (with the same token and `x-cflix-profile`) then returns the item with `seconds > 0`.
 - **Finish.** Run `page.click('#btn-finish')`. The browser returns to `/home` and `#row-continue` may be empty (finish resets progress to 0) — the meaningful proof is the `/api/history` read before finishing.

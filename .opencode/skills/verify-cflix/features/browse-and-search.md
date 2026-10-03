@@ -24,7 +24,7 @@ Preconditions:
 
 - **Rows render.** Run `await page.locator('#row-movies .card').count()` and `#row-series .card`. Both are greater than zero for a seeded catalog.
 - **Continue watching.** If history exists, `#row-continue .card` lists those items. On a fresh store it is empty.
-- **Search.** Type a title and submit. Run `page.fill('#search-input', 'dark')`, `page.click('#search-form button')`. `#row-results` contains one card titled `Dark` and `#row-results-wrap` is visible.
+- **Search.** Type a title and submit. Run `page.fill('#search-input', 'dark')`, `page.click('#search-form button')`. `#row-results` contains two cards titled `The Dark Knight` and `Dark` and `#row-results-wrap` is visible.
 - **Empty search.** Submit `#search-input` with a term that matches nothing. `#row-results` has zero cards and the wrap is visible.
 - **Maturity.** Select a `child` profile first. Run `page.evaluate(() => fetch('/api/catalog/search', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + sessionStorage.getItem('cflix_token'), 'x-cflix-profile': JSON.parse(sessionStorage.getItem('cflix_profile')).id }, body: JSON.stringify({ text: '' }) }).then(r => r.json()))`. Every returned item has `maturity !== 'adult'`.
 - **Proof.** Screenshot the home rows and the results row; record the search term and result count.
