@@ -6,12 +6,13 @@
 <title>CFLIX — Watch Unlimited Movies &amp; TV Shows</title>
 <link rel="stylesheet" href="tokens.css">
 <link rel="stylesheet" href="base.css">
+<link rel="preload" as="image" href="hero-bg.webp" type="image/webp">
 <style>
   body { background: #000; }
   html { scroll-behavior: smooth; }
   @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
-  .land__hero { position: relative; min-height: 92vh; display: flex; flex-direction: column; justify-content: center; padding: 0 6%; overflow: hidden; }
-  .land__hero::before { content: ""; position: absolute; inset: 0; background: radial-gradient(130% 90% at 72% 12%, #5a1018 0%, #24070b 48%, #000 82%); }
+  .land__hero { position: relative; min-height: 92vh; display: flex; flex-direction: column; justify-content: center; padding: 0 6%; overflow: hidden; background: #000 url("hero-bg.jpg") center/cover no-repeat; background-image: image-set(url("hero-bg.webp") type("image/webp"), url("hero-bg.jpg") type("image/jpeg")); }
+  .land__hero::before { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(0,0,0,.72) 0%, rgba(0,0,0,.42) 55%, rgba(0,0,0,.18) 100%), linear-gradient(180deg, rgba(0,0,0,.55) 0%, rgba(0,0,0,0) 28%); }
   .land__hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(0deg, #000 6%, transparent 40%); }
   .land__nav { position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center; padding: 22px 6%; z-index: 3; }
   .land__logo { color: var(--primary-red); font-size: 30px; font-weight: 800; letter-spacing: -1.5px; text-decoration: none; }
