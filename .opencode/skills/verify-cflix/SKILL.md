@@ -39,7 +39,7 @@ Stable handles:
 - Detail (`data-page="detail"`, needs `?id=`): `.detail__artwork span` title, `#episodes .episode-link[data-ep]`, `#btn-play`.
 - Player (`data-page="player"`): `.player__title`, `#btn-finish`; progress posts every 10s of playback.
 
-**API (plain HTTP).** `POST /api/auth/signup|signin|google`, `POST /api/auth/refresh|signout`, `GET|POST /api/profiles`, `GET /api/catalog/browse|get`, `POST /api/catalog/search`, `POST /api/play`, `POST /api/progress`, `GET /api/history`. Auth via `Authorization: Bearer <token>`; profile scope via `x-cflix-profile: <id>` header. `scripts/smoke.mjs` exercises this surface end to end — it is an API probe, not UI proof.
+**API (plain HTTP).** `POST /api/auth/signup|signin|google`, `GET|POST /api/profiles`, `GET /api/catalog/browse|get`, `POST /api/catalog/search`, `POST /api/play`, `POST /api/progress`, `GET /api/history`. Auth via `Authorization: Bearer <token>`; profile scope via `x-cflix-profile: <id>` header. `scripts/smoke.mjs` exercises this surface end to end — it is an API probe, not UI proof.
 
 ## Evidence
 

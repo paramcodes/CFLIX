@@ -32,8 +32,6 @@ const routes = {
   'POST /api/auth/signup': async (req, body) => AuthService.signUp(body),
   'POST /api/auth/signin': async (req, body) => AuthService.signIn(body),
   'POST /api/auth/google': async (req, body) => AuthService.signInWithGoogle(body),
-  'POST /api/auth/refresh': async (req, body) => AuthService.refresh(body.token),
-  'POST /api/auth/signout': async (req, body, token) => { AuthService.signOut(token); return { ok: true }; },
 
   'GET /api/profiles': async (req, body, token) => {
     const account = AuthService.accountForToken(token);
