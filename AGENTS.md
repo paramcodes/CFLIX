@@ -4,7 +4,7 @@
 
 - `server.js` — Node static server and JSON API entrypoint.
 - `src/` — server-side modules (`store.js`, `services.js`, `catalog-data.js`, `types.js`).
-- `public/` — static assets; `public/screens/` holds the 16 HTML/CSS/JS screens.
+- `public/` — static assets; `public/screens/` holds the 4 HTML/CSS/JS screens.
 - `scripts/smoke.mjs` — smoke test against a running server.
 - `scripts/capture.mjs` — Playwright capture of screenshots and a tour video.
 - `docs/revamp/` — before/after media.

@@ -55,17 +55,6 @@ export const AuthService = {
     return { user: publicAccount(account), session: issueSession(account.id) };
   },
 
-  refresh(token) {
-    const s = db.sessions.get(token);
-    if (!s || s.expiresAt < Date.now()) throw new DomainError('SESSION_EXPIRED', 'expired');
-    db.sessions.delete(token);
-    return issueSession(s.accountId);
-  },
-
-  signOut(token) {
-    db.sessions.delete(token);
-  },
-
   accountForToken(token) {
     const s = db.sessions.get(token);
     if (!s || s.expiresAt < Date.now()) throw new DomainError('SESSION_EXPIRED', 'expired');

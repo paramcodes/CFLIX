@@ -49,7 +49,7 @@ const audit = async (path) => {
   });
 };
 
-for (const p of ['/', '/screens/02-sign-in.html', '/screens/05-home-page.html', '/screens/13-bigrow-landing-a.html', '/prototype-index.html']) {
+for (const p of ['/', '/screens/02-sign-in.html', '/screens/05-home-page.html']) {
   const r = await audit(p);
   console.log(JSON.stringify(r));
 }
