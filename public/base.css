@@ -148,7 +148,7 @@ a { color: inherit; text-decoration: none; }
 .card--landscape { aspect-ratio: 16/9; }
 .card--rank { display: flex; align-items: flex-end; padding: 0 8px 10px 0; }
 .card__num { margin-right: -10px; color: #000; font-size: 96px; font-weight: 800; line-height: .72; -webkit-text-stroke: 3px var(--grey-25); }
-.card__art { position: absolute; inset: 0; }
+.card__art { position: absolute; inset: 0; background-size: cover; background-position: center; }
 .card__body { position: relative; z-index: 1; }
 .card__badges { position: relative; z-index: 1; display: flex; gap: 6px; padding: 8px; }
 .card__title { position: absolute; left: 0; right: 0; bottom: 0; padding: 8px 10px; background: linear-gradient(180deg, transparent, rgba(0,0,0,.9)); color: #fff; font-size: var(--fs-caption-1); font-weight: 700; }

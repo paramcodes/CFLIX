@@ -185,7 +185,7 @@ function fillRow(id, items, short = false) {
   if (!el) return;
   el.innerHTML = items.map((item) => `
     <article class="card ${short ? 'card--short' : 'card--landscape'}" data-id="${item.id}" style="cursor:pointer">
-      <div class="card__art ph ph--${'abcdefgh'[Math.floor(Math.random() * 8)]}"></div>
+      <div class="card__art${item.posterUrl ? '' : ` ph ph--${'abcdefgh'[Math.floor(Math.random() * 8)]}`}"${item.posterUrl ? ` style="background-image:url('${item.posterUrl}')"` : ''}></div>
       <div class="card__title">${item.title}</div>
     </article>`).join('');
   for (const c of el.children) {
