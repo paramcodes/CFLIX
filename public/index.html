@@ -138,7 +138,6 @@
 </footer>
 
 <script>
-// Wheel inertia: lerp-based smoothing. Skipped entirely under reduced motion.
 (() => {
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   let target = window.scrollY, current = window.scrollY, raf = null;

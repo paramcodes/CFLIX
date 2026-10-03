@@ -1,5 +1,3 @@
-// Seed catalog. Local stand-in for a real catalog service.
-
 export const movies = [
   { kind: 'movie', id: 'm1', title: 'The Dark Knight', synopsis: 'Batman raises the stakes in Gotham.', posterUrl: '/posters/m1.jpg', year: 2008, durationSeconds: 9120, maturity: 'teen' },
   { kind: 'movie', id: 'm2', title: 'Space Odyssey', synopsis: 'A trip to Jupiter.', posterUrl: '/posters/m2.jpg', year: 1968, durationSeconds: 8520, maturity: 'teen' },

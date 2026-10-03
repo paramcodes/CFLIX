@@ -42,12 +42,8 @@ export const AuthService = {
     return { user: publicAccount(account), session: issueSession(account.id) };
   },
 
-  // Google stub: idToken is "google:<email>". Local stand-in for JWKS verify.
-  // Merges by email: existing account (any provider) gets a session.
   signInWithGoogle({ idToken }) {
-    if (!idToken || !idToken.startsWith('google:')) throw new DomainError('INVALID_GOOGLE_TOKEN', 'bad token');
-    const email = idToken.slice('google:'.length).trim();
-    if (!email) throw new DomainError('INVALID_GOOGLE_TOKEN', 'no email in token');
+    const email = emailFromGoogleIdToken(idToken);
     let account = findAccountByEmail(email);
     if (!account) {
       account = { id: newId('u'), email, provider: 'google', passwordHash: null };
@@ -131,7 +127,6 @@ export const CatalogService = {
     return { items: hits.slice(0, limit), nextCursor: null };
   },
 
-  // Series play resolves the profile's next unwatched episode.
   play(accountId, profileId, ref) {
     requireProfile(profileId);
     if (ref.kind === 'movie') {
@@ -147,12 +142,14 @@ export const CatalogService = {
       assertCanWatch(profileId, s);
       return { item: ep, manifestUrl: `/stream/${ep.id}.m3u8`, resumeFromSeconds: savedSeconds(profileId, ep.id) };
     }
-    // series
-    const s = series.find((x) => x.id === ref.id);
-    if (!s) throw new DomainError('NOT_FOUND', 'no such series');
-    assertCanWatch(profileId, s);
-    const ep = nextUnwatchedEpisode(profileId, s);
-    return { item: ep, manifestUrl: `/stream/${ep.id}.m3u8`, resumeFromSeconds: savedSeconds(profileId, ep.id) };
+    if (ref.kind === 'series') {
+      const s = series.find((x) => x.id === ref.id);
+      if (!s) throw new DomainError('NOT_FOUND', 'no such series');
+      assertCanWatch(profileId, s);
+      const ep = nextUnwatchedEpisode(profileId, s);
+      return { item: ep, manifestUrl: `/stream/${ep.id}.m3u8`, resumeFromSeconds: savedSeconds(profileId, ep.id) };
+    }
+    throw new DomainError('VALIDATION', 'unknown media kind');
   },
 
   recordProgress(profileId, { itemId, seconds }) {
@@ -171,6 +168,13 @@ export const CatalogService = {
       .map((p) => ({ ...p, item: findItem(p.itemId) || findEpisode(p.itemId) || null }));
   },
 };
+
+function emailFromGoogleIdToken(idToken) {
+  if (!idToken || !idToken.startsWith('google:')) throw new DomainError('INVALID_GOOGLE_TOKEN', 'bad token');
+  const email = idToken.slice('google:'.length).trim();
+  if (!email) throw new DomainError('INVALID_GOOGLE_TOKEN', 'no email in token');
+  return email;
+}
 
 function requireProfile(profileId) {
   const p = db.profiles.get(profileId);

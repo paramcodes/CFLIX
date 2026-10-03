@@ -1,9 +1,11 @@
-// In-memory store. The only module that touches the maps.
-
-const accounts = new Map();      // id -> account
-const profiles = new Map();      // id -> profile
-const progress = new Map();      // `${profileId}:${itemId}` -> WatchPosition
-const sessions = new Map();      // token -> { accountId, expiresAt }
+/** @type {Map<string, object>} */
+const accounts = new Map();
+/** @type {Map<string, object>} */
+const profiles = new Map();
+/** @type {Map<string, object>} */
+const progress = new Map();
+/** @type {Map<string, { accountId: string, expiresAt: number }>} */
+const sessions = new Map();
 
 let nextId = 1;
 
