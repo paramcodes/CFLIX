@@ -1,0 +1,304 @@
+{
+  "phase": "before",
+  "landed": {
+    "index": "http://localhost:3101/",
+    "signin": "http://localhost:3101/screens/02-sign-in.html",
+    "home": "http://localhost:3101/screens/05-home-page.html"
+  },
+  "cta": {
+    "text": "Start watching CFLIX",
+    "cls": "btn btn--red",
+    "href": "screens/02-sign-in.html",
+    "textDecorationLine": "underline"
+  },
+  "underlinedCount": 9,
+  "underlined": [
+    {
+      "page": "index.html",
+      "text": "Start watching CFLIX",
+      "cls": "btn btn--red",
+      "href": "screens/02-sign-in.html",
+      "textDecorationLine": "underline"
+    },
+    {
+      "page": "index.html",
+      "text": "Audio Description",
+      "cls": "",
+      "href": "#",
+      "textDecorationLine": "underline"
+    },
+    {
+      "page": "index.html",
+      "text": "Investor Relations",
+      "cls": "",
+      "href": "#",
+      "textDecorationLine": "underline"
+    },
+    {
+      "page": "index.html",
+      "text": "Help Center",
+      "cls": "",
+      "href": "#",
+      "textDecorationLine": "underline"
+    },
+    {
+      "page": "index.html",
+      "text": "Jobs",
+      "cls": "",
+      "href": "#",
+      "textDecorationLine": "underline"
+    },
+    {
+      "page": "index.html",
+      "text": "Gift Cards",
+      "cls": "",
+      "href": "#",
+      "textDecorationLine": "underline"
+    },
+    {
+      "page": "index.html",
+      "text": "Terms of Use",
+      "cls": "",
+      "href": "#",
+      "textDecorationLine": "underline"
+    },
+    {
+      "page": "index.html",
+      "text": "Media Center",
+      "cls": "",
+      "href": "#",
+      "textDecorationLine": "underline"
+    },
+    {
+      "page": "index.html",
+      "text": "Privacy",
+      "cls": "",
+      "href": "#",
+      "textDecorationLine": "underline"
+    }
+  ],
+  "measured": {
+    "index.html": [
+      {
+        "text": "CFLIX",
+        "cls": "land__logo",
+        "href": "index.html",
+        "textDecorationLine": "none"
+      },
+      {
+        "text": "Sign In",
+        "cls": "land__cta-in",
+        "href": "screens/02-sign-in.html",
+        "textDecorationLine": "none"
+      },
+      {
+        "text": "Start watching CFLIX",
+        "cls": "btn btn--red",
+        "href": "screens/02-sign-in.html",
+        "textDecorationLine": "underline"
+      },
+      {
+        "text": "All prototype screens →",
+        "cls": "land__back",
+        "href": "prototype-index.html",
+        "textDecorationLine": "none"
+      },
+      {
+        "text": "Audio Description",
+        "cls": "",
+        "href": "#",
+        "textDecorationLine": "underline"
+      },
+      {
+        "text": "Investor Relations",
+        "cls": "",
+        "href": "#",
+        "textDecorationLine": "underline"
+      },
+      {
+        "text": "Help Center",
+        "cls": "",
+        "href": "#",
+        "textDecorationLine": "underline"
+      },
+      {
+        "text": "Jobs",
+        "cls": "",
+        "href": "#",
+        "textDecorationLine": "underline"
+      },
+      {
+        "text": "Gift Cards",
+        "cls": "",
+        "href": "#",
+        "textDecorationLine": "underline"
+      },
+      {
+        "text": "Terms of Use",
+        "cls": "",
+        "href": "#",
+        "textDecorationLine": "underline"
+      },
+      {
+        "text": "Media Center",
+        "cls": "",
+        "href": "#",
+        "textDecorationLine": "underline"
+      },
+      {
+        "text": "Privacy",
+        "cls": "",
+        "href": "#",
+        "textDecorationLine": "underline"
+      }
+    ],
+    "02-sign-in.html": [
+      {
+        "text": "Forgot Password?",
+        "cls": "auth-link",
+        "href": "#",
+        "textDecorationLine": "none"
+      },
+      {
+        "text": "Sign up now.",
+        "cls": "",
+        "href": "#",
+        "textDecorationLine": "none"
+      }
+    ],
+    "05-home-page.html": [
+      {
+        "text": "Home",
+        "cls": "nav__link nav__link--active",
+        "href": "#",
+        "textDecorationLine": "none"
+      },
+      {
+        "text": "TV Shows",
+        "cls": "nav__link",
+        "href": "#",
+        "textDecorationLine": "none"
+      },
+      {
+        "text": "Movies",
+        "cls": "nav__link",
+        "href": "#",
+        "textDecorationLine": "none"
+      },
+      {
+        "text": "New & Popular",
+        "cls": "nav__link",
+        "href": "#",
+        "textDecorationLine": "none"
+      },
+      {
+        "text": "My List",
+        "cls": "nav__link",
+        "href": "#",
+        "textDecorationLine": "none"
+      },
+      {
+        "text": "Browse by Languages",
+        "cls": "nav__link",
+        "href": "#",
+        "textDecorationLine": "none"
+      },
+      {
+        "text": "Audio Description",
+        "cls": "nav__link",
+        "href": "#",
+        "textDecorationLine": "none"
+      },
+      {
+        "text": "Investor Relations",
+        "cls": "nav__link",
+        "href": "#",
+        "textDecorationLine": "none"
+      },
+      {
+        "text": "Media Center",
+        "cls": "nav__link",
+        "href": "#",
+        "textDecorationLine": "none"
+      },
+      {
+        "text": "Redeem Your Gift Card",
+        "cls": "nav__link",
+        "href": "#",
+        "textDecorationLine": "none"
+      },
+      {
+        "text": "Help Center",
+        "cls": "nav__link",
+        "href": "#",
+        "textDecorationLine": "none"
+      },
+      {
+        "text": "Jobs",
+        "cls": "nav__link",
+        "href": "#",
+        "textDecorationLine": "none"
+      },
+      {
+        "text": "CFLIX Shop",
+        "cls": "nav__link",
+        "href": "#",
+        "textDecorationLine": "none"
+      },
+      {
+        "text": "Gift Cards",
+        "cls": "nav__link",
+        "href": "#",
+        "textDecorationLine": "none"
+      },
+      {
+        "text": "Terms of Use",
+        "cls": "nav__link",
+        "href": "#",
+        "textDecorationLine": "none"
+      },
+      {
+        "text": "Privacy",
+        "cls": "nav__link",
+        "href": "#",
+        "textDecorationLine": "none"
+      },
+      {
+        "text": "Cookie Preferences",
+        "cls": "nav__link",
+        "href": "#",
+        "textDecorationLine": "none"
+      },
+      {
+        "text": "Corporate Information",
+        "cls": "nav__link",
+        "href": "#",
+        "textDecorationLine": "none"
+      },
+      {
+        "text": "Contact Us",
+        "cls": "nav__link",
+        "href": "#",
+        "textDecorationLine": "none"
+      },
+      {
+        "text": "Speed Test",
+        "cls": "nav__link",
+        "href": "#",
+        "textDecorationLine": "none"
+      },
+      {
+        "text": "Legal Notices",
+        "cls": "nav__link",
+        "href": "#",
+        "textDecorationLine": "none"
+      },
+      {
+        "text": "Ad Choices",
+        "cls": "nav__link",
+        "href": "#",
+        "textDecorationLine": "none"
+      }
+    ]
+  }
+}
