@@ -14,7 +14,10 @@ export function newId(prefix) {
 }
 
 export const db = {
-  accounts, profiles, progress, sessions,
+  accounts,
+  profiles,
+  progress,
+  sessions,
 };
 
 export function findAccountByEmail(email) {

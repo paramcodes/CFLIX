@@ -1,176 +1,435 @@
 <!doctype html>
 <html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>CFLIX — Watch Unlimited Movies &amp; TV Shows</title>
-<link rel="stylesheet" href="tokens.css">
-<link rel="stylesheet" href="base.css">
-<link rel="preload" as="image" href="hero-bg.webp" type="image/webp">
-<style>
-  body { background: #000; }
-  html { scroll-behavior: smooth; }
-  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
-  .land__hero { position: relative; min-height: 92vh; display: flex; flex-direction: column; justify-content: center; padding: 0 6%; overflow: hidden; background: #000 url("hero-bg.jpg") center/cover no-repeat; background-image: image-set(url("hero-bg.webp") type("image/webp"), url("hero-bg.jpg") type("image/jpeg")); }
-  .land__hero::before { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(0,0,0,.72) 0%, rgba(0,0,0,.42) 55%, rgba(0,0,0,.18) 100%), linear-gradient(180deg, rgba(0,0,0,.55) 0%, rgba(0,0,0,0) 28%); }
-  .land__hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(0deg, #000 6%, transparent 40%); }
-  .land__nav { position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center; padding: 22px 6%; z-index: 3; }
-  .land__logo { color: var(--primary-red); font-size: 30px; font-weight: 800; letter-spacing: -1.5px; text-decoration: none; }
-  .land__logo svg { display: block; height: 1.15em; width: auto; }
-  .land__logo svg text { fill: var(--primary-red); font-weight: 800; font-size: 30px; font-family: inherit; letter-spacing: 0.5px; }
-  .land__nav .nav__spacer { flex: 1; }
-  .land__cta-in { border: 1px solid var(--grey-500); border-radius: var(--r-md); padding: 8px 18px; color: #fff; font-size: 14px; font-weight: 700; text-decoration: none; transition: border-color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out); }
-  .land__cta-in:hover { background: rgba(255,255,255,.08); }
-  .land__hero-inner { position: relative; z-index: 2; max-width: 760px; margin-top: 40px; }
-  .land__h1 { margin: 0; color: #fff; font-size: clamp(38px, 6vw, 64px); font-weight: 800; line-height: 1.05; letter-spacing: -2px; text-wrap: balance; }
-  .land__sub { margin: 18px 0 0; color: var(--grey-50); font-size: clamp(16px, 2vw, 20px); line-height: 1.5; max-width: 56ch; }
-  .land__form { display: flex; gap: 10px; margin-top: 30px; max-width: 560px; }
-  .land__form input { flex: 1; height: 56px; padding: 0 18px; background: rgba(0,0,0,.6); border: 1px solid var(--grey-400); border-radius: var(--r-md); color: #fff; font: inherit; transition: border-color var(--dur-fast) var(--ease-out); }
-  .land__form input:focus { outline: none; border-color: #fff; }
-  .land__form input::placeholder { color: var(--grey-150); }
-  .land__form .btn { height: 56px; border-radius: var(--r-md); }
-  .land__note { margin: 14px 0 0; color: var(--grey-150); font-size: 13px; }
-  .land__features { border-top: 1px solid var(--grey-600); }
-  .land__feature { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 6%; padding: 8% 6%; border-bottom: 1px solid var(--grey-600); }
-  .land__feature--flip { direction: rtl; }
-  .land__feature--flip > * { direction: ltr; }
-  .land__f-title { margin: 0 0 14px; color: #fff; font-size: clamp(26px, 3.4vw, 40px); font-weight: 800; letter-spacing: -1px; text-wrap: balance; }
-  .land__f-copy { margin: 0; color: var(--grey-100); font-size: 17px; line-height: 1.55; max-width: 46ch; }
-  .land__mock { aspect-ratio: 16/10; }
-  .land__mock--tv { background: #000 url(mock-tv.jpg) center/cover no-repeat; }
-  .land__mock--download { background: #000 url(mock-download.jpg) center/cover no-repeat; }
-  .land__mock--everywhere { background: #000 url(mock-everywhere.webp) center/contain no-repeat; }
-  .land__mock--kids { background: #000 url(mock-kids.jpg) center/cover no-repeat; }
-  .land__faq-wrap { padding: 8% 6%; }
-  .land__faq-h { margin: 0 0 28px; color: #fff; font-size: clamp(26px, 3.4vw, 40px); font-weight: 800; letter-spacing: -1px; }
-  .land__faq-item { interpolate-size: allow-keywords; background: var(--panel-3); border-radius: var(--r-md); margin-bottom: 10px; overflow: hidden; }
-  .land__faq-item details summary { cursor: pointer; list-style: none; }
-  .land__faq-item details summary::-webkit-details-marker { display: none; }
-  .land__faq-item details::details-content {
-    height: 0;
-    overflow: clip;
-    transition: height var(--dur-base) var(--ease-out),
-                content-visibility 0s linear var(--dur-base) allow-discrete;
-  }
-  .land__faq-item details[open]::details-content {
-    height: auto;
-    content-visibility: visible;
-    transition: height var(--dur-base) var(--ease-out),
-                content-visibility 0s allow-discrete;
-  }
-  .land__faq-item .faq__q { transition: background-color var(--dur-fast) var(--ease-out); }
-  .land__faq-item .faq__q:hover { background: rgba(255,255,255,.06); }
-  .land__faq-item .faq__q i { transition: transform var(--dur-base) var(--ease-out); }
-  .land__faq-item details[open] .faq__q i { transform: rotate(45deg); }
-  @media (prefers-reduced-motion: reduce) {
-    .land__faq-item details::details-content,
-    .land__faq-item details[open]::details-content { transition: none; }
-    .land__faq-item .faq__q i { transition: none; }
-  }
-</style>
-</head>
-<body class="land">
-
-<div class="land__hero">
-  <nav class="land__nav">
-    <a class="land__logo" href="index.html"><svg viewBox="0 0 124 44" aria-hidden="true"><defs><path id="arc-land" d="M4 38 Q62 10 120 38"/></defs><text><textPath href="#arc-land" startOffset="50%" text-anchor="middle">CFLIX</textPath></text></svg></a>
-    <span class="nav__spacer"></span>
-    <a class="land__cta-in" href="screens/02-sign-in.html">Sign In</a>
-  </nav>
-  <div class="land__hero-inner">
-    <h1 class="land__h1">Unlimited movies, TV shows, and more</h1>
-    <p class="land__sub">Watch anywhere. Cancel anytime. Start your free week — no card required for the first seven days.</p>
-    <form class="land__form" action="screens/02-sign-in.html" method="get">
-      <input type="email" name="email" placeholder="Email address" aria-label="Email address">
-      <button class="btn btn--red" type="submit">Get Started</button>
-    </form>
-    <p class="land__note">Ready to watch? Enter your email to create or restart your membership.</p>
-  </div>
-</div>
-
-<div class="land__features">
-  <section class="land__feature">
-    <div>
-      <h2 class="land__f-title">Enjoy on your TV</h2>
-      <p class="land__f-copy">Stream CFLIX on smart TVs, PlayStation, Xbox, Chromecast, Apple TV, Blu-ray players, and more.</p>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CFLIX — Watch Unlimited Movies &amp; TV Shows</title>
+    <link rel="stylesheet" href="tokens.css" />
+    <link rel="stylesheet" href="base.css" />
+    <link rel="preload" as="image" href="hero-bg.webp" type="image/webp" />
+    <style>
+      body {
+        background: #000;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+      }
+      .land__hero {
+        position: relative;
+        min-height: 92vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 0 6%;
+        overflow: hidden;
+        background: #000 url('hero-bg.jpg') center/cover no-repeat;
+        background-image: image-set(
+          url('hero-bg.webp') type('image/webp'),
+          url('hero-bg.jpg') type('image/jpeg')
+        );
+      }
+      .land__hero::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background:
+          linear-gradient(
+            90deg,
+            rgba(0, 0, 0, 0.72) 0%,
+            rgba(0, 0, 0, 0.42) 55%,
+            rgba(0, 0, 0, 0.18) 100%
+          ),
+          linear-gradient(180deg, rgba(0, 0, 0, 0.55) 0%, rgba(0, 0, 0, 0) 28%);
+      }
+      .land__hero::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(0deg, #000 6%, transparent 40%);
+      }
+      .land__nav {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        display: flex;
+        align-items: center;
+        padding: 22px 6%;
+        z-index: 3;
+      }
+      .land__logo {
+        color: var(--primary-red);
+        font-size: 30px;
+        font-weight: 800;
+        letter-spacing: -1.5px;
+        text-decoration: none;
+      }
+      .land__logo svg {
+        display: block;
+        height: 1.15em;
+        width: auto;
+      }
+      .land__logo svg text {
+        fill: var(--primary-red);
+        font-weight: 800;
+        font-size: 30px;
+        font-family: inherit;
+        letter-spacing: 0.5px;
+      }
+      .land__nav .nav__spacer {
+        flex: 1;
+      }
+      .land__cta-in {
+        border: 1px solid var(--grey-500);
+        border-radius: var(--r-md);
+        padding: 8px 18px;
+        color: #fff;
+        font-size: 14px;
+        font-weight: 700;
+        text-decoration: none;
+        transition:
+          border-color var(--dur-fast) var(--ease-out),
+          background-color var(--dur-fast) var(--ease-out);
+      }
+      .land__cta-in:hover {
+        background: rgba(255, 255, 255, 0.08);
+      }
+      .land__hero-inner {
+        position: relative;
+        z-index: 2;
+        max-width: 760px;
+        margin-top: 40px;
+      }
+      .land__h1 {
+        margin: 0;
+        color: #fff;
+        font-size: clamp(38px, 6vw, 64px);
+        font-weight: 800;
+        line-height: 1.05;
+        letter-spacing: -2px;
+        text-wrap: balance;
+      }
+      .land__sub {
+        margin: 18px 0 0;
+        color: var(--grey-50);
+        font-size: clamp(16px, 2vw, 20px);
+        line-height: 1.5;
+        max-width: 56ch;
+      }
+      .land__form {
+        display: flex;
+        gap: 10px;
+        margin-top: 30px;
+        max-width: 560px;
+      }
+      .land__form input {
+        flex: 1;
+        height: 56px;
+        padding: 0 18px;
+        background: rgba(0, 0, 0, 0.6);
+        border: 1px solid var(--grey-400);
+        border-radius: var(--r-md);
+        color: #fff;
+        font: inherit;
+        transition: border-color var(--dur-fast) var(--ease-out);
+      }
+      .land__form input:focus {
+        outline: none;
+        border-color: #fff;
+      }
+      .land__form input::placeholder {
+        color: var(--grey-150);
+      }
+      .land__form .btn {
+        height: 56px;
+        border-radius: var(--r-md);
+      }
+      .land__note {
+        margin: 14px 0 0;
+        color: var(--grey-150);
+        font-size: 13px;
+      }
+      .land__features {
+        border-top: 1px solid var(--grey-600);
+      }
+      .land__feature {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        align-items: center;
+        gap: 6%;
+        padding: 8% 6%;
+        border-bottom: 1px solid var(--grey-600);
+      }
+      .land__feature--flip {
+        direction: rtl;
+      }
+      .land__feature--flip > * {
+        direction: ltr;
+      }
+      .land__f-title {
+        margin: 0 0 14px;
+        color: #fff;
+        font-size: clamp(26px, 3.4vw, 40px);
+        font-weight: 800;
+        letter-spacing: -1px;
+        text-wrap: balance;
+      }
+      .land__f-copy {
+        margin: 0;
+        color: var(--grey-100);
+        font-size: 17px;
+        line-height: 1.55;
+        max-width: 46ch;
+      }
+      .land__mock {
+        aspect-ratio: 16/10;
+      }
+      .land__mock--tv {
+        background: #000 url(mock-tv.jpg) center/cover no-repeat;
+      }
+      .land__mock--download {
+        background: #000 url(mock-download.jpg) center/cover no-repeat;
+      }
+      .land__mock--everywhere {
+        background: #000 url(mock-everywhere.webp) center/contain no-repeat;
+      }
+      .land__mock--kids {
+        background: #000 url(mock-kids.jpg) center/cover no-repeat;
+      }
+      .land__faq-wrap {
+        padding: 8% 6%;
+      }
+      .land__faq-h {
+        margin: 0 0 28px;
+        color: #fff;
+        font-size: clamp(26px, 3.4vw, 40px);
+        font-weight: 800;
+        letter-spacing: -1px;
+      }
+      .land__faq-item {
+        interpolate-size: allow-keywords;
+        background: var(--panel-3);
+        border-radius: var(--r-md);
+        margin-bottom: 10px;
+        overflow: hidden;
+      }
+      .land__faq-item details summary {
+        cursor: pointer;
+        list-style: none;
+      }
+      .land__faq-item details summary::-webkit-details-marker {
+        display: none;
+      }
+      .land__faq-item details::details-content {
+        height: 0;
+        overflow: clip;
+        transition:
+          height var(--dur-base) var(--ease-out),
+          content-visibility 0s linear var(--dur-base) allow-discrete;
+      }
+      .land__faq-item details[open]::details-content {
+        height: auto;
+        content-visibility: visible;
+        transition:
+          height var(--dur-base) var(--ease-out),
+          content-visibility 0s allow-discrete;
+      }
+      .land__faq-item .faq__q {
+        transition: background-color var(--dur-fast) var(--ease-out);
+      }
+      .land__faq-item .faq__q:hover {
+        background: rgba(255, 255, 255, 0.06);
+      }
+      .land__faq-item .faq__q i {
+        transition: transform var(--dur-base) var(--ease-out);
+      }
+      .land__faq-item details[open] .faq__q i {
+        transform: rotate(45deg);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .land__faq-item details::details-content,
+        .land__faq-item details[open]::details-content {
+          transition: none;
+        }
+        .land__faq-item .faq__q i {
+          transition: none;
+        }
+      }
+    </style>
+  </head>
+  <body class="land">
+    <div class="land__hero">
+      <nav class="land__nav">
+        <a class="land__logo" href="index.html"
+          ><svg viewBox="0 0 124 44" aria-hidden="true">
+            <defs><path id="arc-land" d="M4 38 Q62 10 120 38" /></defs>
+            <text>
+              <textPath href="#arc-land" startOffset="50%" text-anchor="middle">
+                CFLIX
+              </textPath>
+            </text>
+          </svg></a
+        >
+        <span class="nav__spacer"></span>
+        <a class="land__cta-in" href="screens/02-sign-in.html">Sign In</a>
+      </nav>
+      <div class="land__hero-inner">
+        <h1 class="land__h1">Unlimited movies, TV shows, and more</h1>
+        <p class="land__sub">
+          Watch anywhere. Cancel anytime. Start your free week — no card
+          required for the first seven days.
+        </p>
+        <form class="land__form" action="screens/02-sign-in.html" method="get">
+          <input
+            type="email"
+            name="email"
+            placeholder="Email address"
+            aria-label="Email address"
+          />
+          <button class="btn btn--red" type="submit">Get Started</button>
+        </form>
+        <p class="land__note">
+          Ready to watch? Enter your email to create or restart your membership.
+        </p>
+      </div>
     </div>
-    <div class="land__mock land__mock--tv"></div>
-  </section>
-  <section class="land__feature land__feature--flip">
-    <div>
-      <h2 class="land__f-title">Download your shows to watch offline</h2>
-      <p class="land__f-copy">Save your favorites easily and always have something to watch, even when you are offline.</p>
+
+    <div class="land__features">
+      <section class="land__feature">
+        <div>
+          <h2 class="land__f-title">Enjoy on your TV</h2>
+          <p class="land__f-copy">
+            Stream CFLIX on smart TVs, PlayStation, Xbox, Chromecast, Apple TV,
+            Blu-ray players, and more.
+          </p>
+        </div>
+        <div class="land__mock land__mock--tv"></div>
+      </section>
+      <section class="land__feature land__feature--flip">
+        <div>
+          <h2 class="land__f-title">Download your shows to watch offline</h2>
+          <p class="land__f-copy">
+            Save your favorites easily and always have something to watch, even
+            when you are offline.
+          </p>
+        </div>
+        <div class="land__mock land__mock--download"></div>
+      </section>
+      <section class="land__feature">
+        <div>
+          <h2 class="land__f-title">Watch everywhere</h2>
+          <p class="land__f-copy">
+            Stream unlimited movies and TV shows on your phone, tablet, laptop,
+            and TV.
+          </p>
+        </div>
+        <div class="land__mock land__mock--everywhere"></div>
+      </section>
+      <section class="land__feature land__feature--flip">
+        <div>
+          <h2 class="land__f-title">Create profiles for kids</h2>
+          <p class="land__f-copy">
+            Send kids on adventures with their favorite characters in a space
+            made just for them, filtered by maturity.
+          </p>
+        </div>
+        <div class="land__mock land__mock--kids"></div>
+      </section>
     </div>
-    <div class="land__mock land__mock--download"></div>
-  </section>
-  <section class="land__feature">
-    <div>
-      <h2 class="land__f-title">Watch everywhere</h2>
-      <p class="land__f-copy">Stream unlimited movies and TV shows on your phone, tablet, laptop, and TV.</p>
-    </div>
-    <div class="land__mock land__mock--everywhere"></div>
-  </section>
-  <section class="land__feature land__feature--flip">
-    <div>
-      <h2 class="land__f-title">Create profiles for kids</h2>
-      <p class="land__f-copy">Send kids on adventures with their favorite characters in a space made just for them, filtered by maturity.</p>
-    </div>
-    <div class="land__mock land__mock--kids"></div>
-  </section>
-</div>
 
-<section class="land__faq-wrap">
-  <h2 class="land__faq-h">Frequently Asked Questions</h2>
-  <div class="faq">
-    <div class="land__faq-item"><details>
-      <summary class="faq__q">What is CFLIX? <i>+</i></summary>
-      <div class="faq__a">CFLIX is a streaming service that offers a wide variety of award-winning TV shows, movies, anime, documentaries, and more on thousands of internet-connected devices.</div>
-    </details></div>
-    <div class="land__faq-item"><details>
-      <summary class="faq__q">How much does CFLIX cost? <i>+</i></summary>
-      <div class="faq__a">Watch CFLIX on your favorite devices. Plans range from $6.99 to $22.99 a month. No extra costs, no contracts.</div>
-    </details></div>
-    <div class="land__faq-item"><details>
-      <summary class="faq__q">Where can I watch? <i>+</i></summary>
-      <div class="faq__a">Watch anywhere, anytime. Sign in with your CFLIX account to watch instantly on the web or on smart TVs, game consoles, and streaming devices.</div>
-    </details></div>
-    <div class="land__faq-item"><details>
-      <summary class="faq__q">How do I cancel? <i>+</i></summary>
-      <div class="faq__a">CFLIX is flexible. There are no annoying contracts and no commitments. You can easily cancel your account online in two clicks.</div>
-    </details></div>
-  </div>
-</section>
+    <section class="land__faq-wrap">
+      <h2 class="land__faq-h">Frequently Asked Questions</h2>
+      <div class="faq">
+        <div class="land__faq-item">
+          <details>
+            <summary class="faq__q">What is CFLIX? <i>+</i></summary>
+            <div class="faq__a">
+              CFLIX is a streaming service that offers a wide variety of
+              award-winning TV shows, movies, anime, documentaries, and more on
+              thousands of internet-connected devices.
+            </div>
+          </details>
+        </div>
+        <div class="land__faq-item">
+          <details>
+            <summary class="faq__q">How much does CFLIX cost? <i>+</i></summary>
+            <div class="faq__a">
+              Watch CFLIX on your favorite devices. Plans range from $6.99 to
+              $22.99 a month. No extra costs, no contracts.
+            </div>
+          </details>
+        </div>
+        <div class="land__faq-item">
+          <details>
+            <summary class="faq__q">Where can I watch? <i>+</i></summary>
+            <div class="faq__a">
+              Watch anywhere, anytime. Sign in with your CFLIX account to watch
+              instantly on the web or on smart TVs, game consoles, and streaming
+              devices.
+            </div>
+          </details>
+        </div>
+        <div class="land__faq-item">
+          <details>
+            <summary class="faq__q">How do I cancel? <i>+</i></summary>
+            <div class="faq__a">
+              CFLIX is flexible. There are no annoying contracts and no
+              commitments. You can easily cancel your account online in two
+              clicks.
+            </div>
+          </details>
+        </div>
+      </div>
+    </section>
 
-<p style="text-align:center;margin:0;padding-bottom:60px">
-  <a class="btn btn--red" href="screens/02-sign-in.html">Start watching CFLIX</a>
-</p>
+    <p style="text-align: center; margin: 0; padding-bottom: 60px">
+      <a class="btn btn--red" href="screens/02-sign-in.html"
+        >Start watching CFLIX</a
+      >
+    </p>
 
-<footer class="footer" style="margin-top:40px">
-  <div class="wrap">
-    <p class="footer__note">CFLIX USA</p>
-  </div>
-</footer>
+    <footer class="footer" style="margin-top: 40px">
+      <div class="wrap">
+        <p class="footer__note">CFLIX USA</p>
+      </div>
+    </footer>
 
-<script>
-(() => {
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  let target = window.scrollY, current = window.scrollY, raf = null;
-  window.addEventListener('wheel', (e) => {
-    if (!raf) current = window.scrollY, target = window.scrollY;
-    target += e.deltaY;
-    const max = document.documentElement.scrollHeight - window.innerHeight;
-    target = Math.max(0, Math.min(target, max));
-    if (!raf) raf = requestAnimationFrame(step);
-    e.preventDefault();
-  }, { passive: false });
-  function step() {
-    current += (target - current) * 0.12;
-    window.scrollTo({ top: current, behavior: 'auto' });
-    if (Math.abs(target - current) > 0.5) raf = requestAnimationFrame(step);
-    else { window.scrollTo({ top: target, behavior: 'auto' }); raf = null; }
-  }
-})();
-</script>
-
-</body>
+    <script>
+      (() => {
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+          return;
+        let target = window.scrollY,
+          current = window.scrollY,
+          raf = null;
+        window.addEventListener(
+          'wheel',
+          (e) => {
+            if (!raf) ((current = window.scrollY), (target = window.scrollY));
+            target += e.deltaY;
+            const max =
+              document.documentElement.scrollHeight - window.innerHeight;
+            target = Math.max(0, Math.min(target, max));
+            if (!raf) raf = requestAnimationFrame(step);
+            e.preventDefault();
+          },
+          { passive: false },
+        );
+        function step() {
+          current += (target - current) * 0.12;
+          window.scrollTo({ top: current, behavior: 'auto' });
+          if (Math.abs(target - current) > 0.5)
+            raf = requestAnimationFrame(step);
+          else {
+            window.scrollTo({ top: target, behavior: 'auto' });
+            raf = null;
+          }
+        }
+      })();
+    </script>
+  </body>
 </html>

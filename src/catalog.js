@@ -10,7 +10,9 @@ function requireProfile(profileId) {
 }
 
 function findItem(id) {
-  return movies.find((m) => m.id === id) || series.find((s) => s.id === id) || null;
+  return (
+    movies.find((m) => m.id === id) || series.find((s) => s.id === id) || null
+  );
 }
 
 function findEpisode(id) {
@@ -48,8 +50,12 @@ function assertCanWatch(profileId, item) {
 export const CatalogService = {
   browse(profileId, kind) {
     const profile = requireProfile(profileId);
-    const moviesAllowed = movies.filter((m) => maturityAllowed(profile.maturity, m.maturity));
-    const seriesAllowed = series.filter((s) => maturityAllowed(profile.maturity, s.maturity)).map(seriesListing);
+    const moviesAllowed = movies.filter((m) =>
+      maturityAllowed(profile.maturity, m.maturity),
+    );
+    const seriesAllowed = series
+      .filter((s) => maturityAllowed(profile.maturity, s.maturity))
+      .map(seriesListing);
     if (kind === 'movie') return { items: moviesAllowed };
     if (kind === 'series') return { items: seriesAllowed };
     return { items: [...moviesAllowed, ...seriesAllowed] };
@@ -58,7 +64,8 @@ export const CatalogService = {
   get(profileId, id) {
     const profile = requireProfile(profileId);
     const item = findItem(id);
-    if (!item || !maturityAllowed(profile.maturity, item.maturity)) throw new DomainError('NOT_FOUND', 'no such title');
+    if (!item || !maturityAllowed(profile.maturity, item.maturity))
+      throw new DomainError('NOT_FOUND', 'no such title');
     return item;
   },
 
@@ -69,10 +76,11 @@ export const CatalogService = {
       ...movies.map((m) => ({ ...m })),
       ...series.map(seriesListing),
     ];
-    const hits = pool.filter((item) =>
-      (kind ? item.kind === kind : true) &&
-      maturityAllowed(profile.maturity, item.maturity) &&
-      item.title.toLowerCase().includes(q),
+    const hits = pool.filter(
+      (item) =>
+        (kind ? item.kind === kind : true) &&
+        maturityAllowed(profile.maturity, item.maturity) &&
+        item.title.toLowerCase().includes(q),
     );
     return { items: hits.slice(0, limit), nextCursor: null };
   },
@@ -83,21 +91,33 @@ export const CatalogService = {
       const m = movies.find((x) => x.id === ref.id);
       if (!m) throw new DomainError('NOT_FOUND', 'no such movie');
       assertCanWatch(profileId, m);
-      return { item: m, manifestUrl: `/stream/${m.id}.m3u8`, resumeFromSeconds: savedSeconds(profileId, m.id) };
+      return {
+        item: m,
+        manifestUrl: `/stream/${m.id}.m3u8`,
+        resumeFromSeconds: savedSeconds(profileId, m.id),
+      };
     }
     if (ref.kind === 'episode') {
       const ep = findEpisode(ref.id);
       if (!ep) throw new DomainError('NOT_FOUND', 'no such episode');
       const s = series.find((x) => x.id === ep.seriesId);
       assertCanWatch(profileId, s);
-      return { item: ep, manifestUrl: `/stream/${ep.id}.m3u8`, resumeFromSeconds: savedSeconds(profileId, ep.id) };
+      return {
+        item: ep,
+        manifestUrl: `/stream/${ep.id}.m3u8`,
+        resumeFromSeconds: savedSeconds(profileId, ep.id),
+      };
     }
     if (ref.kind === 'series') {
       const s = series.find((x) => x.id === ref.id);
       if (!s) throw new DomainError('NOT_FOUND', 'no such series');
       assertCanWatch(profileId, s);
       const ep = nextUnwatchedEpisode(profileId, s);
-      return { item: ep, manifestUrl: `/stream/${ep.id}.m3u8`, resumeFromSeconds: savedSeconds(profileId, ep.id) };
+      return {
+        item: ep,
+        manifestUrl: `/stream/${ep.id}.m3u8`,
+        resumeFromSeconds: savedSeconds(profileId, ep.id),
+      };
     }
     throw new DomainError('VALIDATION', 'unknown media kind');
   },
@@ -105,7 +125,12 @@ export const CatalogService = {
   recordProgress(profileId, { itemId, seconds }) {
     requireProfile(profileId);
     const id = String(itemId);
-    const entry = { profileId, itemId: id, seconds: Number(seconds) || 0, updatedAt: new Date().toISOString() };
+    const entry = {
+      profileId,
+      itemId: id,
+      seconds: Number(seconds) || 0,
+      updatedAt: new Date().toISOString(),
+    };
     db.progress.set(`${profileId}:${id}`, entry);
     return entry;
   },
@@ -115,6 +140,9 @@ export const CatalogService = {
     return progressOf(profileId)
       .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
       .slice(0, limit)
-      .map((p) => ({ ...p, item: findItem(p.itemId) || findEpisode(p.itemId) || null }));
+      .map((p) => ({
+        ...p,
+        item: findItem(p.itemId) || findEpisode(p.itemId) || null,
+      }));
   },
 };

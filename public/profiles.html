@@ -1,65 +1,223 @@
 <!doctype html>
 <html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Who's watching?</title>
-<link rel="stylesheet" href="tokens.css">
-<link rel="stylesheet" href="base.css">
-<style>
-  body { background: #141414; color: #fff; font-family: Helvetica, Arial, sans-serif; }
-  .stage { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; }
-  h1 { font-weight: 500; font-size: 32px; }
-  .tiles { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
-  .avatar-tile { display: flex; flex-direction: column; align-items: center; gap: 8px; background: none; border: 0; color: #b3b3b3; cursor: pointer; font-size: 14px; transition: color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out); }
-  .avatar-tile:hover { transform: translateY(-4px); }
-  .avatar-tile__pic { transition: box-shadow var(--dur-fast) var(--ease-out); }
-  .avatar-tile:hover .avatar-tile__pic { box-shadow: 0 0 0 2px #fff; }
-  .avatar-tile:hover { color: #fff; }
-  .avatar-tile__pic { width: 90px; height: 90px; border-radius: 6px; background: url(avatar.png) center / cover no-repeat; }
-  .avatar-tile__pic--tint { background-image: linear-gradient(160deg, hsl(var(--tint-a) 75% 55% / .7), hsl(var(--tint-b) 75% 50% / .7)), url(avatar.png); background-blend-mode: color; }
-  .avatar-tile__pic--add { display: flex; align-items: center; justify-content: center; background: #333; color: #b3b3b3; font-size: 40px; }
-  .btn--ghost { padding: 8px 20px; }
-  .dlg-backdrop[hidden] { display: none; }
-  .dlg-backdrop { position: fixed; inset: 0; background: var(--tb-60); display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity var(--dur-base) var(--ease-out); z-index: 50; }
-  .dlg-backdrop.is-open { opacity: 1; }
-  .dlg { width: 400px; max-width: calc(100vw - 48px); background: var(--panel-3); border: 1px solid var(--grey-500); border-radius: var(--r-lg); box-shadow: var(--shadow-modal); padding: 28px; color: #fff; transform: scale(0.92); transition: transform var(--dur-base) var(--ease-out); }
-  .dlg-backdrop.is-open .dlg { transform: scale(1); }
-  .dlg h2 { margin: 0 0 20px; font-weight: 500; font-size: var(--fs-title-4); }
-  .dlg label { display: block; font-size: var(--fs-small-body); color: var(--grey-100); margin-bottom: 6px; }
-  .dlg input { width: 100%; box-sizing: border-box; padding: 10px 12px; background: var(--grey-850); border: 1px solid var(--grey-500); border-radius: var(--r-md); color: #fff; font-size: var(--fs-body); margin-bottom: 18px; }
-  .dlg input:focus { outline: none; border-color: var(--blue-200); }
-  .seg { display: flex; gap: 8px; margin-bottom: 24px; }
-  .seg button { flex: 1; padding: 9px 0; background: var(--grey-850); border: 1px solid var(--grey-500); border-radius: var(--r-md); color: var(--grey-100); font-size: var(--fs-small-body); cursor: pointer; transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out); }
-  .seg button.is-active { background: var(--primary-red); border-color: var(--primary-red); color: #fff; }
-  .dlg__actions { display: flex; justify-content: flex-end; gap: 10px; }
-  .dlg__error { min-height: 18px; color: var(--red-100); font-size: var(--fs-caption-1); margin: -12px 0 12px; }
-</style>
-</head>
-<body data-page="profiles">
-<div class="stage">
-  <h1>Who's watching?</h1>
-  <div class="tiles" id="profile-list"></div>
-  <button class="btn btn--ghost" id="btn-manage" onclick="location.href='screens/02-sign-in.html'">Switch account</button>
-</div>
-<div class="dlg-backdrop" id="dlg-add" hidden>
-  <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="dlg-add-title">
-    <h2 id="dlg-add-title">Add profile</h2>
-    <label for="dlg-name">Name</label>
-    <input id="dlg-name" type="text" autocomplete="off" placeholder="e.g. Mom">
-    <div class="dlg__error" id="dlg-error"></div>
-    <label>Maturity</label>
-    <div class="seg" id="dlg-maturity">
-      <button type="button" data-m="child">Child</button>
-      <button type="button" data-m="teen">Teen</button>
-      <button type="button" data-m="adult" class="is-active">Adult</button>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Who's watching?</title>
+    <link rel="stylesheet" href="tokens.css" />
+    <link rel="stylesheet" href="base.css" />
+    <style>
+      body {
+        background: #141414;
+        color: #fff;
+        font-family: Helvetica, Arial, sans-serif;
+      }
+      .stage {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 24px;
+      }
+      h1 {
+        font-weight: 500;
+        font-size: 32px;
+      }
+      .tiles {
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      .avatar-tile {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        background: none;
+        border: 0;
+        color: #b3b3b3;
+        cursor: pointer;
+        font-size: 14px;
+        transition:
+          color var(--dur-fast) var(--ease-out),
+          transform var(--dur-fast) var(--ease-out);
+      }
+      .avatar-tile:hover {
+        transform: translateY(-4px);
+      }
+      .avatar-tile__pic {
+        transition: box-shadow var(--dur-fast) var(--ease-out);
+      }
+      .avatar-tile:hover .avatar-tile__pic {
+        box-shadow: 0 0 0 2px #fff;
+      }
+      .avatar-tile:hover {
+        color: #fff;
+      }
+      .avatar-tile__pic {
+        width: 90px;
+        height: 90px;
+        border-radius: 6px;
+        background: url(avatar.png) center / cover no-repeat;
+      }
+      .avatar-tile__pic--tint {
+        background-image:
+          linear-gradient(
+            160deg,
+            hsl(var(--tint-a) 75% 55% / 0.7),
+            hsl(var(--tint-b) 75% 50% / 0.7)
+          ),
+          url(avatar.png);
+        background-blend-mode: color;
+      }
+      .avatar-tile__pic--add {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #333;
+        color: #b3b3b3;
+        font-size: 40px;
+      }
+      .btn--ghost {
+        padding: 8px 20px;
+      }
+      .dlg-backdrop[hidden] {
+        display: none;
+      }
+      .dlg-backdrop {
+        position: fixed;
+        inset: 0;
+        background: var(--tb-60);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity var(--dur-base) var(--ease-out);
+        z-index: 50;
+      }
+      .dlg-backdrop.is-open {
+        opacity: 1;
+      }
+      .dlg {
+        width: 400px;
+        max-width: calc(100vw - 48px);
+        background: var(--panel-3);
+        border: 1px solid var(--grey-500);
+        border-radius: var(--r-lg);
+        box-shadow: var(--shadow-modal);
+        padding: 28px;
+        color: #fff;
+        transform: scale(0.92);
+        transition: transform var(--dur-base) var(--ease-out);
+      }
+      .dlg-backdrop.is-open .dlg {
+        transform: scale(1);
+      }
+      .dlg h2 {
+        margin: 0 0 20px;
+        font-weight: 500;
+        font-size: var(--fs-title-4);
+      }
+      .dlg label {
+        display: block;
+        font-size: var(--fs-small-body);
+        color: var(--grey-100);
+        margin-bottom: 6px;
+      }
+      .dlg input {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 10px 12px;
+        background: var(--grey-850);
+        border: 1px solid var(--grey-500);
+        border-radius: var(--r-md);
+        color: #fff;
+        font-size: var(--fs-body);
+        margin-bottom: 18px;
+      }
+      .dlg input:focus {
+        outline: none;
+        border-color: var(--blue-200);
+      }
+      .seg {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 24px;
+      }
+      .seg button {
+        flex: 1;
+        padding: 9px 0;
+        background: var(--grey-850);
+        border: 1px solid var(--grey-500);
+        border-radius: var(--r-md);
+        color: var(--grey-100);
+        font-size: var(--fs-small-body);
+        cursor: pointer;
+        transition:
+          background-color var(--dur-fast) var(--ease-out),
+          color var(--dur-fast) var(--ease-out),
+          border-color var(--dur-fast) var(--ease-out);
+      }
+      .seg button.is-active {
+        background: var(--primary-red);
+        border-color: var(--primary-red);
+        color: #fff;
+      }
+      .dlg__actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+      }
+      .dlg__error {
+        min-height: 18px;
+        color: var(--red-100);
+        font-size: var(--fs-caption-1);
+        margin: -12px 0 12px;
+      }
+    </style>
+  </head>
+  <body data-page="profiles">
+    <div class="stage">
+      <h1>Who's watching?</h1>
+      <div class="tiles" id="profile-list"></div>
+      <button
+        class="btn btn--ghost"
+        id="btn-manage"
+        onclick="location.href = 'screens/02-sign-in.html'"
+      >
+        Switch account
+      </button>
     </div>
-    <div class="dlg__actions">
-      <button class="btn btn--ghost btn--sm" id="dlg-cancel">Cancel</button>
-      <button class="btn btn--red btn--sm" id="dlg-create">Create</button>
+    <div class="dlg-backdrop" id="dlg-add" hidden>
+      <div
+        class="dlg"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="dlg-add-title"
+      >
+        <h2 id="dlg-add-title">Add profile</h2>
+        <label for="dlg-name">Name</label>
+        <input
+          id="dlg-name"
+          type="text"
+          autocomplete="off"
+          placeholder="e.g. Mom"
+        />
+        <div class="dlg__error" id="dlg-error"></div>
+        <label>Maturity</label>
+        <div class="seg" id="dlg-maturity">
+          <button type="button" data-m="child">Child</button>
+          <button type="button" data-m="teen">Teen</button>
+          <button type="button" data-m="adult" class="is-active">Adult</button>
+        </div>
+        <div class="dlg__actions">
+          <button class="btn btn--ghost btn--sm" id="dlg-cancel">Cancel</button>
+          <button class="btn btn--red btn--sm" id="dlg-create">Create</button>
+        </div>
+      </div>
     </div>
-  </div>
-</div>
-<script src="wire.js"></script>
-</body>
+    <script src="wire.js"></script>
+  </body>
 </html>

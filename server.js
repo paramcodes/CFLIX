@@ -7,8 +7,12 @@ const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = new URL('./public/', import.meta.url).pathname;
 
 const MIME = {
-  '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript',
-  '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml',
+  '.html': 'text/html',
+  '.css': 'text/css',
+  '.js': 'text/javascript',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.svg': 'image/svg+xml',
   '.json': 'application/json',
 };
 
@@ -20,7 +24,11 @@ function json(res, status, body) {
 async function readBody(req) {
   let data = '';
   for await (const chunk of req) data += chunk;
-  try { return data ? JSON.parse(data) : {}; } catch { return {}; }
+  try {
+    return data ? JSON.parse(data) : {};
+  } catch {
+    return {};
+  }
 }
 
 function bearer(req) {
@@ -31,7 +39,8 @@ function bearer(req) {
 const routes = {
   'POST /api/auth/signup': async (req, body) => AuthService.signUp(body),
   'POST /api/auth/signin': async (req, body) => AuthService.signIn(body),
-  'POST /api/auth/google': async (req, body) => AuthService.signInWithGoogle(body),
+  'POST /api/auth/google': async (req, body) =>
+    AuthService.signInWithGoogle(body),
 
   'GET /api/profiles': async (req, body, token) => {
     const account = AuthService.accountForToken(token);
@@ -89,20 +98,36 @@ const server = createServer(async (req, res) => {
       const result = await routes[key](req, body, token, profileId, url);
       json(res, 200, result);
     } catch (err) {
-      const status = err.code === 'UNAUTHORIZED' ? 401 : err.code === 'SESSION_EXPIRED' ? 401 : err.code === 'NOT_FOUND' ? 404 : 400;
-      json(res, status, { error: { code: err.code || 'ERROR', message: err.message } });
+      const status =
+        err.code === 'UNAUTHORIZED'
+          ? 401
+          : err.code === 'SESSION_EXPIRED'
+            ? 401
+            : err.code === 'NOT_FOUND'
+              ? 404
+              : 400;
+      json(res, status, {
+        error: { code: err.code || 'ERROR', message: err.message },
+      });
     }
     return;
   }
 
   let path = normalize(url.pathname === '/' ? '/index.html' : url.pathname);
-  if (path.includes('..')) { res.writeHead(403); res.end(); return; }
+  if (path.includes('..')) {
+    res.writeHead(403);
+    res.end();
+    return;
+  }
   try {
     const data = await readFile(join(PUBLIC_DIR, path));
-    res.writeHead(200, { 'content-type': MIME[extname(path)] || 'application/octet-stream' });
+    res.writeHead(200, {
+      'content-type': MIME[extname(path)] || 'application/octet-stream',
+    });
     res.end(data);
   } catch {
-    res.writeHead(404); res.end('not found');
+    res.writeHead(404);
+    res.end('not found');
   }
 });
 

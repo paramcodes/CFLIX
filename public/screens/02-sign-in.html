@@ -1,53 +1,119 @@
 <!doctype html>
 <html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sign in</title>
-<link rel="stylesheet" href="../tokens.css">
-<link rel="stylesheet" href="../base.css">
-<style>
-  .auth-stage { position: relative; min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; background: #0a0a0a url("../auth-bg.webp") center/cover no-repeat; padding: 110px 4% 70px; }
-  .auth-stage::before { content: ""; position: absolute; inset: 0; background: radial-gradient(70% 82% at 50% 44%, rgba(0,0,0,.93) 0%, rgba(0,0,0,.87) 55%, rgba(0,0,0,.6) 100%), linear-gradient(180deg, rgba(0,0,0,.6) 0%, rgba(0,0,0,0) 30%), linear-gradient(0deg, rgba(0,0,0,.8) 0%, rgba(0,0,0,0) 45%); }
-  .auth-col { position: relative; z-index: 1; width: 100%; max-width: 450px; }
-</style>
-</head>
-<body class="shell" data-page="sign-in">
-<section class="auth-stage">
-  <div class="auth-col">
-    <div class="auth auth--center">
-      <h1 class="auth-title">Sign In</h1>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sign in</title>
+    <link rel="stylesheet" href="../tokens.css" />
+    <link rel="stylesheet" href="../base.css" />
+    <style>
+      .auth-stage {
+        position: relative;
+        min-height: 100vh;
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        background: #0a0a0a url('../auth-bg.webp') center/cover no-repeat;
+        padding: 110px 4% 70px;
+      }
+      .auth-stage::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(
+            70% 82% at 50% 44%,
+            rgba(0, 0, 0, 0.93) 0%,
+            rgba(0, 0, 0, 0.87) 55%,
+            rgba(0, 0, 0, 0.6) 100%
+          ),
+          linear-gradient(180deg, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0) 30%),
+          linear-gradient(0deg, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0) 45%);
+      }
+      .auth-col {
+        position: relative;
+        z-index: 1;
+        width: 100%;
+        max-width: 450px;
+      }
+    </style>
+  </head>
+  <body class="shell" data-page="sign-in">
+    <section class="auth-stage">
+      <div class="auth-col">
+        <div class="auth auth--center">
+          <h1 class="auth-title">Sign In</h1>
 
-      <div class="field field--focus">
-        <div class="field__box">
-          <input id="in-email" placeholder="Email or phone number" style="background:transparent;border:0;color:#fff;width:100%;outline:none;font-size:inherit">
+          <div class="field field--focus">
+            <div class="field__box">
+              <input
+                id="in-email"
+                placeholder="Email or phone number"
+                style="
+                  background: transparent;
+                  border: 0;
+                  color: #fff;
+                  width: 100%;
+                  outline: none;
+                  font-size: inherit;
+                "
+              />
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="field__box">
+              <input
+                id="in-password"
+                type="password"
+                placeholder="Password"
+                style="
+                  background: transparent;
+                  border: 0;
+                  color: #fff;
+                  width: 100%;
+                  outline: none;
+                  font-size: inherit;
+                "
+              />
+            </div>
+          </div>
+
+          <button class="btn btn--red btn--full" id="btn-signin" type="button">
+            Sign In
+          </button>
+
+          <div class="auth-divider">OR</div>
+
+          <button
+            class="btn btn--ghost btn--full"
+            id="btn-signup"
+            type="button"
+          >
+            Sign Up
+          </button>
+          <button
+            class="btn btn--ghost btn--full"
+            id="btn-google"
+            type="button"
+            style="margin-top: 8px"
+          >
+            Sign in with Google
+          </button>
+          <p id="in-error" style="color: #eb3942; min-height: 1em"></p>
+
+          <label class="auth-check">
+            <i></i>
+            <span>Remember me</span>
+          </label>
+
+          <p class="auth-fine">
+            By signing in you agree to our terms and privacy policy.
+          </p>
         </div>
       </div>
+    </section>
 
-      <div class="field">
-        <div class="field__box">
-          <input id="in-password" type="password" placeholder="Password" style="background:transparent;border:0;color:#fff;width:100%;outline:none;font-size:inherit">
-        </div>
-      </div>
-
-      <button class="btn btn--red btn--full" id="btn-signin" type="button">Sign In</button>
-
-      <div class="auth-divider">OR</div>
-
-      <button class="btn btn--ghost btn--full" id="btn-signup" type="button">Sign Up</button>
-      <button class="btn btn--ghost btn--full" id="btn-google" type="button" style="margin-top:8px">Sign in with Google</button>
-      <p id="in-error" style="color:#eb3942;min-height:1em"></p>
-
-      <label class="auth-check">
-        <i></i>
-        <span>Remember me</span>
-      </label>
-
-      <p class="auth-fine">By signing in you agree to our terms and privacy policy.</p>
-    </div>
-  </div>
-</section>
-
-<script src="../wire.js"></script>
-</body>
+    <script src="../wire.js"></script>
+  </body>
 </html>
