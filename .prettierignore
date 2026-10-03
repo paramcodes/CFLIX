@@ -1,0 +1,13 @@
+artifacts/
+docs/
+node_modules/
+.worktrees/
+package-lock.json
+*.png
+*.mp4
+*.webm
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.webp

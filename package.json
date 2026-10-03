@@ -7,10 +7,13 @@
   "scripts": {
     "start": "node server.js",
     "test": "node scripts/smoke.mjs",
-    "capture": "node scripts/capture.mjs"
+    "capture": "node scripts/capture.mjs",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "devDependencies": {
-    "playwright": "^1.58.2"
+    "playwright": "^1.58.2",
+    "prettier": "^3.9.9"
   },
   "license": "MIT"
 }
