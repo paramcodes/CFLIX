@@ -43,11 +43,30 @@
   .land__mock--kids { background: #000 url(mock-kids.jpg) center/cover no-repeat; }
   .land__faq-wrap { padding: 8% 6%; }
   .land__faq-h { margin: 0 0 28px; color: #fff; font-size: clamp(26px, 3.4vw, 40px); font-weight: 800; letter-spacing: -1px; }
-  .faq__item details summary { cursor: pointer; list-style: none; }
-  .faq__item details summary::-webkit-details-marker { display: none; }
-  .faq__item .faq__q { transition: background-color var(--dur-fast) var(--ease-out); }
-  .faq__item .faq__q:hover { background: rgba(255,255,255,.06); }
-  .land__faq-item { background: var(--panel-3); border-radius: var(--r-md); margin-bottom: 10px; overflow: hidden; }
+  .land__faq-item { interpolate-size: allow-keywords; background: var(--panel-3); border-radius: var(--r-md); margin-bottom: 10px; overflow: hidden; }
+  .land__faq-item details summary { cursor: pointer; list-style: none; }
+  .land__faq-item details summary::-webkit-details-marker { display: none; }
+  .land__faq-item details::details-content {
+    height: 0;
+    overflow: clip;
+    transition: height var(--dur-base) var(--ease-out),
+                content-visibility 0s linear var(--dur-base) allow-discrete;
+  }
+  .land__faq-item details[open]::details-content {
+    height: auto;
+    content-visibility: visible;
+    transition: height var(--dur-base) var(--ease-out),
+                content-visibility 0s allow-discrete;
+  }
+  .land__faq-item .faq__q { transition: background-color var(--dur-fast) var(--ease-out); }
+  .land__faq-item .faq__q:hover { background: rgba(255,255,255,.06); }
+  .land__faq-item .faq__q i { transition: transform var(--dur-base) var(--ease-out); }
+  .land__faq-item details[open] .faq__q i { transform: rotate(45deg); }
+  @media (prefers-reduced-motion: reduce) {
+    .land__faq-item details::details-content,
+    .land__faq-item details[open]::details-content { transition: none; }
+    .land__faq-item .faq__q i { transition: none; }
+  }
   .land__back { display: block; text-align: center; padding: 40px 0 8px; color: var(--grey-150); font-size: 13px; text-decoration: none; }
   .land__back:hover { color: #fff; }
 </style>
