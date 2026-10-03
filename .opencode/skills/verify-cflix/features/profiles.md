@@ -32,3 +32,5 @@ Preconditions:
 - If there is no valid token, the page redirects to `/signin`; sign in first.
 - Maturity defaults to `adult` in the dialog; click the segment button to change it before creating.
 - Profile creation requires a name; clicking create with an empty name only shows the inline error.
+- A fresh account has an empty state: zero tiles, only the async-injected `#add-profile`. The tile list renders from `GET /api/profiles` and `#add-profile` is appended after the fetch resolves (`public/wire.js` lines 101-121), so recipes must wait for `#add-profile` to be present before counting tiles.
+- Profile creation caps at 5 per account: `server/src/profiles.js` lines 10-11 (`if (existing.length >= 5) throw new DomainError('PROFILE_LIMIT', 'max 5 profiles')`). Creating a sixth profile surfaces `max 5 profiles`; recipes must not assume unbounded creation.

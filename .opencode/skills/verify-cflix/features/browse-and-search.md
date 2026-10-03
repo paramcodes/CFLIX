@@ -34,3 +34,4 @@ Preconditions:
 - Home redirects to `/profiles` when `cflix_profile` is unset.
 - Progress posts from the player screen feed continue watching; a fresh server has an empty `#row-continue`.
 - Search results replace `#row-results` content; the wrap stays visible until the page reloads.
+- The search expectations assume an adult/teen-visible profile. A child profile filters out both teen seed items (`The Dark Knight`, `Dark` — both `maturity: 'teen'` in `server/src/catalog-data.js`), so `dark` returns 0 cards there. Filtering is `maturityAllowed` (`server/src/types.js` lines 1-5, rank `child: 0, teen: 1, adult: 2`) applied in `server/src/catalog.js`. Select an adult profile before asserting the two-card result.
