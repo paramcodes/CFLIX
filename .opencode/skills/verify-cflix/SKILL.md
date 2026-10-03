@@ -10,7 +10,7 @@ CFLIX is a Node static server plus JSON API serving 16 HTML/CSS/JS screens with 
 ## Launch
 
 ```sh
-PORT=3100 node server.js   # from the repo root; any free port works
+PORT=3100 node server/index.js   # from the repo root; any free port works
 ```
 
 Ready when the log prints `cflix on http://localhost:3100` and `curl -s localhost:3100/` returns HTML. Teardown: kill the PID you started (`kill $PID`); never kill by process name.
@@ -20,7 +20,7 @@ Ready when the log prints `cflix on http://localhost:3100` and `curl -s localhos
 Read-only check that the instance is worth driving. All must pass:
 
 - `curl -s -o /dev/null -w '%{http_code}' localhost:3100/` returns `200`.
-- `curl -s -o /dev/null -w '%{http_code}' localhost:3100/screens/02-sign-in.html` returns `200`.
+- `curl -s -o /dev/null -w '%{http_code}' localhost:3100/signin` returns `200`.
 - `curl -s -o /dev/null -w '%{http_code}' localhost:3100/api/profiles` returns `401` (API alive, auth enforced).
 
 A fresh instance accepts any new email for signup. If signup returns `EMAIL_TAKEN`, the store is dirty — restart the server.
@@ -29,12 +29,12 @@ A fresh instance accepts any new email for signup. If signup returns `EMAIL_TAKE
 
 Two surfaces; use both, mock neither without noting it.
 
-**Browser (Playwright).** Playwright is installed under `/tmp/opencode/node_modules`; run scripts with `NODE_PATH=/tmp/opencode/node_modules`. The same pattern as `scripts/capture.mjs`: launch chromium, `page.goto(base + '/screens/02-sign-in.html')`, drive by the selectors below. Every screen's behavior is wired by `public/wire.js` keyed on `document.body.dataset.page`; session state lives in `sessionStorage` keys `cflix_token`, `cflix_profile`, `cflix_play_ref`.
+**Browser (Playwright).** Playwright is installed under `/tmp/opencode/node_modules`; run scripts with `NODE_PATH=/tmp/opencode/node_modules`. The same pattern as `scripts/capture.mjs`: launch chromium, `page.goto(base + '/signin')`, drive by the selectors below. Every screen's behavior is wired by `public/wire.js` keyed on `document.body.dataset.page`; session state lives in `sessionStorage` keys `cflix_token`, `cflix_profile`, `cflix_play_ref`.
 
 Stable handles:
 
-- Sign in: `#in-email`, `#in-password`, `#btn-signin`, `#btn-signup`, `#btn-google`, error text in `#in-error`. Submit redirects to `/profiles.html`.
-- Profiles: `#profile-list .avatar-tile[data-id]` (click selects, stores `cflix_profile`, goes to `screens/05-home-page.html`), `#add-profile` opens dialog `#dlg-add` (`#dlg-name`, `#dlg-maturity button[data-m]`, `#dlg-create`, `#dlg-cancel`).
+- Sign in: `#in-email`, `#in-password`, `#btn-signin`, `#btn-signup`, `#btn-google`, error text in `#in-error`. Submit redirects to `/profiles`.
+- Profiles: `#profile-list .avatar-tile[data-id]` (click selects, stores `cflix_profile`, goes to `/home`), `#add-profile` opens dialog `#dlg-add` (`#dlg-name`, `#dlg-maturity button[data-m]`, `#dlg-create`, `#dlg-cancel`).
 - Home (`data-page="home"`): `#who` ("Watching as <name>"), `#row-movies`, `#row-series`, `#row-continue`, `#btn-switch`, `#search-form` + `#search-input`; results land in `#row-results` and `#row-results-wrap` becomes visible.
 - Detail (`data-page="detail"`, needs `?id=`): `.detail__artwork span` title, `#episodes .episode-link[data-ep]`, `#btn-play`.
 - Player (`data-page="player"`): `.player__title`, `#btn-finish`; progress posts every 10s of playback.

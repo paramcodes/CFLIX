@@ -124,4 +124,16 @@ check(
 r = await req('GET', '/api/profiles', null, 'bogus');
 check('bogus token rejected', r.status === 401);
 
+for (const p of ['/', '/signin', '/profiles', '/home', '/title', '/watch']) {
+  const res = await fetch(B + p);
+  check(`route ${p} returns 200`, res.status === 200);
+}
+for (const p of [
+  '/' + 'screens' + '/05-home-page.html',
+  '/prototype-index.html',
+]) {
+  const res = await fetch(B + p);
+  check(`old route ${p} returns 404`, res.status === 404);
+}
+
 process.exit(failures ? 1 : 0);

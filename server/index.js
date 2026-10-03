@@ -3,6 +3,15 @@ import { readFile } from 'node:fs/promises';
 import { join, extname, normalize } from 'node:path';
 import { AuthService, ProfileService, CatalogService } from './src/services.js';
 
+const PAGE_MAP = {
+  '/': '/index.html',
+  '/signin': '/(auth)/signin.html',
+  '/profiles': '/profiles.html',
+  '/home': '/home.html',
+  '/title': '/title.html',
+  '/watch': '/watch.html',
+};
+
 const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = new URL('../public/', import.meta.url).pathname;
 
@@ -113,7 +122,7 @@ const server = createServer(async (req, res) => {
     return;
   }
 
-  let path = normalize(url.pathname === '/' ? '/index.html' : url.pathname);
+  let path = normalize(PAGE_MAP[url.pathname] ?? url.pathname);
   if (path.includes('..')) {
     res.writeHead(403);
     res.end();

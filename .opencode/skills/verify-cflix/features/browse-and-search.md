@@ -11,16 +11,16 @@ The home screen shows rows of movies, series, and continue watching for the sele
 
 ## How to get to it (user POV)
 
-- After selecting a profile on `/profiles.html`.
+- After selecting a profile on `/profiles`.
 - After finishing playback (`#btn-finish` on the player screen).
-- "Switch profile" clears the profile and returns to `/profiles.html`.
+- "Switch profile" clears the profile and returns to `/profiles`.
 
 ## Driving it with Playwright
 
 Preconditions:
 
 - Signed in and a profile selected (`sessionStorage.cflix_token` and `cflix_profile` set).
-- Open `/screens/05-home-page.html`.
+- Open `/home`.
 
 - **Rows render.** Run `await page.locator('#row-movies .card').count()` and `#row-series .card`. Both are greater than zero for a seeded catalog.
 - **Continue watching.** If history exists, `#row-continue .card` lists those items. On a fresh store it is empty.
@@ -31,6 +31,6 @@ Preconditions:
 
 ## Gotchas
 
-- Home redirects to `../profiles.html` when `cflix_profile` is unset.
+- Home redirects to `/profiles` when `cflix_profile` is unset.
 - Progress posts from the player screen feed continue watching; a fresh server has an empty `#row-continue`.
 - Search results replace `#row-results` content; the wrap stays visible until the page reloads.

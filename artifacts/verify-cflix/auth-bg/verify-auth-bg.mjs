@@ -44,7 +44,7 @@ const browser = await chromium.launch();
 for (const vp of [{ width: 1440, height: 900 }, { width: 1920, height: 1080 }]) {
   const ctx = await browser.newContext({ viewport: vp, deviceScaleFactor: 1 });
   const page = await ctx.newPage();
-  await page.goto(`${base}/screens/02-sign-in.html`, { waitUntil: 'load' });
+  await page.goto(`${base}/signin`, { waitUntil: 'load' });
   await page.evaluate(() => window.scrollTo(0, 0));
 
   const tag = `${vp.width}x${vp.height}`;
@@ -126,7 +126,7 @@ for (const vp of [{ width: 1440, height: 900 }, { width: 1920, height: 1080 }]) 
 rmSync('/tmp/opencode/.auth-bg-video', { recursive: true, force: true });
 const vctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, recordVideo: { dir: '/tmp/opencode/.auth-bg-video', size: { width: 1440, height: 900 } } });
 const vpage = await vctx.newPage();
-await vpage.goto(`${base}/screens/02-sign-in.html`, { waitUntil: 'load' });
+await vpage.goto(`${base}/signin`, { waitUntil: 'load' });
 await vpage.fill('#in-email', 'wrong@example.com');
 await vpage.fill('#in-password', 'not-the-password');
 await vpage.click('#btn-signin');

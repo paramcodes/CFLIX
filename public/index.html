@@ -4,9 +4,9 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>CFLIX — Watch Unlimited Movies &amp; TV Shows</title>
-    <link rel="stylesheet" href="tokens.css" />
-    <link rel="stylesheet" href="base.css" />
-    <link rel="preload" as="image" href="hero-bg.webp" type="image/webp" />
+    <link rel="stylesheet" href="/tokens.css" />
+    <link rel="stylesheet" href="/base.css" />
+    <link rel="preload" as="image" href="/hero-bg.webp" type="image/webp" />
     <style>
       body {
         background: #000;
@@ -27,10 +27,10 @@
         justify-content: center;
         padding: 0 6%;
         overflow: hidden;
-        background: #000 url('hero-bg.jpg') center/cover no-repeat;
+        background: #000 url('/hero-bg.jpg') center/cover no-repeat;
         background-image: image-set(
-          url('hero-bg.webp') type('image/webp'),
-          url('hero-bg.jpg') type('image/jpeg')
+          url('/hero-bg.webp') type('image/webp'),
+          url('/hero-bg.jpg') type('image/jpeg')
         );
       }
       .land__hero::before {
@@ -190,16 +190,16 @@
         aspect-ratio: 16/10;
       }
       .land__mock--tv {
-        background: #000 url(mock-tv.jpg) center/cover no-repeat;
+        background: #000 url(/mock-tv.jpg) center/cover no-repeat;
       }
       .land__mock--download {
-        background: #000 url(mock-download.jpg) center/cover no-repeat;
+        background: #000 url(/mock-download.jpg) center/cover no-repeat;
       }
       .land__mock--everywhere {
-        background: #000 url(mock-everywhere.webp) center/contain no-repeat;
+        background: #000 url(/mock-everywhere.webp) center/contain no-repeat;
       }
       .land__mock--kids {
-        background: #000 url(mock-kids.jpg) center/cover no-repeat;
+        background: #000 url(/mock-kids.jpg) center/cover no-repeat;
       }
       .land__faq-wrap {
         padding: 8% 6%;
@@ -265,7 +265,7 @@
   <body class="land">
     <div class="land__hero">
       <nav class="land__nav">
-        <a class="land__logo" href="index.html"
+        <a class="land__logo" href="/"
           ><svg viewBox="0 0 124 44" aria-hidden="true">
             <defs><path id="arc-land" d="M4 38 Q62 10 120 38" /></defs>
             <text>
@@ -276,7 +276,7 @@
           </svg></a
         >
         <span class="nav__spacer"></span>
-        <a class="land__cta-in" href="screens/02-sign-in.html">Sign In</a>
+        <a class="land__cta-in" href="/signin">Sign In</a>
       </nav>
       <div class="land__hero-inner">
         <h1 class="land__h1">Unlimited movies, TV shows, and more</h1>
@@ -284,7 +284,7 @@
           Watch anywhere. Cancel anytime. Start your free week — no card
           required for the first seven days.
         </p>
-        <form class="land__form" action="screens/02-sign-in.html" method="get">
+        <form class="land__form" action="/signin" method="get">
           <input
             type="email"
             name="email"
@@ -388,9 +388,7 @@
     </section>
 
     <p style="text-align: center; margin: 0; padding-bottom: 60px">
-      <a class="btn btn--red" href="screens/02-sign-in.html"
-        >Start watching CFLIX</a
-      >
+      <a class="btn btn--red" href="/signin">Start watching CFLIX</a>
     </p>
 
     <footer class="footer" style="margin-top: 40px">

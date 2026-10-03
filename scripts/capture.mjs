@@ -12,8 +12,8 @@ mkdirSync(OUT, { recursive: true });
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 
-await page.goto(B + '/screens/02-sign-in.html');
-await page.evaluate(async () => {
+await page.goto(B + '/signin');
+const seed = await page.evaluate(async () => {
   const post = (p, b) =>
     fetch(p, {
       method: 'POST',
@@ -45,15 +45,22 @@ await page.evaluate(async () => {
     }).then((r2) => r2.json());
   sessionStorage.setItem('cflix_token', token);
   sessionStorage.setItem('cflix_profile', JSON.stringify(p));
+  const browse = await fetch('/api/catalog/browse?kind=movie', {
+    headers: {
+      authorization: `Bearer ${token}`,
+      'x-cflix-profile': p.id,
+    },
+  }).then((r3) => r3.json());
+  return { token, profile: p, seedId: browse.items[0].id };
 });
 
 const pages = [
-  ['index', '/index.html'],
-  ['signin', '/screens/02-sign-in.html'],
-  ['profiles', '/profiles.html'],
-  ['home', '/screens/05-home-page.html'],
-  ['detail', '/screens/09-title-detail.html'],
-  ['player', '/screens/10-player-scroll.html'],
+  ['index', '/'],
+  ['signin', '/signin'],
+  ['profiles', '/profiles'],
+  ['home', '/home'],
+  ['detail', `/title?id=${seed.seedId}`],
+  ['player', '/watch'],
 ];
 
 for (const [name, path] of pages) {
@@ -67,12 +74,19 @@ const ctx = await browser.newContext({
   viewport: { width: 1440, height: 900 },
   recordVideo: { dir: OUT, size: { width: 1440, height: 900 } },
 });
+await ctx.addInitScript(
+  ([t, p]) => {
+    sessionStorage.setItem('cflix_token', t);
+    sessionStorage.setItem('cflix_profile', p);
+  },
+  [seed.token, JSON.stringify(seed.profile)],
+);
 const vp = await ctx.newPage();
-await vp.goto(B + '/index.html', { waitUntil: 'networkidle' });
+await vp.goto(B + '/', { waitUntil: 'networkidle' });
 await vp.waitForTimeout(800);
 await vp.evaluate(() => window.scrollTo({ top: 600, behavior: 'smooth' }));
 await vp.waitForTimeout(1200);
-await vp.goto(B + '/screens/05-home-page.html', { waitUntil: 'networkidle' });
+await vp.goto(B + '/home', { waitUntil: 'networkidle' });
 await vp.waitForTimeout(1200);
 await vp.evaluate(() => window.scrollTo({ top: 900, behavior: 'smooth' }));
 await vp.waitForTimeout(1500);

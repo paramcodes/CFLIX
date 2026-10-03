@@ -17,7 +17,7 @@ async function status(path, opts) {
   return { status: res.status, type: res.headers.get('content-type'), len: Number(res.headers.get('content-length') || 0) };
 }
 
-for (const [p, want] of [['/', 200], ['/screens/02-sign-in.html', 200]]) {
+for (const [p, want] of [['/', 200], ['/signin', 200]]) {
   const { status: s } = await status(p);
   s === want ? ok(`doctor ${p} -> ${s}`) : fail(`doctor ${p} -> ${s}, want ${want}`);
 }
@@ -30,7 +30,7 @@ const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 page.on('response', (r) => { if (r.url().includes('/posters/')) log.push(`net  ${r.status()} ${r.url().replace(B, '')}`); });
 
-await page.goto(B + '/screens/02-sign-in.html');
+await page.goto(B + '/signin');
 await page.evaluate(async () => {
   const post = (p, b, token) => fetch(p, {
     method: 'POST',
@@ -47,7 +47,7 @@ await page.evaluate(async () => {
   sessionStorage.setItem('cflix_profile', JSON.stringify(p));
 });
 
-await page.goto(B + '/screens/05-home-page.html', { waitUntil: 'networkidle' });
+await page.goto(B + '/home', { waitUntil: 'networkidle' });
 await page.waitForTimeout(800);
 
 const rows = await page.evaluate(() => {
