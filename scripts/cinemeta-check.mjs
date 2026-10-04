@@ -107,11 +107,11 @@ function assertNoHtml(label, value) {
 
 async function main() {
   console.log('maturity derivation');
-  check('Animation/Family/Kids -> child', maturityFromGenres(['Animation', 'Family']), 'child');
-  check('Horror/War/Thriller/Crime -> adult', maturityFromGenres(['Crime', 'Drama']), 'adult');
-  check('anything else -> teen', maturityFromGenres(['Drama', 'Romance']), 'teen');
-  check('adult outranks child', maturityFromGenres(['Animation', 'Horror']), 'adult');
-  check('no genres -> teen', maturityFromGenres([]), 'teen');
+  check('Animation/Family/Kids -> child', maturityOf({ genres: ['Animation', 'Family'] }), 'child');
+  check('Horror/War/Thriller/Crime -> adult', maturityOf({ genres: ['Crime', 'Drama'] }), 'adult');
+  check('anything else -> teen', maturityOf({ genres: ['Drama', 'Romance'] }), 'teen');
+  check('adult outranks child', maturityOf({ genres: ['Animation', 'Horror'] }), 'adult');
+  check('no genres -> teen', maturityOf({ genres: [] }), 'teen');
 
   console.log('\nget() movie tt0111161 (The Shawshank Redemption)');
   const shawshankRaw = await rawMeta('movie', 'tt0111161');
