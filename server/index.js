@@ -66,11 +66,17 @@ const routes = {
 
   'GET /api/catalog/browse': async (req, body, token, profileId, url) => {
     requireAccount(token);
-    return CatalogService.browse(profileId, url.searchParams.get('kind'));
+    return CatalogService.browse(profileId, url.searchParams.get('kind'), {
+      genre: url.searchParams.get('genre'),
+    });
   },
   'GET /api/catalog/get': async (req, body, token, profileId, url) => {
     requireAccount(token);
     return CatalogService.get(profileId, url.searchParams.get('id'));
+  },
+  'GET /api/catalog/related': async (req, body, token, profileId, url) => {
+    requireAccount(token);
+    return CatalogService.related(profileId, url.searchParams.get('id'));
   },
   'POST /api/catalog/search': async (req, body, token, profileId) => {
     requireAccount(token);
@@ -86,7 +92,7 @@ const routes = {
   },
   'GET /api/history': async (req, body, token, profileId) => {
     requireAccount(token);
-    return { items: CatalogService.history(profileId) };
+    return { items: await CatalogService.history(profileId) };
   },
 };
 

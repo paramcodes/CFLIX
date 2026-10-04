@@ -186,7 +186,9 @@ const limitOf = (limit) => {
 };
 
 const imageUrl = (image) =>
-  image && typeof image === 'object' ? (image.original ?? image.medium ?? null) : null;
+  image && typeof image === 'object'
+    ? (image.original ?? image.medium ?? null)
+    : null;
 
 const yearOf = (iso) => {
   const year = Number.parseInt(String(iso ?? '').slice(0, 4), 10);
@@ -200,9 +202,8 @@ const yearOf = (iso) => {
  */
 function pickArtwork(images) {
   const ofType = (kind) =>
-    (Array.isArray(images)
-      ? images.find((i) => i?.type === kind)
-      : null)?.resolutions?.original?.url ?? null;
+    (Array.isArray(images) ? images.find((i) => i?.type === kind) : null)
+      ?.resolutions?.original?.url ?? null;
   return {
     backdropUrl: ofType('background') ?? ofType('banner'),
     logoUrl: ofType('typography'),
@@ -278,7 +279,9 @@ async function enrich(show) {
     request(`/shows/${showId}/cast`),
   ]);
   const episodes = Array.isArray(episodeList)
-    ? episodeList.map((episode) => normalizeEpisode(episode, showId, fallbackMinutes))
+    ? episodeList.map((episode) =>
+        normalizeEpisode(episode, showId, fallbackMinutes),
+      )
     : [];
   return normalizeSeries(show, {
     seasonCount: new Set(episodes.map((e) => e.seasonNumber)).size,
@@ -311,7 +314,9 @@ export async function browse({ kind = 'series', genre, skip = 0, limit } = {}) {
     .filter(Boolean)
     .map((show) => listing(show, show._embedded?.seasons?.length ?? 0));
   const matched = wanted
-    ? items.filter((item) => item.genres.some((g) => g.toLowerCase() === wanted))
+    ? items.filter((item) =>
+        item.genres.some((g) => g.toLowerCase() === wanted),
+      )
     : items;
   return matched.slice(0, cap);
 }

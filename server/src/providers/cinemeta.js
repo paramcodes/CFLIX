@@ -80,7 +80,9 @@ function stringList(value) {
 }
 
 function objectList(value) {
-  return Array.isArray(value) ? value.filter((v) => v && typeof v === 'object') : [];
+  return Array.isArray(value)
+    ? value.filter((v) => v && typeof v === 'object')
+    : [];
 }
 
 function posterUrl(value) {
@@ -129,7 +131,8 @@ function toEpisodes(videos, seriesId, episodeSeconds) {
       stillUrl: typeof v.thumbnail === 'string' ? v.thumbnail : null,
     }))
     .sort(
-      (a, b) => a.seasonNumber - b.seasonNumber || a.episodeNumber - b.episodeNumber,
+      (a, b) =>
+        a.seasonNumber - b.seasonNumber || a.episodeNumber - b.episodeNumber,
     );
 }
 
@@ -255,7 +258,9 @@ function interleave(groups) {
 function window(items, skip, limit) {
   const from = Math.max(0, Number(skip) || 0);
   const size =
-    limit === undefined || limit === null ? Infinity : Math.max(0, Number(limit) || 0);
+    limit === undefined || limit === null
+      ? Infinity
+      : Math.max(0, Number(limit) || 0);
   return items.slice(from, from + size);
 }
 
@@ -299,15 +304,15 @@ async function search(query, { kind, limit } = {}) {
 }
 
 async function episodes(item, { season } = {}) {
-  const seriesId =
-    item && typeof item === 'object' ? plainText(item.id) : '';
+  const seriesId = item && typeof item === 'object' ? plainText(item.id) : '';
   if (!seriesId) return [];
   // Always re-reads meta rather than trusting item.episodes, which is empty from
   // browse and truncated to the latest 20 anywhere upstream.
   const raw = await meta('series', seriesId);
   if (!raw) return [];
   const all = episodesOf(raw, seriesId);
-  const wanted = season === undefined || season === null ? null : Number(season);
+  const wanted =
+    season === undefined || season === null ? null : Number(season);
   return wanted === null ? all : all.filter((e) => e.seasonNumber === wanted);
 }
 

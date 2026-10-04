@@ -32,12 +32,7 @@ export const DEFAULT_MATURITY = 'teen';
 
 /** What a page or the browse genre filter needs to label a genre chip. */
 export const GENRE_VOCABULARY = Object.freeze({
-  child: Object.freeze([
-    'animation',
-    'children',
-    'family',
-    'kids',
-  ]),
+  child: Object.freeze(['animation', 'children', 'family', 'kids']),
   adult: Object.freeze([
     'adult',
     'crime',
@@ -86,7 +81,8 @@ export function maturityOf(source = {}) {
   // A real certificate outranks a genre guess. Kitsu files "Ecchi" and "Horror" under titles
   // rated G, and inferring adult from the genre would block them for no reason.
   const certificate =
-    MATURITY_BY_RATING.get(label(ageRating)) ?? MATURITY_BY_RATING.get(label(guide));
+    MATURITY_BY_RATING.get(label(ageRating)) ??
+    MATURITY_BY_RATING.get(label(guide));
   if (certificate) return certificate;
 
   let derived = DEFAULT_MATURITY;
