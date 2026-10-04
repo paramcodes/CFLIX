@@ -161,8 +161,11 @@ async function providerCall(name, op, keyParts, call, fallback) {
 }
 
 async function providerBrowseItems(kind, genre) {
+  // `anime` names Kitsu the same way search does; routing only inside search left
+  // browse?kind=anime answering with Cinemeta movies and series.
+  const name = KIND_PROVIDER[kind] ?? providerName();
   const items = await providerCall(
-    providerName(),
+    name,
     'browse',
     [kind ?? 'all', genre ?? '-'],
     (adapter) => adapter.browse({ kind, genre, limit: BROWSE_LIMIT }),
