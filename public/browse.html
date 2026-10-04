@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Browse &amp; Search | CFLIX</title>
+    <link rel="stylesheet" href="/tokens.css" />
+    <link rel="stylesheet" href="/base.css" />
+    <link rel="stylesheet" href="/css/browse.css" />
+  </head>
+  <body class="shell" data-page="browse">
+    <nav class="nav nav--solid" aria-label="Primary">
+      <a class="nav__logo" href="/home">CFLIX</a>
+      <div class="nav__links">
+        <a class="nav__link" href="/home">Home</a>
+        <a
+          class="nav__link nav__link--active"
+          href="/browse"
+          aria-current="page"
+          >Browse</a
+        >
+      </div>
+      <div class="nav__spacer"></div>
+      <a class="nav__link" href="/profiles" id="browse-who"></a>
+    </nav>
+
+    <main class="wrap browse">
+      <h1 class="browse__heading">Browse</h1>
+
+      <div class="browse__toolbar">
+        <form class="browse__control" id="browse-form" role="search" novalidate>
+          <label class="browse__label" for="browse-q">Search titles</label>
+          <input
+            class="browse__input"
+            id="browse-q"
+            name="q"
+            type="search"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="The Dark Knight"
+          />
+        </form>
+
+        <div class="browse__control">
+          <label class="browse__label" for="browse-genre">Genre</label>
+          <select class="browse__select" id="browse-genre"></select>
+        </div>
+      </div>
+
+      <div
+        class="browse__tabs"
+        id="browse-tabs"
+        role="tablist"
+        aria-label="Title kind"
+      ></div>
+
+      <p class="browse__status" id="browse-count" role="status"></p>
+      <p class="browse__note" id="browse-note" hidden></p>
+
+      <section
+        id="browse-panel"
+        role="tabpanel"
+        aria-label="Results"
+        aria-busy="true"
+      >
+        <div class="browse__grid" id="browse-grid"></div>
+
+        <div class="browse__state" id="browse-empty" hidden>
+          <h2>No titles</h2>
+          <p data-empty-copy></p>
+        </div>
+
+        <div class="browse__state" id="browse-error" hidden>
+          <h2 data-error-title>Something went wrong</h2>
+          <p data-error-copy></p>
+          <button class="btn btn--red" type="button" id="browse-retry">
+            Try again
+          </button>
+          <a
+            class="btn btn--ghost"
+            id="browse-error-link"
+            href="/profiles"
+            hidden
+            >Choose a profile</a
+          >
+        </div>
+      </section>
+
+      <div class="browse__more">
+        <button class="btn btn--ghost" type="button" id="browse-more" hidden>
+          Load more
+        </button>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="wrap">
+        <p class="footer__mark">CFLIX</p>
+        <p class="footer__note">
+          © 2026 CFLIX Design System screen prototype. Artwork is placeholder
+          gradient only.
+        </p>
+      </div>
+    </footer>
+
+    <script type="module" src="/wire.js"></script>
+  </body>
+</html>

@@ -4,6 +4,7 @@ const pages = {
   home: () => import('/js/pages/home.js'),
   detail: () => import('/js/pages/detail.js'),
   player: () => import('/js/pages/player.js'),
+  browse: () => import('/js/pages/browse.js'),
 };
 
 const page = document.body.dataset.page;

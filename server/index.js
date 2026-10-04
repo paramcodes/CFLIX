@@ -10,6 +10,7 @@ const PAGE_MAP = {
   '/home': '/home.html',
   '/title': '/title.html',
   '/watch': '/watch.html',
+  '/browse': '/browse.html',
 };
 
 const PORT = process.env.PORT || 3000;
