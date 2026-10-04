@@ -27,6 +27,7 @@
   inset: 0;
   z-index: 1;
   background: #000;
+  pointer-events: none;
 }
 
 .player__frame > div,
@@ -47,6 +48,27 @@
 
 .player__transport {
   z-index: 3;
+}
+
+.player__head,
+.player__elapsed,
+.player__bigplay,
+.player__transport,
+.note {
+  transition: opacity 150ms linear;
+}
+
+.player.is-idle .player__head,
+.player.is-idle .player__elapsed,
+.player.is-idle .player__bigplay,
+.player.is-idle .player__transport,
+.player.is-idle .note {
+  opacity: 0;
+}
+
+.player.is-idle,
+.player.is-idle * {
+  cursor: none;
 }
 
 .player__scrub {
