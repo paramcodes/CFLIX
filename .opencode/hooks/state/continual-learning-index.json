@@ -18,6 +18,12 @@
       "sources": ["subagent-handoff-cflix-restructure-p1-p6-trunk-behind-state"],
       "result": "No high-signal memory updates.",
       "reason": "Handoff covered transient behind-state, in-flight P1-P6 worktree ownership, and task-scoped instructions only; no durable reusable preferences or workspace facts, with explicit do-not-duplicate for in-flight route content."
+    },
+    {
+      "date": "2026-10-04",
+      "sources": ["post-reset-state-after-worktree-and-branch-prune"],
+      "result": "Updated AGENTS.md Learned Workspace Facts.",
+      "reason": "Reset to trunk f28e281, 111 worktrees and 42 branches pruned, all 12 child tasks merged, PR #19 closed unmerged, e5d2a8d content trap, and stale counts corrected. Verified against git, gh, and the on-disk file before writing; the non-fact sections of AGENTS.md still match origin/main byte for byte."
     }
   ]
 }
