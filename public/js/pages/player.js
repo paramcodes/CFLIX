@@ -230,6 +230,32 @@ export default async function player() {
     Promise.resolve(request).catch(() => {});
   };
 
+  const onKeydown = (event) => {
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
+    if (!state.ready || event.repeat) return;
+    const key = event.key?.toLowerCase();
+    if (key === ' ') {
+      const target = event.target;
+      const tag = target?.tagName?.toLowerCase();
+      // Space activates a focused control natively, so the page must stand
+      // down there or a button toggles twice.
+      if (
+        tag === 'button' ||
+        tag === 'input' ||
+        tag === 'select' ||
+        tag === 'textarea' ||
+        target?.isContentEditable
+      ) {
+        return;
+      }
+      event.preventDefault();
+      toggle();
+      return;
+    }
+    if (key === 'f') toggleFullscreen();
+    else if (key === 'm') toggleMute();
+  };
+
   const tick = () => {
     if (typeof state.player?.getCurrentTime !== 'function') return;
     const time = state.player.getCurrentTime();
@@ -284,6 +310,7 @@ export default async function player() {
     state.fullscreen = !!document.fullscreenElement;
     render();
   });
+  document.addEventListener('keydown', onKeydown);
 
   const ytPromise = loadYouTubeApi();
   const parentPromise =
