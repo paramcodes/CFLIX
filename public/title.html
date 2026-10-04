@@ -7,8 +7,65 @@
     <link rel="stylesheet" href="/tokens.css" />
     <link rel="stylesheet" href="/base.css" />
     <link rel="stylesheet" href="/css/detail.css" />
+    <link rel="stylesheet" href="/css/nav.css" />
+    <script type="module" src="/js/pages/nav.js"></script>
   </head>
   <body class="shell" data-page="detail">
+    <nav class="nav">
+      <a class="nav__logo" href="/home">
+        <svg viewBox="0 0 124 44" aria-hidden="true">
+          <defs><path id="arc-nav" d="M4 38 Q62 10 120 38" /></defs>
+          <text>
+            <textPath href="#arc-nav" startOffset="50%" text-anchor="middle">
+              CFLIX
+            </textPath>
+          </text>
+        </svg>
+      </a>
+      <div class="nav__spacer"></div>
+      <div class="nav__tools">
+        <button
+          type="button"
+          class="nav__bell"
+          aria-disabled="true"
+          title="Notifications are not implemented yet"
+          aria-label="Notifications, not implemented yet"
+        >
+          <svg
+            class="nav__icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path
+              d="M12 3.5a5.5 5.5 0 0 0-5.5 5.5c0 4-2 5.2-2 5.2h15s-2-1.2-2-5.2A5.5 5.5 0 0 0 12 3.5z"
+            />
+            <path d="M10.2 18.2a2 2 0 0 0 3.6 0" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          class="nav__avatar"
+          aria-haspopup="menu"
+          aria-expanded="false"
+          aria-controls="nav-menu"
+          aria-label="Profile menu"
+        >
+          <span class="nav__avatar-pic"></span>
+        </button>
+        <div
+          class="nav__menu"
+          id="nav-menu"
+          role="menu"
+          aria-label="Profile menu"
+          hidden
+        ></div>
+      </div>
+    </nav>
     <main class="detail">
       <section class="detail__hero">
         <div class="detail__backdrop" id="detail-backdrop"></div>
