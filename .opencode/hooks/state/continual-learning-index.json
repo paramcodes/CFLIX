@@ -24,6 +24,12 @@
       "sources": ["post-reset-state-after-worktree-and-branch-prune"],
       "result": "Updated AGENTS.md Learned Workspace Facts.",
       "reason": "Reset to trunk f28e281, 111 worktrees and 42 branches pruned, all 12 child tasks merged, PR #19 closed unmerged, e5d2a8d content trap, and stale counts corrected. Verified against git, gh, and the on-disk file before writing; the non-fact sections of AGENTS.md still match origin/main byte for byte."
+    },
+    {
+      "date": "2026-10-04",
+      "sources": ["player-controls-session-player-probe-traps-and-worktree-layout"],
+      "result": "Updated AGENTS.md: Learned Workspace Facts plus the Frontend Pages and Worktrees bullets in Workspace Architecture.",
+      "reason": "Mined and live-verified player-page probe traps (controls disabled until onReady, opacity:0-only hide styles, /title?id=s1 NO PREVIEW fixture, sound-on autoplay not blocked), the npm-test-is-HTTP-only gating fact, current worktree layout (.worktrees/player-controls on local-only feat/player-controls, gitignored .worktrees/arena-player), main == origin/main == e28cb4f, and the 41-PR count; merged two overlapping landed-work bullets to hold Learned Workspace Facts at exactly 12. Every claim checked against git, gh, and the source before writing, and the result diffed against git show origin/main:AGENTS.md — all 12 pre-existing facts preserved."
     }
   ]
 }
