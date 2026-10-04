@@ -18,27 +18,31 @@ async function req(method, path, body, token, profileId) {
   return { status: res.status, data: await res.json().catch(() => ({})) };
 }
 
+const smokeEmail =
+  process.env.SMOKE_EMAIL ||
+  `smoke_${Date.now()}_${Math.random().toString(36).slice(2, 7)}@test.dev`;
+
 let r = await req('POST', '/api/auth/signup', {
-  email: 'smoke@test.dev',
+  email: smokeEmail,
   password: 'pw123',
 });
 check('signup returns token', !!r.data.session?.token);
 r = await req('POST', '/api/auth/signin', {
-  email: 'smoke@test.dev',
+  email: smokeEmail,
   password: 'pw123',
 });
 check('signin works', r.status === 200);
 const token = r.data.session.token;
 r = await req('POST', '/api/auth/signin', {
-  email: 'smoke@test.dev',
+  email: smokeEmail,
   password: 'wrong',
 });
 check('bad password rejected', r.status === 400);
 
-r = await req('POST', '/api/auth/google', { idToken: 'google:smoke@test.dev' });
+r = await req('POST', '/api/auth/google', { idToken: `google:${smokeEmail}` });
 check(
   'google merges same email',
-  r.data.user?.email === 'smoke@test.dev' && r.status === 200,
+  r.data.user?.email === smokeEmail && r.status === 200,
 );
 
 r = await req(

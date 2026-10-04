@@ -137,7 +137,7 @@ const server = createServer(async (req, res) => {
     return;
   }
 
-  let path = normalize(PAGE_MAP[url.pathname] ?? url.pathname);
+  const path = normalize(PAGE_MAP[url.pathname] ?? url.pathname);
   if (path.includes('..')) {
     res.writeHead(403);
     res.end();

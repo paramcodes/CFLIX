@@ -1,6 +1,7 @@
 import { chromium } from 'playwright';
 
-const B = process.env.BASE_URL || `http://localhost:${process.env.PORT || 3194}`;
+const B =
+  process.env.BASE_URL || `http://localhost:${process.env.PORT || 3194}`;
 const EMAIL = `wiresplit-${Date.now()}@test.dev`;
 const PASSWORD = 'pw123456';
 const PROFILE = 'Kid';
@@ -14,7 +15,9 @@ function check(name, cond, detail = '') {
 }
 
 const browser = await chromium.launch();
-const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+const context = await browser.newContext({
+  viewport: { width: 1440, height: 900 },
+});
 await context.addInitScript(() => {
   window.__rejections = [];
   window.addEventListener('unhandledrejection', (e) => {
@@ -42,27 +45,49 @@ check(
   (await pageKey()) === 'sign-in',
   await pageKey(),
 );
-for (const sel of ['#in-email', '#in-password', '#btn-signin', '#btn-signup', '#btn-google', '#in-error']) {
-  check(`signin exposes ${sel}`, (await cards(sel)) === 1, `count=${await cards(sel)}`);
+for (const sel of [
+  '#in-email',
+  '#in-password',
+  '#btn-signin',
+  '#btn-signup',
+  '#btn-google',
+  '#in-error',
+]) {
+  check(
+    `signin exposes ${sel}`,
+    (await cards(sel)) === 1,
+    `count=${await cards(sel)}`,
+  );
 }
 
 await page.fill('#in-email', EMAIL);
 await page.fill('#in-password', PASSWORD);
 await page.fill('#in-password', 'wrong');
 await page.click('#btn-signin');
-await page.waitForFunction(() => document.querySelector('#in-error').textContent.length > 0);
+await page.waitForFunction(
+  () => document.querySelector('#in-error').textContent.length > 0,
+);
 check(
   'bad password shows inline #in-error and stays on /signin',
-  (await text('#in-error')).length > 0 && new URL(page.url()).pathname === '/signin',
+  (await text('#in-error')).length > 0 &&
+    new URL(page.url()).pathname === '/signin',
   `#in-error="${await text('#in-error')}" url=${new URL(page.url()).pathname}`,
 );
 
 await page.fill('#in-password', PASSWORD);
 await page.click('#btn-signup');
 await page.waitForURL('**/profiles');
-check('signup redirects to /profiles', new URL(page.url()).pathname === '/profiles', page.url());
+check(
+  'signup redirects to /profiles',
+  new URL(page.url()).pathname === '/profiles',
+  page.url(),
+);
 const token = await ses('cflix_token');
-check('signup sets sessionStorage.cflix_token', !!token, `cflix_token=${token ? 'set' : 'null'}`);
+check(
+  'signup sets sessionStorage.cflix_token',
+  !!token,
+  `cflix_token=${token ? 'set' : 'null'}`,
+);
 check(
   'signup clears sessionStorage.cflix_profile',
   (await ses('cflix_profile')) === null,
@@ -74,8 +99,16 @@ await page.fill('#in-email', EMAIL);
 await page.fill('#in-password', PASSWORD);
 await page.click('#btn-signin');
 await page.waitForURL('**/profiles');
-check('valid sign-in redirects to /profiles', new URL(page.url()).pathname === '/profiles', page.url());
-check('valid sign-in sets cflix_token', !!(await ses('cflix_token')), `cflix_token=${(await ses('cflix_token')) ? 'set' : 'null'}`);
+check(
+  'valid sign-in redirects to /profiles',
+  new URL(page.url()).pathname === '/profiles',
+  page.url(),
+);
+check(
+  'valid sign-in sets cflix_token',
+  !!(await ses('cflix_token')),
+  `cflix_token=${(await ses('cflix_token')) ? 'set' : 'null'}`,
+);
 
 const google = await context.newPage();
 await google.goto(`${B}/signin`);
@@ -107,7 +140,9 @@ await page.click('#add-profile');
 await page.waitForSelector('#dlg-add.is-open');
 await page.fill('#dlg-name', '');
 await page.click('#dlg-create');
-await page.waitForFunction(() => document.querySelector('#dlg-error').textContent.length > 0);
+await page.waitForFunction(
+  () => document.querySelector('#dlg-error').textContent.length > 0,
+);
 check(
   'empty #dlg-name blocks create with "Name is required."',
   (await text('#dlg-error')) === 'Name is required.' &&
@@ -123,29 +158,40 @@ await page.fill('#dlg-name', PROFILE);
 await page.click('#dlg-maturity button[data-m="adult"]');
 check(
   'maturity segment marks the clicked button active',
-  (await page.getAttribute('#dlg-maturity button[data-m="adult"]', 'class')).includes('is-active'),
+  (
+    await page.getAttribute('#dlg-maturity button[data-m="adult"]', 'class')
+  ).includes('is-active'),
   await page.getAttribute('#dlg-maturity button[data-m="adult"]', 'class'),
 );
 await page.click('#dlg-create');
 await page.waitForSelector('#dlg-add', { state: 'hidden' });
 await page.waitForFunction(
-  () => document.querySelectorAll('#profile-list .avatar-tile[data-id]').length === 1,
+  () =>
+    document.querySelectorAll('#profile-list .avatar-tile[data-id]').length ===
+    1,
 );
 check(
   'created tile reads "Kid · adult"',
-  (await text('#profile-list .avatar-tile[data-id]')).trim() === `${PROFILE} · adult`,
+  (await text('#profile-list .avatar-tile[data-id]')).trim() ===
+    `${PROFILE} · adult`,
   `tile="${(await text('#profile-list .avatar-tile[data-id]')).trim()}"`,
 );
 
 await page.click('#profile-list .avatar-tile[data-id]');
 await page.waitForURL('**/home');
-check('tile select lands on /home', new URL(page.url()).pathname === '/home', page.url());
+check(
+  'tile select lands on /home',
+  new URL(page.url()).pathname === '/home',
+  page.url(),
+);
 check(
   'home dispatches on data-page=home',
   (await pageKey()) === 'home',
   await pageKey(),
 );
-await page.waitForFunction(() => document.querySelector('#who').textContent.length > 0);
+await page.waitForFunction(
+  () => document.querySelector('#who').textContent.length > 0,
+);
 check(
   '#who reads "Watching as Kid"',
   (await text('#who')).trim() === `Watching as ${PROFILE}`,
@@ -161,12 +207,22 @@ check(
 await page.waitForFunction(
   () => document.querySelectorAll('#row-movies .card').length > 0,
 );
-check('#row-movies has cards', (await cards('#row-movies .card')) > 0, `count=${await cards('#row-movies .card')}`);
-check('#row-series has cards', (await cards('#row-series .card')) > 0, `count=${await cards('#row-series .card')}`);
+check(
+  '#row-movies has cards',
+  (await cards('#row-movies .card')) > 0,
+  `count=${await cards('#row-movies .card')}`,
+);
+check(
+  '#row-series has cards',
+  (await cards('#row-series .card')) > 0,
+  `count=${await cards('#row-series .card')}`,
+);
 
 await page.fill('#search-input', 'dark');
 await page.click('#search-form button');
-await page.waitForFunction(() => document.querySelectorAll('#row-results .card').length > 0);
+await page.waitForFunction(
+  () => document.querySelectorAll('#row-results .card').length > 0,
+);
 check(
   'search "dark" returns 2 cards in #row-results',
   (await cards('#row-results .card')) === 2,
@@ -182,7 +238,8 @@ await page.click('#row-movies .card');
 await page.waitForURL('**/title?id=*');
 check(
   'movie card opens /title?id=',
-  new URL(page.url()).pathname === '/title' && new URL(page.url()).searchParams.get('id') !== null,
+  new URL(page.url()).pathname === '/title' &&
+    new URL(page.url()).searchParams.get('id') !== null,
   page.url(),
 );
 check(
@@ -194,11 +251,21 @@ await page.waitForFunction(
   () => document.querySelector('.detail__artwork span').textContent.length > 0,
 );
 const movieTitle = (await text('.detail__artwork span')).trim();
-check('.detail__artwork span shows the movie title', movieTitle.length > 0, `title="${movieTitle}"`);
-check('document.title matches the movie title', (await page.title()) === movieTitle, await page.title());
+check(
+  '.detail__artwork span shows the movie title',
+  movieTitle.length > 0,
+  `title="${movieTitle}"`,
+);
+check(
+  'document.title matches the movie title',
+  (await page.title()) === movieTitle,
+  await page.title(),
+);
 
 await page.goto(`${B}/home`);
-await page.waitForFunction(() => document.querySelectorAll('#row-series .card').length > 0);
+await page.waitForFunction(
+  () => document.querySelectorAll('#row-series .card').length > 0,
+);
 await page.click('#row-series .card');
 await page.waitForURL('**/title?id=*');
 await page.waitForFunction(
@@ -212,7 +279,11 @@ check(
 
 await page.click('#btn-play');
 await page.waitForURL('**/watch');
-check('#btn-play lands on /watch', new URL(page.url()).pathname === '/watch', page.url());
+check(
+  '#btn-play lands on /watch',
+  new URL(page.url()).pathname === '/watch',
+  page.url(),
+);
 check(
   'player dispatches on data-page=player',
   (await pageKey()) === 'player',
@@ -221,9 +292,17 @@ check(
 await page.waitForFunction(
   () => sessionStorage.getItem('cflix_play_ref') === null,
 );
-check('player consumes cflix_play_ref', (await ses('cflix_play_ref')) === null, `cflix_play_ref=${await ses('cflix_play_ref')}`);
+check(
+  'player consumes cflix_play_ref',
+  (await ses('cflix_play_ref')) === null,
+  `cflix_play_ref=${await ses('cflix_play_ref')}`,
+);
 const playTitle = (await text('.player__title')).trim();
-check('.player__title shows the resolved item', playTitle.length > 0, `title="${playTitle}"`);
+check(
+  '.player__title shows the resolved item',
+  playTitle.length > 0,
+  `title="${playTitle}"`,
+);
 
 const elapsedAt = async () => (await text('.player__elapsed')).trim();
 const before = await elapsedAt();
@@ -251,10 +330,13 @@ check(
 
 await page.click('#btn-finish');
 await page.waitForURL('**/home');
-await page.waitForFunction(() => document.querySelector('#who').textContent.length > 0);
+await page.waitForFunction(
+  () => document.querySelector('#who').textContent.length > 0,
+);
 check(
   '#btn-finish returns to /home with #who intact',
-  new URL(page.url()).pathname === '/home' && (await text('#who')).trim() === `Watching as ${PROFILE}`,
+  new URL(page.url()).pathname === '/home' &&
+    (await text('#who')).trim() === `Watching as ${PROFILE}`,
   `url=${new URL(page.url()).pathname} #who="${(await text('#who')).trim()}"`,
 );
 
@@ -302,7 +384,9 @@ await guard.evaluate(
   JSON.stringify(stored),
 );
 await guard.goto(`${B}/home`);
-await guard.waitForFunction(() => document.querySelector('#who').textContent.length > 0);
+await guard.waitForFunction(
+  () => document.querySelector('#who').textContent.length > 0,
+);
 check(
   'guard: a seeded cflix_token + cflix_profile reach a rendered /home',
   (await guard.locator('#who').innerText()).trim() === `Watching as ${PROFILE}`,

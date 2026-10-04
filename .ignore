@@ -1,0 +1,6 @@
+.worktrees/
+.opencode/
+artifacts/
+node_modules/
+docs/revamp/
+docs/ui-*/

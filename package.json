@@ -6,12 +6,24 @@
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
-    "test": "node scripts/smoke.mjs",
+    "test": "node scripts/test-runner.mjs",
+    "test:smoke": "node scripts/smoke.mjs",
+    "test:adapters": "node scripts/cache-check.mjs && node scripts/cinemeta-check.mjs && node scripts/tvmaze-check.mjs && node scripts/kitsu-check.mjs",
+    "verify": "node scripts/verify/verify-all.mjs",
+    "verify:auth": "node scripts/verify/verify-auth.mjs",
+    "verify:profiles": "node scripts/verify/verify-profiles.mjs",
+    "verify:browse": "node scripts/verify/verify-browse.mjs",
+    "verify:playback": "node scripts/verify/verify-playback.mjs",
     "capture": "node scripts/capture.mjs",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.12.0",
+    "globals": "^17.13.0",
     "playwright": "^1.58.2",
     "prettier": "^3.9.9"
   },
