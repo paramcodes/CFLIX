@@ -5,8 +5,8 @@ import {
   search,
   episodes,
   lookupByImdbId,
-  genresToMaturity,
 } from '../server/src/providers/tvmaze.js';
+import { maturityOf } from '../server/src/providers/maturity.js';
 
 let failures = 0;
 
@@ -168,15 +168,15 @@ check('Arrow title', arrow.title, 'Arrow');
 check('Arrow logoUrl non-empty', typeof arrow.logoUrl === 'string' && arrow.logoUrl.length > 0, true);
 report('Arrow logoUrl', arrow.logoUrl);
 
-console.log('\n== genresToMaturity (derived, TVmaze ships no certificate)');
-check('Crime + Thriller', genresToMaturity(['Crime', 'Thriller']), 'adult');
-check('Horror', genresToMaturity(['Horror']), 'adult');
-check('Drama + Science-Fiction', genresToMaturity(['Drama', 'Science-Fiction']), 'teen');
-check('Comedy + Children', genresToMaturity(['Comedy', 'Children']), 'child');
-check('adult beats child', genresToMaturity(['Children', 'Crime']), 'adult');
-check('unknown genre falls to teen', genresToMaturity(['Reality']), 'teen');
-check('empty input', genresToMaturity([]), 'teen');
-check('non-array input', genresToMaturity(null), 'teen');
+console.log('\n== maturityOf (derived, TVmaze ships no certificate)');
+check('Crime + Thriller', maturityOf({ genres: ['Crime', 'Thriller'] }), 'adult');
+check('Horror', maturityOf({ genres: ['Horror'] }), 'adult');
+check('Drama + Science-Fiction', maturityOf({ genres: ['Drama', 'Science-Fiction'] }), 'teen');
+check('Comedy + Children', maturityOf({ genres: ['Comedy', 'Children'] }), 'child');
+check('adult beats child', maturityOf({ genres: ['Children', 'Crime'] }), 'adult');
+check('unknown genre falls to teen', maturityOf({ genres: ['Reality'] }), 'teen');
+check('empty input', maturityOf({ genres: [] }), 'teen');
+check('non-array input', maturityOf({ genres: null }), 'teen');
 
 console.log('\n== browse');
 const rail = await browse({ limit: 6 });

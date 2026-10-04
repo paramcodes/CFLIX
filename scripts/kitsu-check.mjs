@@ -4,9 +4,9 @@ import {
   get,
   search,
   episodes,
-  ageRatingToMaturity,
   RAILS,
 } from '../server/src/providers/kitsu.js';
+import { maturityOf } from '../server/src/providers/maturity.js';
 import { MATURITY_RANK } from '../server/src/types.js';
 
 const BASE = 'https://kitsu.io/api/edge';
@@ -196,7 +196,7 @@ const cases = [
   ['G', undefined, 'child'],
 ];
 for (const [rating, guide, expected] of cases) {
-  const got = ageRatingToMaturity(rating, { guide });
+  const got = maturityOf({ ageRating: rating, guide });
   check(
     `${JSON.stringify(rating)} / ${JSON.stringify(guide)} -> ${expected}`,
     got === expected,
@@ -205,15 +205,15 @@ for (const [rating, guide, expected] of cases) {
 }
 check(
   'nsfw:true overrides to adult',
-  ageRatingToMaturity('G', { nsfw: true }) === 'adult',
-  `got ${ageRatingToMaturity('G', { nsfw: true })}`,
+  maturityOf({ ageRating: 'G', nsfw: true }) === 'adult',
+  `got ${maturityOf({ ageRating: 'G', nsfw: true })}`,
 );
 check(
   'unmapped rating falls back to teen',
-  ageRatingToMaturity('XX', {}) === 'teen',
-  `got ${ageRatingToMaturity('XX', {})}`,
+  maturityOf({ ageRating: 'XX' }) === 'teen',
+  `got ${maturityOf({ ageRating: 'XX' })}`,
 );
-check('null rating falls back to teen', ageRatingToMaturity(null) === 'teen');
+check('null rating falls back to teen', maturityOf() === 'teen');
 console.log(
   '  real Kitsu rating census (Naruto/One Piece/Attack on Titan/Demon Slayer):',
 );
@@ -229,7 +229,7 @@ for (const q of [
   const at = r.body.data[0].attributes;
   show(
     `  ${at.canonicalTitle}`,
-    `${at.ageRating} | ${at.ageRatingGuide} -> ${ageRatingToMaturity(at.ageRating, { guide: at.ageRatingGuide, nsfw: at.nsfw })}`,
+    `${at.ageRating} | ${at.ageRatingGuide} -> ${maturityOf({ ageRating: at.ageRating, guide: at.ageRatingGuide, nsfw: at.nsfw })}`,
   );
 }
 
@@ -299,7 +299,8 @@ function toShape(d) {
       .replace(/\(Source:[^)]*\)/gi, ' ')
       .replace(/\s+/g, ' ')
       .trim(),
-    maturity: ageRatingToMaturity(at.ageRating, {
+    maturity: maturityOf({
+      ageRating: at.ageRating,
       guide: at.ageRatingGuide,
       nsfw: at.nsfw,
     }),

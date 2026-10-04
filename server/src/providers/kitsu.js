@@ -1,5 +1,7 @@
 const BASE = 'https://kitsu.io/api/edge';
 
+import { maturityOf } from './maturity.js';
+
 export const name = 'kitsu';
 
 /** Upstream rejects `page[limit]` above 20 with a 400, so every list call is clamped. */
@@ -30,46 +32,6 @@ export const RAILS = Object.freeze({
 });
 
 const RAIL_VALUES = new Set(Object.values(RAILS));
-
-/**
- * Kitsu's own age rating, mapped into the profile gate. Guides are listed because Kitsu pairs
- * each rating with a human label and some labels disagree with the letter's usual meaning.
- *
- * `PG` is rated `teen` on purpose: Kitsu also files kid-safe shows under `PG | Children`, and
- * the gate errs toward blocking. An unmapped rating falls back to `teen` for the same reason.
- */
-const MATURITY_BY_LABEL = new Map([
-  ['G', 'child'],
-  ['all ages', 'child'],
-  ['children', 'child'],
-  ['PG', 'teen'],
-  ['PG-13', 'teen'],
-  ['teens 13 or older', 'teen'],
-  ['R', 'adult'],
-  ['R17', 'adult'],
-  ['R18', 'adult'],
-  ['17+', 'adult'],
-  ['mature', 'adult'],
-]);
-
-/**
- * Kitsu's real age rating, unlike the movie and series adapters which infer maturity from
- * genres. `nsfw` overrides everything, because Kitsu refuses `filter[nsfw]` (400
- * "nsfw is not allowed") so a flagged record can only be caught on read.
- *
- * @param {string|null|undefined} ageRating
- * @param {{guide?: string|null, nsfw?: boolean}} [extra]
- * @returns {'child'|'teen'|'adult'}
- */
-export function ageRatingToMaturity(ageRating, { guide, nsfw } = {}) {
-  if (nsfw === true) return 'adult';
-  const label = typeof ageRating === 'string' ? ageRating.trim() : '';
-  if (label && MATURITY_BY_LABEL.has(label))
-    return MATURITY_BY_LABEL.get(label);
-  const guideLabel =
-    typeof guide === 'string' ? guide.trim().toLowerCase() : '';
-  return MATURITY_BY_LABEL.get(guideLabel) || 'teen';
-}
 
 function clampInt(value, { min, max, fallback }) {
   const n = Number.parseInt(value, 10);
@@ -163,6 +125,7 @@ function genreNames(record, included) {
 
 function toItem(record, included) {
   const a = record.attributes || {};
+  const genres = genreNames(record, included);
   return {
     kind: 'series',
     id: `kitsu:${record.id}`,
@@ -179,11 +142,13 @@ function toItem(record, included) {
     logoUrl: null,
     year: yearOf(a.startDate),
     durationSeconds: null,
-    maturity: ageRatingToMaturity(a.ageRating, {
+    maturity: maturityOf({
+      genres,
+      ageRating: a.ageRating,
       guide: a.ageRatingGuide,
       nsfw: a.nsfw,
     }),
-    genres: genreNames(record, included),
+    genres,
     cast: [],
     rating: ratingOf(a.averageRating),
     trailerYtId:
