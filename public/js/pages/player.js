@@ -115,7 +115,7 @@ export default async function player() {
   let posted = false;
   let previous = null;
   let ticker = null;
-  let lastActivity = 0;
+  let hideAt = 0;
   let hideTimer = 0;
 
   const showNotice = (kind, badge) => {
@@ -257,21 +257,18 @@ export default async function player() {
     hideTimer = 0;
     els.root.classList.remove('is-idle');
     if (!hideAllowed()) return;
-    // The deadline is derived from lastActivity, so re-calling this can never
-    // postpone a hide, however often it runs.
-    const remaining = Math.max(
-      0,
-      HIDE_AFTER_MS - (performance.now() - lastActivity),
+    hideTimer = setTimeout(
+      () => {
+        hideTimer = 0;
+        if (!hideAllowed()) return;
+        els.root.classList.add('is-idle');
+      },
+      Math.max(0, hideAt - performance.now()),
     );
-    hideTimer = setTimeout(() => {
-      hideTimer = 0;
-      if (!hideAllowed()) return;
-      els.root.classList.add('is-idle');
-    }, remaining);
   };
 
   const poke = () => {
-    lastActivity = performance.now();
+    hideAt = performance.now() + HIDE_AFTER_MS;
     scheduleHide();
   };
 
@@ -325,9 +322,6 @@ export default async function player() {
 
   els.seek.addEventListener('pointerdown', (event) => {
     scrubbing = true;
-    // Capture keeps the drag alive across the cross-origin iframe. Without
-    // it a pointerup over the embed never reaches this document, so
-    // scrubbing would stick true forever.
     try {
       els.seek.setPointerCapture(event.pointerId);
     } catch {}
@@ -483,8 +477,7 @@ export default async function player() {
         setControlsEnabled(true);
         if (!ticker) ticker = setInterval(tick, 250);
         render();
-        lastActivity = performance.now();
-        scheduleHide();
+        poke();
       },
       onStateChange: (event) => {
         state.status = YT_STATES[event.data] || 'ready';

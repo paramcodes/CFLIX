@@ -656,8 +656,8 @@ a {
   aspect-ratio: 16/9;
   background: #000;
   overflow: hidden;
-  /* `hidden` still scrolls on focus and shifts every geometry check; `clip` is
-     not a scroll container. The first line is the fallback for older engines. */
+  /* `hidden` still scrolls programmatically on focus; `clip` does not. The first
+     line is the fallback for engines without `clip`. */
   overflow: clip;
 }
 .player__still {
