@@ -665,9 +665,8 @@ a {
   position: absolute;
   left: 0;
   right: 0;
-  top: 0;
-  height: 3px;
-  background: rgba(255, 255, 255, 0.28);
+  top: auto;
+  bottom: 0;
 }
 .player__scrub i {
   display: block;

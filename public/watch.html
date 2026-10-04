@@ -20,22 +20,6 @@
           <div id="yt-player"></div>
         </div>
 
-        <div class="player__scrub">
-          <span class="player__buffer"></span>
-          <i></i>
-          <input
-            class="player__seek"
-            id="seek"
-            type="range"
-            min="0"
-            max="1"
-            step="1"
-            value="0"
-            aria-label="Seek"
-            aria-valuetext="0:00:00 of 0:00:00"
-          />
-        </div>
-
         <p class="player__elapsed" id="elapsed">0:00:00</p>
 
         <div class="player__head">
@@ -69,6 +53,22 @@
       </div>
 
       <div class="player__transport">
+        <div class="player__scrub">
+          <span class="player__buffer"></span>
+          <i></i>
+          <input
+            class="player__seek"
+            id="seek"
+            type="range"
+            min="0"
+            max="1"
+            step="1"
+            value="0"
+            aria-label="Seek"
+            aria-valuetext="0:00:00 of 0:00:00"
+          />
+        </div>
+
         <button
           class="player__ctrl"
           id="btn-back"

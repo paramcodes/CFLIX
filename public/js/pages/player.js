@@ -251,8 +251,14 @@ export default async function player() {
     render();
   };
 
-  els.seek.addEventListener('pointerdown', () => {
+  els.seek.addEventListener('pointerdown', (event) => {
     scrubbing = true;
+    // Capture keeps the drag alive across the cross-origin iframe. Without
+    // it a pointerup over the embed never reaches this document, so
+    // scrubbing would stick true forever.
+    try {
+      els.seek.setPointerCapture(event.pointerId);
+    } catch {}
   });
   window.addEventListener('pointerup', () => {
     scrubbing = false;
