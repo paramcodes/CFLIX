@@ -7,8 +7,9 @@
  *
  * @typedef {import('./contract.js').CatalogItem} CatalogItem
  * @typedef {import('./contract.js').Episode} Episode
- * @typedef {import('./contract.js').Maturity} Maturity
  */
+
+import { maturityOf } from './maturity.js';
 
 const BASE = 'https://api.tvmaze.com';
 const REQUEST_TIMEOUT_MS = 8000;
@@ -40,34 +41,6 @@ export const BROWSE_SEEDS = [
 ];
 
 export const name = 'tvmaze';
-
-const ADULT_GENRES = new Set([
-  'adult',
-  'crime',
-  'espionage',
-  'horror',
-  'thriller',
-  'war',
-]);
-const CHILD_GENRES = new Set(['animation', 'children', 'kids']);
-
-/**
- * Maturity is derived because TVmaze ships no certificate. The table is deliberately
- * conservative: an unrecognised genre lands on 'teen', and adult beats child so a show tagged
- * both ways is never shown to a child profile. Sibling adapters derive their own; the three
- * tables should be reconciled into one shared module.
- *
- * @param {string[]} genres
- * @returns {Maturity}
- */
-export function genresToMaturity(genres) {
-  const names = (Array.isArray(genres) ? genres : []).map((g) =>
-    String(g).toLowerCase(),
-  );
-  if (names.some((g) => ADULT_GENRES.has(g))) return 'adult';
-  if (names.some((g) => CHILD_GENRES.has(g))) return 'child';
-  return 'teen';
-}
 
 const NAMED_ENTITIES = {
   amp: '&',
@@ -280,7 +253,7 @@ function normalizeSeries(
     logoUrl: artwork.logoUrl ?? null,
     year: yearOf(show.premiered),
     durationSeconds: null,
-    maturity: genresToMaturity(show.genres),
+    maturity: maturityOf({ genres: show.genres }),
     genres: Array.isArray(show.genres) ? show.genres.map(String) : [],
     cast,
     rating: Number.isFinite(show.rating?.average) ? show.rating.average : null,

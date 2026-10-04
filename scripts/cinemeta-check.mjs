@@ -8,7 +8,8 @@
  */
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { cinemeta, maturityFromGenres } from '../server/src/providers/cinemeta.js';
+import { cinemeta } from '../server/src/providers/cinemeta.js';
+import { maturityOf } from '../server/src/providers/maturity.js';
 
 const BASE = process.env.CINEMETA_BASE || 'https://v3-cinemeta.strem.io';
 const EN_DASH = '–';
@@ -106,11 +107,11 @@ function assertNoHtml(label, value) {
 
 async function main() {
   console.log('maturity derivation');
-  check('Animation/Family/Kids -> child', maturityFromGenres(['Animation', 'Family']), 'child');
-  check('Horror/War/Thriller/Crime -> adult', maturityFromGenres(['Crime', 'Drama']), 'adult');
-  check('anything else -> teen', maturityFromGenres(['Drama', 'Romance']), 'teen');
-  check('adult outranks child', maturityFromGenres(['Animation', 'Horror']), 'adult');
-  check('no genres -> teen', maturityFromGenres([]), 'teen');
+  check('Animation/Family/Kids -> child', maturityOf({ genres: ['Animation', 'Family'] }), 'child');
+  check('Horror/War/Thriller/Crime -> adult', maturityOf({ genres: ['Crime', 'Drama'] }), 'adult');
+  check('anything else -> teen', maturityOf({ genres: ['Drama', 'Romance'] }), 'teen');
+  check('adult outranks child', maturityOf({ genres: ['Animation', 'Horror'] }), 'adult');
+  check('no genres -> teen', maturityOf({ genres: [] }), 'teen');
 
   console.log('\nget() movie tt0111161 (The Shawshank Redemption)');
   const shawshankRaw = await rawMeta('movie', 'tt0111161');

@@ -14,12 +14,11 @@
  *   - `imdbRating` is a string, and `""` for unrated titles.
  */
 
+import { maturityOf } from './maturity.js';
+
 const BASE = process.env.CINEMETA_BASE || 'https://v3-cinemeta.strem.io';
 const TIMEOUT_MS = Number(process.env.CINEMETA_TIMEOUT_MS || 8000);
 const NAME = 'cinemeta';
-
-const CHILD_GENRES = new Set(['animation', 'family', 'kids']);
-const ADULT_GENRES = new Set(['horror', 'war', 'thriller', 'crime']);
 
 const TAG = /<[^>]*>/g;
 const WHITESPACE = /\s+/g;
@@ -32,28 +31,6 @@ const ENTITIES = {
   '&#39;': "'",
   '&nbsp;': ' ',
 };
-
-/**
- * Maturity from genres. Shared: a sibling adapter should import this rather than
- * restate the table, so every provider gates a profile the same way.
- *
- * Adult wins over child because a maturity gate that under-blocks is worse than
- * one that over-blocks. Cinemeta ships no certificate, so this is a genre proxy
- * and it is coarse by nature: "Crime" alone puts a prestige drama at adult.
- *
- * @param {string[]|null|undefined} genres
- * @returns {import('./contract.js').Maturity}
- */
-export function maturityFromGenres(genres) {
-  const list = (Array.isArray(genres) ? genres : []).map((g) =>
-    String(g).toLowerCase(),
-  );
-  if (list.some((g) => ADULT_GENRES.has(g))) return 'adult';
-  if (list.some((g) => CHILD_GENRES.has(g))) return 'child';
-  return 'teen';
-}
-
-export const MATURITY_GENRES = { child: CHILD_GENRES, adult: ADULT_GENRES };
 
 function plainText(value) {
   if (typeof value !== 'string') return '';
@@ -175,7 +152,7 @@ function toItem(raw, kind, episodes) {
     // A series total is not a meaningful number, and Cinemeta's series runtime is
     // a per-episode average. It belongs on each Episode, never here.
     durationSeconds: kind === 'series' ? null : parseSeconds(raw.runtime),
-    maturity: maturityFromGenres(genres),
+    maturity: maturityOf({ genres }),
     genres,
     cast: stringList(raw.cast),
     rating: parseRating(raw.imdbRating),
