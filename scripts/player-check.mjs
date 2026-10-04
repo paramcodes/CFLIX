@@ -1,7 +1,8 @@
 import { chromium } from 'playwright';
 import { mkdirSync, writeFileSync } from 'node:fs';
 
-const B = process.env.BASE_URL || `http://localhost:${process.env.PORT || 3217}`;
+const B =
+  process.env.BASE_URL || `http://localhost:${process.env.PORT || 3217}`;
 const OUT_DIR = 'artifacts/verify-cflix';
 const stamp = new Date().toISOString().replace(/[:.]/g, '-');
 const EMAIL = `player-${Date.now()}@test.dev`;
@@ -52,7 +53,10 @@ async function until(fn, timeoutMs, everyMs = 300) {
   return value;
 }
 
-const signup = await post('/api/auth/signup', { email: EMAIL, password: PASSWORD });
+const signup = await post('/api/auth/signup', {
+  email: EMAIL,
+  password: PASSWORD,
+});
 const token = signup.data.session?.token;
 check('signup returns a token', !!token, `status=${signup.status}`);
 
@@ -64,18 +68,37 @@ const created = await post(
 const profile = created.data;
 check('adult profile created', !!profile.id, JSON.stringify(profile));
 
-const auth = { authorization: `Bearer ${token}`, 'x-cflix-profile': profile.id };
-const movies = (await get('/api/catalog/browse?kind=movie', auth)).data.items || [];
-const series = (await get('/api/catalog/browse?kind=series', auth)).data.items || [];
+const auth = {
+  authorization: `Bearer ${token}`,
+  'x-cflix-profile': profile.id,
+};
+const movies =
+  (await get('/api/catalog/browse?kind=movie', auth)).data.items || [];
+const series =
+  (await get('/api/catalog/browse?kind=series', auth)).data.items || [];
 const trailerMovie = movies.find((m) => m.trailerYtId);
 const trailerSeries = series.find((s) => s.trailerYtId);
 const seedMovie = (await get('/api/catalog/get?id=m1', auth)).data;
-check('catalog has a movie with a trailer', !!trailerMovie, `${trailerMovie?.id}`);
-check('catalog has a series with a trailer', !!trailerSeries, `${trailerSeries?.id}`);
-check('seed movie has no trailer', seedMovie?.trailerYtId == null, JSON.stringify(seedMovie?.trailerYtId));
+check(
+  'catalog has a movie with a trailer',
+  !!trailerMovie,
+  `${trailerMovie?.id}`,
+);
+check(
+  'catalog has a series with a trailer',
+  !!trailerSeries,
+  `${trailerSeries?.id}`,
+);
+check(
+  'seed movie has no trailer',
+  seedMovie?.trailerYtId == null,
+  JSON.stringify(seedMovie?.trailerYtId),
+);
 
 const browser = await chromium.launch();
-const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+const context = await browser.newContext({
+  viewport: { width: 1440, height: 900 },
+});
 await context.addInitScript(
   ({ t, p }) => {
     sessionStorage.setItem('cflix_token', t);
@@ -84,7 +107,10 @@ await context.addInitScript(
     window.__rejections = stored ? JSON.parse(stored) : [];
     window.addEventListener('unhandledrejection', (e) => {
       window.__rejections.push(String(e.reason));
-      sessionStorage.setItem('__player_rejections', JSON.stringify(window.__rejections));
+      sessionStorage.setItem(
+        '__player_rejections',
+        JSON.stringify(window.__rejections),
+      );
     });
   },
   { t: token, p: JSON.stringify(profile) },
@@ -97,11 +123,14 @@ page.on('console', (m) => {
   const text = m.text();
   if (m.type() !== 'error') return;
   if (text.includes('Failed to load resource')) return;
+  // Emitted inside the YouTube iframe's own document; the app does not own that policy.
+  if (text.includes('Permissions policy violation')) return;
   pageErrors.push(`console: ${text}`);
 });
 
 const text = (selector) => page.locator(selector).first().innerText();
-const attr = (selector, name) => page.locator(selector).first().getAttribute(name);
+const attr = (selector, name) =>
+  page.locator(selector).first().getAttribute(name);
 const value = (selector) => page.locator(selector).first().inputValue();
 const disabled = (selector) => page.locator(selector).first().isDisabled();
 const ytInfo = () =>
@@ -120,16 +149,24 @@ const ytInfo = () =>
 
 async function openWatch(ref) {
   await page.goto(`${B}/home`);
-  await page.evaluate((r) => sessionStorage.setItem('cflix_play_ref', JSON.stringify(r)), ref);
+  await page.evaluate(
+    (r) => sessionStorage.setItem('cflix_play_ref', JSON.stringify(r)),
+    ref,
+  );
   await page.goto(`${B}/watch`);
   await page.waitForFunction(
-    () => document.querySelector('.player__title').textContent.trim().length > 0,
+    () =>
+      document.querySelector('.player__title').textContent.trim().length > 0,
     null,
     { timeout: 20000 },
   );
 }
 
-check('server enforces auth', (await get('/api/profiles')).status === 401, 'unauthenticated read');
+check(
+  'server enforces auth',
+  (await get('/api/profiles')).status === 401,
+  'unauthenticated read',
+);
 
 const startedAt = Date.now();
 await openWatch({ kind: 'movie', id: trailerMovie.id });
@@ -147,7 +184,8 @@ const styleApplied = await page.evaluate(() => ({
 }));
 check(
   'page stylesheet /css/player.css is loaded and applied',
-  styleApplied.sheets.some((h) => h.endsWith('/css/player.css')) && styleApplied.height === '900px',
+  styleApplied.sheets.some((h) => h.endsWith('/css/player.css')) &&
+    styleApplied.height === '900px',
   JSON.stringify(styleApplied),
 );
 
@@ -160,9 +198,16 @@ check(
   `note="${note}"`,
 );
 
-const iframeUp = await until(async () => (await page.locator('.player__frame iframe').count()) === 1, 15000);
+const iframeUp = await until(
+  async () => (await page.locator('.player__frame iframe').count()) === 1,
+  15000,
+);
 const iframeCount = await page.locator('.player__frame iframe').count();
-check('real media element (youtube iframe) is present', !!iframeUp && iframeCount === 1, `iframes=${iframeCount}`);
+check(
+  'real media element (youtube iframe) is present',
+  !!iframeUp && iframeCount === 1,
+  `iframes=${iframeCount}`,
+);
 
 const reported = await until(async () => {
   const info = await ytInfo();
@@ -181,14 +226,30 @@ check(
 );
 
 const first = await text('#elapsed');
-const advanced = await until(async () => (await text('#elapsed')) !== first, 12000, 500);
-check('.player__elapsed advances from real playback', !!advanced, `${first} -> ${await text('#elapsed')}`);
+const advanced = await until(
+  async () => (await text('#elapsed')) !== first,
+  12000,
+  500,
+);
+check(
+  '.player__elapsed advances from real playback',
+  !!advanced,
+  `${first} -> ${await text('#elapsed')}`,
+);
 
 const playingLabel = await attr('#btn-toggle', 'aria-label');
-check('play button reads Pause while playing', playingLabel === 'Pause', `aria-label=${playingLabel}`);
+check(
+  'play button reads Pause while playing',
+  playingLabel === 'Pause',
+  `aria-label=${playingLabel}`,
+);
 await page.click('#btn-toggle');
 const paused = await until(async () => (await ytInfo())?.state === 2, 5000);
-check('clicking the control pauses real playback', !!paused, JSON.stringify(await ytInfo()));
+check(
+  'clicking the control pauses real playback',
+  !!paused,
+  JSON.stringify(await ytInfo()),
+);
 check(
   'play button reads Play while paused',
   (await attr('#btn-toggle', 'aria-label')) === 'Play',
@@ -196,15 +257,27 @@ check(
 );
 await page.click('#btn-toggle');
 const resumed = await until(async () => (await ytInfo())?.state === 1, 5000);
-check('clicking the control resumes playback', !!resumed, JSON.stringify(await ytInfo()));
+check(
+  'clicking the control resumes playback',
+  !!resumed,
+  JSON.stringify(await ytInfo()),
+);
 
-const history = await until(async () => {
-  const { data } = await get('/api/history', auth);
-  const row = (data.items || []).find((h) => h.itemId === trailerMovie.id);
-  return row && row.seconds > 0 ? row : null;
-}, 25000, 500);
+const history = await until(
+  async () => {
+    const { data } = await get('/api/history', auth);
+    const row = (data.items || []).find((h) => h.itemId === trailerMovie.id);
+    return row && row.seconds > 0 ? row : null;
+  },
+  25000,
+  500,
+);
 const nowPlaying = await ytInfo();
-check('progress reaches GET /api/history with seconds > 0', !!history, JSON.stringify(history));
+check(
+  'progress reaches GET /api/history with seconds > 0',
+  !!history,
+  JSON.stringify(history),
+);
 check(
   'posted seconds match the media element, not a synthetic counter',
   !!history &&
@@ -215,7 +288,12 @@ check(
 writeFileSync(
   `${OUT_DIR}/player-check-history-${stamp}.json`,
   JSON.stringify(
-    { itemId: trailerMovie.id, history, currentTime: nowPlaying?.current, buffered: nowPlaying?.buffered },
+    {
+      itemId: trailerMovie.id,
+      history,
+      currentTime: nowPlaying?.current,
+      buffered: nowPlaying?.buffered,
+    },
     null,
     2,
   ),
@@ -230,7 +308,10 @@ check(
 const seekBefore = Number(await value('#seek'));
 await page.focus('#seek');
 await page.keyboard.press('End');
-const seekEnd = await until(async () => (await ytInfo())?.current > (reported.duration || 0) - 4, 8000);
+const seekEnd = await until(
+  async () => (await ytInfo())?.current > (reported.duration || 0) - 4,
+  8000,
+);
 check(
   'keyboard End on the scrub bar seeks to the end',
   !!seekEnd && Math.abs(Number(await value('#seek')) - reported.duration) <= 2,
@@ -248,28 +329,66 @@ const seekBeforeArrow = Number(await value('#seek'));
 await page.keyboard.press('ArrowRight');
 await sleep(700);
 const seekAfterArrow = Number(await value('#seek'));
-check('keyboard arrow on the scrub bar nudges the position', seekAfterArrow > seekBeforeArrow, `${seekBeforeArrow} -> ${seekAfterArrow}`);
+check(
+  'keyboard arrow on the scrub bar nudges the position',
+  seekAfterArrow > seekBeforeArrow,
+  `${seekBeforeArrow} -> ${seekAfterArrow}`,
+);
 
 await page.focus('#vol');
 const volumeBefore = Number(await value('#vol'));
 await page.keyboard.press('ArrowLeft');
 const volumeAfter = Number(await value('#vol'));
-check('keyboard arrow on the volume slider changes the level', volumeAfter < volumeBefore, `${volumeBefore} -> ${volumeAfter}`);
+check(
+  'keyboard arrow on the volume slider changes the level',
+  volumeAfter < volumeBefore,
+  `${volumeBefore} -> ${volumeAfter}`,
+);
 
 await page.focus('#btn-mute');
 await page.keyboard.press('Enter');
 const mutedPressed = await attr('#btn-mute', 'aria-pressed');
-check('keyboard Enter on the mute button toggles aria-pressed', mutedPressed === 'true', `aria-pressed=${mutedPressed}`);
+check(
+  'keyboard Enter on the mute button toggles aria-pressed',
+  mutedPressed === 'true',
+  `aria-pressed=${mutedPressed}`,
+);
 await page.keyboard.press('Enter');
-check('mute button toggles back', (await attr('#btn-mute', 'aria-pressed')) === 'false', `aria-pressed=${await attr('#btn-mute', 'aria-pressed')}`);
+check(
+  'mute button toggles back',
+  (await attr('#btn-mute', 'aria-pressed')) === 'false',
+  `aria-pressed=${await attr('#btn-mute', 'aria-pressed')}`,
+);
 
 await page.focus('#btn-full');
 await page.keyboard.press('Enter');
-const fullscreen = await until(async () => page.evaluate(() => !!document.fullscreenElement), 5000);
-check('keyboard Enter on the fullscreen button enters fullscreen', !!fullscreen, `fullscreenElement=${await page.evaluate(() => !!document.fullscreenElement)}`);
-check('fullscreen button reports aria-pressed', (await attr('#btn-full', 'aria-pressed')) === 'true', `aria-pressed=${await attr('#btn-full', 'aria-pressed')}`);
-await page.keyboard.press('Escape');
-await until(async () => page.evaluate(() => !document.fullscreenElement), 5000);
+const fullscreen = await until(
+  async () => page.evaluate(() => !!document.fullscreenElement),
+  5000,
+);
+check(
+  'keyboard Enter on the fullscreen button enters fullscreen',
+  !!fullscreen,
+  `fullscreenElement=${await page.evaluate(() => !!document.fullscreenElement)}`,
+);
+check(
+  'fullscreen button reports aria-pressed',
+  (await attr('#btn-full', 'aria-pressed')) === 'true',
+  `aria-pressed=${await attr('#btn-full', 'aria-pressed')}`,
+);
+// Escape does not leave fullscreen in headless Chromium, so exit through the API and
+// assert it: an exit that silently fails resurfaces 50 lines later as an opaque
+// setViewportSize protocol error instead of a named check.
+await page.evaluate(() => document.exitFullscreen());
+const exited = await until(
+  async () => page.evaluate(() => !document.fullscreenElement),
+  5000,
+);
+check(
+  'fullscreen exits',
+  !!exited,
+  `fullscreenElement=${await page.evaluate(() => !!document.fullscreenElement)}`,
+);
 
 await page.keyboard.press('Tab');
 const reached = new Set();
@@ -300,27 +419,58 @@ for (let i = 0; i < 40; i++) {
     await page.keyboard.press('Enter');
     await sleep(300);
   }
-  const expected = ['btn-back', 'btn-toggle', 'btn-rew', 'btn-fwd', 'btn-mute', 'vol', 'seek', 'btn-full', 'btn-finish'];
+  const expected = [
+    'btn-back',
+    'btn-toggle',
+    'btn-rew',
+    'btn-fwd',
+    'btn-mute',
+    'vol',
+    'seek',
+    'btn-full',
+    'btn-finish',
+  ];
   if (expected.every((id) => reached.has(id))) break;
   await page.keyboard.press('Tab');
 }
-const expected = ['btn-back', 'btn-toggle', 'btn-rew', 'btn-fwd', 'btn-mute', 'vol', 'seek', 'btn-full', 'btn-finish'];
+const expected = [
+  'btn-back',
+  'btn-toggle',
+  'btn-rew',
+  'btn-fwd',
+  'btn-mute',
+  'vol',
+  'seek',
+  'btn-full',
+  'btn-finish',
+];
 for (const id of expected) {
-  check(`keyboard reaches #${id}`, reached.has(id), `reached=${[...reached].join(',')}`);
+  check(
+    `keyboard reaches #${id}`,
+    reached.has(id),
+    `reached=${[...reached].join(',')}`,
+  );
 }
 check('keyboard operates #seek', !!operations.seek, JSON.stringify(operations));
 check('keyboard operates #vol', !!operations.vol, JSON.stringify(operations));
-check('keyboard operates #btn-toggle', !!operations.toggle, JSON.stringify(operations));
+check(
+  'keyboard operates #btn-toggle',
+  !!operations.toggle,
+  JSON.stringify(operations),
+);
 
 await page.focus('#seek');
-await page.screenshot({ path: `${OUT_DIR}/player-trailer-controls-${stamp}.png` });
+await page.screenshot({
+  path: `${OUT_DIR}/player-trailer-controls-${stamp}.png`,
+});
 await page.evaluate(() => document.activeElement.blur());
 await page.screenshot({ path: `${OUT_DIR}/player-trailer-${stamp}.png` });
 
 await page.setViewportSize({ width: 375, height: 667 });
 await sleep(400);
 const narrow = await page.evaluate(() => {
-  const box = (selector) => document.querySelector(selector).getBoundingClientRect();
+  const box = (selector) =>
+    document.querySelector(selector).getBoundingClientRect();
   const stage = box('.player__stage');
   const transport = box('.player__transport');
   const finish = box('#btn-finish');
@@ -334,50 +484,78 @@ const narrow = await page.evaluate(() => {
 });
 check(
   'small viewport: controls sit below the media, not over it',
-  narrow.transportTop >= narrow.stageBottom - 1 && narrow.finishTop >= narrow.transportBottom - 1,
+  narrow.transportTop >= narrow.stageBottom - 1 &&
+    narrow.finishTop >= narrow.transportBottom - 1,
   JSON.stringify(narrow),
 );
-await page.screenshot({ path: `${OUT_DIR}/player-small-viewport-${stamp}.png` });
+await page.screenshot({
+  path: `${OUT_DIR}/player-small-viewport-${stamp}.png`,
+});
 await page.setViewportSize({ width: 1440, height: 900 });
 await sleep(300);
 
 await openWatch({ kind: 'movie', id: 'm1' });
 const posterBadge = (await text('#media-badge')).trim();
 const posterNote = (await text('#media-note')).trim();
-check('no-trailer title shows NO PREVIEW badge', posterBadge === 'NO PREVIEW', `badge="${posterBadge}"`);
+check(
+  'no-trailer title shows NO PREVIEW badge',
+  posterBadge === 'NO PREVIEW',
+  `badge="${posterBadge}"`,
+);
 check(
   'no-trailer label says nothing plays',
-  /No trailer for this title/.test(posterNote) && /nothing plays/.test(posterNote),
+  /No trailer for this title/.test(posterNote) &&
+    /nothing plays/.test(posterNote),
   `note="${posterNote}"`,
 );
 check(
   'no trailer means no media element',
-  (await page.locator('.player__frame iframe').count()) === 0 && (await page.locator('.player__frame').first().isHidden()),
+  (await page.locator('.player__frame iframe').count()) === 0 &&
+    (await page.locator('.player__frame').first().isHidden()),
   `iframes=${await page.locator('.player__frame iframe').count()}`,
 );
 check(
   'poster still with the .ph--still gradient is visible',
-  (await page.locator('.ph--still').first().isVisible()) && (await page.locator('.player__poster').first().isVisible()),
+  (await page.locator('.ph--still').first().isVisible()) &&
+    (await page.locator('.player__poster').first().isVisible()),
   '',
 );
 const posterElapsedA = await text('#elapsed');
 await sleep(3000);
 const posterElapsedB = await text('#elapsed');
-check('poster fallback never advances the clock', posterElapsedA === '0:00:00' && posterElapsedB === posterElapsedA, `${posterElapsedA} -> ${posterElapsedB}`);
+check(
+  'poster fallback never advances the clock',
+  posterElapsedA === '0:00:00' && posterElapsedB === posterElapsedA,
+  `${posterElapsedA} -> ${posterElapsedB}`,
+);
 check(
   'media controls are disabled with nothing to play',
-  (await disabled('#btn-toggle')) && (await disabled('#seek')) && (await disabled('#vol')) && (await disabled('#btn-fwd')),
+  (await disabled('#btn-toggle')) &&
+    (await disabled('#seek')) &&
+    (await disabled('#vol')) &&
+    (await disabled('#btn-fwd')),
   '',
 );
-check('back and finish stay operable', !(await disabled('#btn-back')) && !(await disabled('#btn-finish')), '');
+check(
+  'back and finish stay operable',
+  !(await disabled('#btn-back')) && !(await disabled('#btn-finish')),
+  '',
+);
 check(
   'time shows the title runtime with nothing playing',
-  (await text('#time')).trim() === `0:00:00 / ${clock(seedMovie.durationSeconds)}`,
+  (await text('#time')).trim() ===
+    `0:00:00 / ${clock(seedMovie.durationSeconds)}`,
   `#time="${await text('#time')}" expected="0:00:00 / ${clock(seedMovie.durationSeconds)}"`,
 );
-await page.screenshot({ path: `${OUT_DIR}/player-poster-fallback-${stamp}.png` });
+await page.screenshot({
+  path: `${OUT_DIR}/player-poster-fallback-${stamp}.png`,
+});
 
-const expectedPlay = await post('/api/play', { ref: { kind: 'series', id: trailerSeries.id } }, auth);
+const expectedPlay = await post(
+  '/api/play',
+  { ref: { kind: 'series', id: trailerSeries.id } },
+  auth,
+);
 await openWatch({ kind: 'series', id: trailerSeries.id });
 const episodeTitle = (await text('.player__title')).trim();
 const epnum = (await text('#epnum')).trim();
@@ -391,22 +569,49 @@ check(
   /^S\d+:E\d+$/.test(epnum),
   `epnum="${epnum}" season=${expectedPlay.data.item?.seasonNumber} episode=${expectedPlay.data.item?.episodeNumber}`,
 );
-const episodeTrailer = await until(async () => (await page.locator('.player__frame iframe').count()) === 1, 15000);
-check('episode plays the series trailer', !!episodeTrailer, `iframes=${await page.locator('.player__frame iframe').count()}`);
+const episodeTrailer = await until(
+  async () => (await page.locator('.player__frame iframe').count()) === 1,
+  15000,
+);
+check(
+  'episode plays the series trailer',
+  !!episodeTrailer,
+  `iframes=${await page.locator('.player__frame iframe').count()}`,
+);
 await sleep(2500);
 await page.screenshot({ path: `${OUT_DIR}/player-episode-${stamp}.png` });
 
 await page.click('#btn-finish');
 await page.waitForURL('**/home', { timeout: 10000 }).catch(() => {});
-check('#btn-finish returns to /home', new URL(page.url()).pathname === '/home', page.url());
+check(
+  '#btn-finish returns to /home',
+  new URL(page.url()).pathname === '/home',
+  page.url(),
+);
 
 const finishHistory = (await get('/api/history', auth)).data.items || [];
-const episodeRow = finishHistory.find((h) => h.itemId === expectedPlay.data.item?.id);
-check('mark watched records the episode with the cleared position', !!episodeRow && episodeRow.seconds === 0, JSON.stringify(episodeRow));
+const episodeRow = finishHistory.find(
+  (h) => h.itemId === expectedPlay.data.item?.id,
+);
+check(
+  'mark watched records the episode with the cleared position',
+  !!episodeRow && episodeRow.seconds === 0,
+  JSON.stringify(episodeRow),
+);
 
-const rejections = await page.evaluate(() => JSON.parse(sessionStorage.getItem('__player_rejections') || '[]'));
-check('no uncaught page errors', pageErrors.length === 0, JSON.stringify(pageErrors));
-check('no unhandled promise rejections', rejections.length === 0, JSON.stringify(rejections));
+const rejections = await page.evaluate(() =>
+  JSON.parse(sessionStorage.getItem('__player_rejections') || '[]'),
+);
+check(
+  'no uncaught page errors',
+  pageErrors.length === 0,
+  JSON.stringify(pageErrors),
+);
+check(
+  'no unhandled promise rejections',
+  rejections.length === 0,
+  JSON.stringify(rejections),
+);
 
 await browser.close();
 writeFileSync(`${OUT_DIR}/player-check-${stamp}.log`, rows.join('\n') + '\n');

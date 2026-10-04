@@ -220,8 +220,7 @@ export default async function player() {
     const box = document.querySelector('.player');
     const request = document.fullscreenElement
       ? document.exitFullscreen()
-      : (box.requestFullscreen?.() ??
-        box.webkitRequestFullscreen?.call(box));
+      : (box.requestFullscreen?.() ?? box.webkitRequestFullscreen?.call(box));
     Promise.resolve(request).catch(() => {});
   };
 
@@ -377,7 +376,8 @@ export default async function player() {
         state.muted = ready.isMuted();
         state.status = 'ready';
         const duration = ready.getDuration();
-        if (Number.isFinite(duration) && duration > 0) state.duration = duration;
+        if (Number.isFinite(duration) && duration > 0)
+          state.duration = duration;
         if (resume > 0 && resume < state.duration) ready.seekTo(resume, true);
         setControlsEnabled(true);
         if (!clocking) {
