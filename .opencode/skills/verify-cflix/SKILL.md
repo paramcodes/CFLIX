@@ -1,11 +1,11 @@
 ---
 name: verify-cflix
-description: "Verify CFLIX (the streaming prototype in this repo) by driving its real surfaces — Playwright browser for the 16 screens and static pages, plain HTTP for the JSON API. Use before claiming a UI/API change works."
+description: "Verify CFLIX (the streaming prototype in this repo) by driving its real surfaces — Playwright browser for the 7 screens and static pages, plain HTTP for the JSON API. Use before claiming a UI/API change works."
 ---
 
 # Verify CFLIX
 
-CFLIX is a Node static server plus JSON API serving 16 HTML/CSS/JS screens with an in-memory store. There is no build step and no database; state resets on restart.
+CFLIX is a Node static server plus JSON API serving 7 HTML pages through clean URLs (`/`, `/signin`, `/profiles`, `/home`, `/title`, `/watch`, `/browse`) with an in-memory store. There is no build step and no database; state resets on restart.
 
 ## Launch
 
@@ -36,8 +36,9 @@ Stable handles:
 - Sign in: `#in-email`, `#in-password`, `#btn-signin`, `#btn-signup`, `#btn-google`, error text in `#in-error`. Submit redirects to `/profiles`.
 - Profiles: `#profile-list .avatar-tile[data-id]` (click selects, stores `cflix_profile`, goes to `/home`), `#add-profile` opens dialog `#dlg-add` (`#dlg-name`, `#dlg-maturity button[data-m]`, `#dlg-create`, `#dlg-cancel`).
 - Home (`data-page="home"`): `#who` ("Watching as <name>"), `#row-movies`, `#row-series`, `#row-continue`, `#btn-switch`, `#search-form` + `#search-input`; results land in `#row-results` and `#row-results-wrap` becomes visible.
-- Detail (`data-page="detail"`, needs `?id=`): `.detail__artwork span` title, `#episodes .episode-link[data-ep]`, `#btn-play`.
-- Player (`data-page="player"`): `.player__title`, `#btn-finish`; progress posts every 10s of playback.
+- Detail (`data-page="detail"`, needs `?id=`): `#detail-title` holds the title — assert `textContent`, not visibility, because a loaded `#detail-logo` clips it to 1x1 px. `#episodes .episode-link[data-ep]` rows carry `.ep__num` (a bare number) and `.ep__name`, grouped under `.detail__ephead` ("Season N"). `#btn-play` starts playback.
+- Player (`data-page="player"`): `.player__title` ships empty — wait for `cflix_play_ref` to clear before asserting it. `#epnum` reads `S1:E1`. `#media-badge` reads `TRAILER`, `NO PREVIEW`, or `UNAVAILABLE`. `#btn-back` keeps progress and returns to `/title`; `#btn-finish` zeroes it and returns to `/home`. Progress posts only while a trailer is actually playing.
+- Browse (`data-page="browse"`): `#browse-count`, `#browse-grid .browse__card`, `#browse-tabs` with `#browse-tab-all|movie|series|anime`, `#browse-genre`, `#browse-empty`, `#browse-more`. State lives in `?q=`, `?kind=`, and `?genre=`.
 
 **API (plain HTTP).** `POST /api/auth/signup|signin|google`, `GET|POST /api/profiles`, `GET /api/catalog/browse|get`, `POST /api/catalog/search`, `POST /api/play`, `POST /api/progress`, `GET /api/history`. Auth via `Authorization: Bearer <token>`; profile scope via `x-cflix-profile: <id>` header. `scripts/smoke.mjs` exercises this surface end to end — it is an API probe, not UI proof.
 

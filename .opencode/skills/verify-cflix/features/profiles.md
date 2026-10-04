@@ -13,6 +13,7 @@ The profiles screen lists the account's profiles as avatar tiles, lets the user 
 
 - Redirected here after successful sign-in.
 - "Switch profile" on the home screen returns here with `cflix_profile` cleared.
+- The nav avatar menu: "Manage profiles" navigates to `/profiles` (`public/js/pages/nav.js:99-101`), and the menu itself lists the profiles for one-click switching (`nav.js:86-97`).
 
 ## Driving it with Playwright
 
@@ -32,5 +33,5 @@ Preconditions:
 - If there is no valid token, the page redirects to `/signin`; sign in first.
 - Maturity defaults to `adult` in the dialog; click the segment button to change it before creating.
 - Profile creation requires a name; clicking create with an empty name only shows the inline error.
-- A fresh account has an empty state: zero tiles, only the async-injected `#add-profile`. The tile list renders from `GET /api/profiles` and `#add-profile` is appended after the fetch resolves (`public/wire.js` lines 101-121), so recipes must wait for `#add-profile` to be present before counting tiles.
+- A fresh account has an empty state: zero tiles, only the async-injected `#add-profile`. The tile list renders from `GET /api/profiles` (`public/js/pages/profiles.js:12`) and `#add-profile` is appended after that fetch resolves (`profiles.js:23`, with its click handler wired at `profiles.js:30`), so recipes must wait for `#add-profile` to be present before counting tiles. `public/wire.js` is only a page-to-module map of 11 lines since the wiresplit; it no longer contains this code.
 - Profile creation caps at 5 per account: `server/src/profiles.js` lines 10-11 (`if (existing.length >= 5) throw new DomainError('PROFILE_LIMIT', 'max 5 profiles')`). Creating a sixth profile surfaces `max 5 profiles`; recipes must not assume unbounded creation.

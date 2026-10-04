@@ -30,5 +30,5 @@ Each feature file starts with an H1 title and one paragraph describing the user-
 
 - [Sign in and sign up](./auth-signin.md) covers password sign-in, sign-up, Google stub, and error states on the sign-in screen.
 - [Profile selection](./profiles.md) covers listing profiles, creating one with a maturity, and selecting one.
-- [Browse and search](./browse-and-search.md) covers home rows, continue watching, and title search on the home screen.
+- [Browse and search](./browse-and-search.md) covers home rows, continue watching, title search on the home screen, and the `/browse` grid.
 - [Playback and progress](./playback.md) covers detail view, starting playback, and progress flowing back into continue watching.
