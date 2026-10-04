@@ -76,7 +76,11 @@
   );
 }
 .row__rail[data-more='start'] {
-  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 46px), transparent 100%);
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    #000 calc(100% - 46px),
+    transparent 100%
+  );
   mask-image: linear-gradient(90deg, #000 calc(100% - 46px), transparent 100%);
 }
 .row__rail[data-more='end'] {
@@ -280,7 +284,12 @@
       rgba(0, 0, 0, 0.5) 52%,
       rgba(0, 0, 0, 0.12) 76%
     ),
-    linear-gradient(0deg, var(--page) 1%, rgba(0, 0, 0, 0.5) 30%, transparent 58%);
+    linear-gradient(
+      0deg,
+      var(--page) 1%,
+      rgba(0, 0, 0, 0.5) 30%,
+      transparent 58%
+    );
 }
 
 .hero__inner {

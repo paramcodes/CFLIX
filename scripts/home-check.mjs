@@ -1,13 +1,17 @@
 import { chromium } from 'playwright';
 import { mkdirSync } from 'node:fs';
 
-const B = process.env.PORT ? `http://localhost:${process.env.PORT}` : 'http://localhost:3311';
+const B = process.env.PORT
+  ? `http://localhost:${process.env.PORT}`
+  : 'http://localhost:3311';
 const OUT = 'artifacts/verify-cflix/home-page';
 mkdirSync(OUT, { recursive: true });
 
 let failures = 0;
 const check = (name, cond, detail = '') => {
-  console.log(`${cond ? 'PASS' : 'FAIL'}  ${name}${detail ? `  ${detail}` : ''}`);
+  console.log(
+    `${cond ? 'PASS' : 'FAIL'}  ${name}${detail ? `  ${detail}` : ''}`,
+  );
   if (!cond) failures++;
 };
 
@@ -24,13 +28,20 @@ const signIn = async (page, seed = false) => {
       }).then((r) => r.json());
     const email = 'homecheck@test.dev';
     let auth = await post('/api/auth/signup', { email, password: 'pw123456' });
-    if (auth.error) auth = await post('/api/auth/signin', { email, password: 'pw123456' });
+    if (auth.error)
+      auth = await post('/api/auth/signin', { email, password: 'pw123456' });
     const token = auth.session.token;
     const bearer = { authorization: `Bearer ${token}` };
-    const list = await fetch('/api/profiles', { headers: bearer }).then((r) => r.json());
+    const list = await fetch('/api/profiles', { headers: bearer }).then((r) =>
+      r.json(),
+    );
     const profile =
       list.items.find((p) => p.maturity === 'adult') ||
-      (await post('/api/profiles', { name: 'Grownup', maturity: 'adult' }, bearer));
+      (await post(
+        '/api/profiles',
+        { name: 'Grownup', maturity: 'adult' },
+        bearer,
+      ));
     if (withProgress) {
       await fetch('/api/progress', {
         method: 'POST',
@@ -47,7 +58,9 @@ const signIn = async (page, seed = false) => {
 const openHome = async (page, { waitForArt = true } = {}) => {
   await page.goto(B + '/home');
   await page.waitForSelector('#row-movies .card');
-  await page.waitForFunction(() => document.querySelectorAll('.hero__slide').length >= 4);
+  await page.waitForFunction(
+    () => document.querySelectorAll('.hero__slide').length >= 4,
+  );
   if (waitForArt) {
     await page.waitForFunction(
       () => {
@@ -91,7 +104,9 @@ const readRails = (page) =>
 /* ------------------------------------------------ rails scroll */
 
 {
-  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  const page = await browser.newPage({
+    viewport: { width: 1440, height: 900 },
+  });
   await signIn(page);
   await openHome(page);
   const rails = await readRails(page);
@@ -106,13 +121,21 @@ const readRails = (page) =>
         `skip  rail #${r.id} holds only ${r.cards} card(s), so it has nothing to scroll to`,
       );
     }
-    check(`rail #${r.id} overflow-x is auto`, r.overflowX === 'auto', r.overflowX);
+    check(
+      `rail #${r.id} overflow-x is auto`,
+      r.overflowX === 'auto',
+      r.overflowX,
+    );
     check(
       `rail #${r.id} snaps x mandatory, cards snap start`,
       r.snap === 'x mandatory' && r.snapAlign === 'start',
       `${r.snap} / ${r.snapAlign}`,
     );
-    check(`rail #${r.id} sets scroll-padding-inline`, parseFloat(r.snapPadInline) > 0, r.snapPadInline);
+    check(
+      `rail #${r.id} sets scroll-padding-inline`,
+      parseFloat(r.snapPadInline) > 0,
+      r.snapPadInline,
+    );
   }
   const long = rails.filter((r) => r.cards >= 6);
   check(
@@ -127,7 +150,9 @@ const readRails = (page) =>
 /* ------------------------------------------------ arrows scroll and disable at the ends */
 
 {
-  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  const page = await browser.newPage({
+    viewport: { width: 1440, height: 900 },
+  });
   await signIn(page);
   await openHome(page);
   const rail = page.locator('#row-movies');
@@ -140,18 +165,30 @@ const readRails = (page) =>
     (await prev.evaluate((el) => el.tagName)) === 'BUTTON' &&
       (await next.evaluate((el) => el.tagName)) === 'BUTTON',
   );
-  check('prev has an aria-label', (await prev.getAttribute('aria-label')) === 'Scroll Movies left', await prev.getAttribute('aria-label'));
-  check('next has an aria-label', (await next.getAttribute('aria-label')) === 'Scroll Movies right');
+  check(
+    'prev has an aria-label',
+    (await prev.getAttribute('aria-label')) === 'Scroll Movies left',
+    await prev.getAttribute('aria-label'),
+  );
+  check(
+    'next has an aria-label',
+    (await next.getAttribute('aria-label')) === 'Scroll Movies right',
+  );
   check('prev starts disabled', await prev.isDisabled());
   check('next starts enabled', await next.isEnabled());
 
   const width = await rail.evaluate((el) => el.clientWidth);
-  const cardWidth = await rail.evaluate((el) => el.firstElementChild.getBoundingClientRect().width);
+  const cardWidth = await rail.evaluate(
+    (el) => el.firstElementChild.getBoundingClientRect().width,
+  );
   const before = await rail.evaluate((el) => el.scrollLeft);
   await next.click();
   await page.waitForTimeout(600);
   const after = await rail.evaluate((el) => el.scrollLeft);
-  check(`next scrolls the rail (scrollLeft ${before} -> ${after})`, after > before);
+  check(
+    `next scrolls the rail (scrollLeft ${before} -> ${after})`,
+    after > before,
+  );
   check(
     `next scrolls about a page, not one card (card ${cardWidth}px, page ${width}px)`,
     after > cardWidth * 3 && after <= width + cardWidth + 10,
@@ -178,8 +215,16 @@ const readRails = (page) =>
   );
   const max = await rail.evaluate((el) => el.scrollWidth - el.clientWidth);
   const end = await rail.evaluate((el) => el.scrollLeft);
-  check('next disables at the end of the rail', await next.isDisabled(), `scrollLeft ${end} of ${max}`);
-  check('the rail parks at its maximum scrollLeft', Math.abs(end - max) < 4, `${end} vs ${max}`);
+  check(
+    'next disables at the end of the rail',
+    await next.isDisabled(),
+    `scrollLeft ${end} of ${max}`,
+  );
+  check(
+    'the rail parks at its maximum scrollLeft',
+    Math.abs(end - max) < 4,
+    `${end} vs ${max}`,
+  );
   check('prev is enabled at the end of the rail', await prev.isEnabled());
 
   await prev.focus();
@@ -194,12 +239,19 @@ const readRails = (page) =>
 /* ------------------------------------------------ hero: 4-5 slides, reshuffled per load */
 
 {
-  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  const page = await browser.newPage({
+    viewport: { width: 1440, height: 900 },
+  });
   await signIn(page);
   await openHome(page);
-  const order = () => page.$$eval('.hero__slide', (els) => els.map((el) => el.dataset.title));
+  const order = () =>
+    page.$$eval('.hero__slide', (els) => els.map((el) => el.dataset.title));
   const first = await order();
-  check(`hero renders 4-5 slides (${first.length})`, first.length >= 4 && first.length <= 5, first.join(' | '));
+  check(
+    `hero renders 4-5 slides (${first.length})`,
+    first.length >= 4 && first.length <= 5,
+    first.join(' | '),
+  );
 
   const slides = await page.$$eval('.hero__slide', (els) =>
     els.map((el) => ({
@@ -227,7 +279,11 @@ const readRails = (page) =>
       s.backdrop === 'yes' && /^https:/.test(s.art) && !!s.maturity,
       `${s.maturity} ${s.art.slice(0, 60)}`,
     );
-    check(`slide "${s.title}" has a title treatment`, s.logo === 'yes' ? !!s.wordmark : !!s.titleText, `logo=${s.logo} wordmark=${!!s.wordmark}`);
+    check(
+      `slide "${s.title}" has a title treatment`,
+      s.logo === 'yes' ? !!s.wordmark : !!s.titleText,
+      `logo=${s.logo} wordmark=${!!s.wordmark}`,
+    );
   }
   const quality = slides.filter((s) => s.quality);
   check(
@@ -252,21 +308,44 @@ const readRails = (page) =>
 /* ------------------------------------------------ hero arrows and dots */
 
 {
-  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  const page = await browser.newPage({
+    viewport: { width: 1440, height: 900 },
+  });
   await signIn(page);
   await openHome(page);
-  const active = () => page.getAttribute('.hero__slide.is-active', 'data-title');
+  const active = () =>
+    page.getAttribute('.hero__slide.is-active', 'data-title');
   const count = await page.locator('.hero__slide').count();
 
-  check('prev is disabled on the first slide', await page.locator('.hero__nav--prev').isDisabled());
-  check('next is enabled on the first slide', await page.locator('.hero__nav--next').isEnabled());
-  check('one dot per slide', (await page.locator('.hero__dot').count()) === count);
+  check(
+    'prev is disabled on the first slide',
+    await page.locator('.hero__nav--prev').isDisabled(),
+  );
+  check(
+    'next is enabled on the first slide',
+    await page.locator('.hero__nav--next').isEnabled(),
+  );
+  check(
+    'one dot per slide',
+    (await page.locator('.hero__dot').count()) === count,
+  );
 
   const dots = await page.$$eval('.hero__dot', (els) =>
-    els.map((el) => ({ tag: el.tagName, label: el.getAttribute('aria-label'), current: el.getAttribute('aria-current') })),
+    els.map((el) => ({
+      tag: el.tagName,
+      label: el.getAttribute('aria-label'),
+      current: el.getAttribute('aria-current'),
+    })),
   );
-  check('every dot is a button with an aria-label', dots.every((d) => d.tag === 'BUTTON' && !!d.label), JSON.stringify(dots[0]));
-  check('exactly one dot is aria-current', dots.filter((d) => d.current === 'true').length === 1);
+  check(
+    'every dot is a button with an aria-label',
+    dots.every((d) => d.tag === 'BUTTON' && !!d.label),
+    JSON.stringify(dots[0]),
+  );
+  check(
+    'exactly one dot is aria-current',
+    dots.filter((d) => d.current === 'true').length === 1,
+  );
 
   const a0 = await active();
   await page.click('.hero__nav--next');
@@ -278,24 +357,42 @@ const readRails = (page) =>
   await page.waitForTimeout(450);
   const last = await active();
   check(`the last dot jumps to the last slide (${a1} -> ${last})`, last !== a1);
-  check('next disables on the last slide', await page.locator('.hero__nav--next').isDisabled());
+  check(
+    'next disables on the last slide',
+    await page.locator('.hero__nav--next').isDisabled(),
+  );
 
   await page.locator('.hero__dot').first().focus();
   await page.keyboard.press('Enter');
   await page.waitForTimeout(400);
   const first = await active();
   check(`dots are keyboard operable (${last} -> ${first})`, first !== last);
-  check('prev disables back on the first slide', await page.locator('.hero__nav--prev').isDisabled());
+  check(
+    'prev disables back on the first slide',
+    await page.locator('.hero__nav--prev').isDisabled(),
+  );
 
   await page.click('.hero__nav--next');
   await page.waitForTimeout(400);
   const forward = await active();
-  check(`prev and next walk the slides (${first} -> ${forward})`, forward !== first);
+  check(
+    `prev and next walk the slides (${first} -> ${forward})`,
+    forward !== first,
+  );
   await page.click('.hero__nav--prev');
   await page.waitForTimeout(400);
-  check(`the prev arrow steps back (${forward} -> ${await active()})`, (await active()) === first);
-  const labels = await page.$$eval('.hero__nav', (els) => els.map((el) => el.getAttribute('aria-label')));
-  check('both hero arrows are aria-labelled', labels.every(Boolean), JSON.stringify(labels));
+  check(
+    `the prev arrow steps back (${forward} -> ${await active()})`,
+    (await active()) === first,
+  );
+  const labels = await page.$$eval('.hero__nav', (els) =>
+    els.map((el) => el.getAttribute('aria-label')),
+  );
+  check(
+    'both hero arrows are aria-labelled',
+    labels.every(Boolean),
+    JSON.stringify(labels),
+  );
   await page.screenshot({ path: `${OUT}/04-hero-second-slide.png` });
   await page.close();
 }
@@ -303,7 +400,9 @@ const readRails = (page) =>
 /* ------------------------------------------------ rows render real data */
 
 {
-  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  const page = await browser.newPage({
+    viewport: { width: 1440, height: 900 },
+  });
   await signIn(page);
   await openHome(page);
   const rows = ['#row-trending', '#row-movies', '#row-series', '#row-anime'];
@@ -319,7 +418,9 @@ const readRails = (page) =>
     check(`${id} renders cards (${cards.length})`, cards.length > 0);
     check(
       `${id} cards link to a real title page`,
-      cards.every((c) => c.title && c.title.length > 1 && /^\/title\?id=\S+/.test(c.href)),
+      cards.every(
+        (c) => c.title && c.title.length > 1 && /^\/title\?id=\S+/.test(c.href),
+      ),
       cards[0] ? `${cards[0].title} -> ${cards[0].href}` : 'no cards',
     );
   }
@@ -338,18 +439,28 @@ const readRails = (page) =>
     posters === movieCount,
   );
 
-  const ranks = await page.$$eval('#row-trending .card__num', (els) => els.map((e) => e.textContent.trim()));
+  const ranks = await page.$$eval('#row-trending .card__num', (els) =>
+    els.map((e) => e.textContent.trim()),
+  );
   check(
     `trending is the provider's own top 10 (${ranks.join(',')})`,
     ranks.length === 10 && ranks[0] === '1' && ranks[9] === '10',
   );
 
-  const genreTitles = await page.$$eval('[data-genre-row] .row__title', (els) => els.map((e) => e.textContent.trim()));
-  check(`two by-genre rows exist (${genreTitles.length})`, genreTitles.length >= 2, genreTitles.join(' | '));
+  const genreTitles = await page.$$eval('[data-genre-row] .row__title', (els) =>
+    els.map((e) => e.textContent.trim()),
+  );
+  check(
+    `two by-genre rows exist (${genreTitles.length})`,
+    genreTitles.length >= 2,
+    genreTitles.join(' | '),
+  );
   const genreRows = await page.$$eval('[data-genre-row]', (els) =>
     els.map((el) => ({
       genre: el.dataset.genreRow,
-      titles: [...el.querySelectorAll('.card__title')].map((t) => t.textContent.trim()),
+      titles: [...el.querySelectorAll('.card__title')].map((t) =>
+        t.textContent.trim(),
+      ),
     })),
   );
   check(
@@ -364,7 +475,9 @@ const readRails = (page) =>
         {
           headers: {
             authorization: `Bearer ${sessionStorage.getItem('cflix_token')}`,
-            'x-cflix-profile': JSON.parse(sessionStorage.getItem('cflix_profile')).id,
+            'x-cflix-profile': JSON.parse(
+              sessionStorage.getItem('cflix_profile'),
+            ).id,
           },
         },
       );
@@ -380,7 +493,9 @@ const readRails = (page) =>
     }, row.genre);
     check(
       `the ${row.genre} rail only holds ${row.genre} titles`,
-      api.allMatch && api.titles.length === row.titles.length && api.titles.every((t) => row.titles.includes(t)),
+      api.allMatch &&
+        api.titles.length === row.titles.length &&
+        api.titles.every((t) => row.titles.includes(t)),
       `rail ${row.titles.length} cards vs ${api.count} from the API`,
     );
   }
@@ -390,7 +505,9 @@ const readRails = (page) =>
 /* ------------------------------------------------ continue watching */
 
 {
-  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  const page = await browser.newPage({
+    viewport: { width: 1440, height: 900 },
+  });
   await signIn(page, true);
   await openHome(page);
   const cards = await page.$$eval('#row-continue .card', (els) =>
@@ -401,10 +518,21 @@ const readRails = (page) =>
       visible: el.offsetParent !== null,
     })),
   );
-  check(`continue watching lists history (${cards.length} cards)`, cards.length > 0, JSON.stringify(cards));
-  check('the continue watching section is visible', await page.locator('#row-continue').isVisible());
+  check(
+    `continue watching lists history (${cards.length} cards)`,
+    cards.length > 0,
+    JSON.stringify(cards),
+  );
+  check(
+    'the continue watching section is visible',
+    await page.locator('#row-continue').isVisible(),
+  );
   const dark = cards.find((c) => c.title === 'The Dark Knight');
-  check('history names The Dark Knight', !!dark, JSON.stringify(cards.map((c) => c.title)));
+  check(
+    'history names The Dark Knight',
+    !!dark,
+    JSON.stringify(cards.map((c) => c.title)),
+  );
   check(
     'the progress bar is filled from recorded seconds (3600 of 9120)',
     !!dark && dark.width === '39.5%' && dark.pct === '39.5',
@@ -419,55 +547,95 @@ const readRails = (page) =>
 /* ------------------------------------------------ nav raises past the hero */
 
 {
-  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  const page = await browser.newPage({
+    viewport: { width: 1440, height: 900 },
+  });
   await signIn(page);
   await openHome(page);
   const nav = page.locator('nav.nav');
-  const topBg = await nav.evaluate((el) => getComputedStyle(el).backgroundImage);
-  check('nav is fixed', (await nav.evaluate((el) => getComputedStyle(el).position)) === 'fixed');
-  check('nav keeps a gradient over the hero', topBg.includes('gradient'), topBg.slice(0, 60));
-  check('nav is not solid at the top of the page', !(await nav.evaluate((el) => el.classList.contains('is-raised'))));
-  await page.evaluate(() => window.scrollTo({ top: 1200, behavior: 'instant' }));
+  const topBg = await nav.evaluate(
+    (el) => getComputedStyle(el).backgroundImage,
+  );
+  check(
+    'nav is fixed',
+    (await nav.evaluate((el) => getComputedStyle(el).position)) === 'fixed',
+  );
+  check(
+    'nav keeps a gradient over the hero',
+    topBg.includes('gradient'),
+    topBg.slice(0, 60),
+  );
+  check(
+    'nav is not solid at the top of the page',
+    !(await nav.evaluate((el) => el.classList.contains('is-raised'))),
+  );
+  await page.evaluate(() =>
+    window.scrollTo({ top: 1200, behavior: 'instant' }),
+  );
   await page.waitForFunction(() =>
     document.querySelector('nav.nav')?.classList.contains('is-raised'),
   );
   await page.waitForFunction(
-    () => getComputedStyle(document.querySelector('nav.nav')).backgroundColor === 'rgb(0, 0, 0)',
+    () =>
+      getComputedStyle(document.querySelector('nav.nav')).backgroundColor ===
+      'rgb(0, 0, 0)',
   );
-  check('nav raises past the hero', await nav.evaluate((el) => el.classList.contains('is-raised')));
+  check(
+    'nav raises past the hero',
+    await nav.evaluate((el) => el.classList.contains('is-raised')),
+  );
   check(
     'the raised nav background is solid black',
-    (await nav.evaluate((el) => getComputedStyle(el).backgroundColor)) === 'rgb(0, 0, 0)',
+    (await nav.evaluate((el) => getComputedStyle(el).backgroundColor)) ===
+      'rgb(0, 0, 0)',
     await nav.evaluate((el) => getComputedStyle(el).backgroundColor),
   );
   await page.screenshot({ path: `${OUT}/06-nav-raised.png` });
   await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
   await page.waitForTimeout(600);
-  check('nav drops the solid background back at the top', !(await nav.evaluate((el) => el.classList.contains('is-raised'))));
+  check(
+    'nav drops the solid background back at the top',
+    !(await nav.evaluate((el) => el.classList.contains('is-raised'))),
+  );
   await page.close();
 }
 
 /* ------------------------------------------------ smooth scroll and reduced motion */
 
 {
-  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  const page = await browser.newPage({
+    viewport: { width: 1440, height: 900 },
+  });
   await signIn(page);
   await openHome(page);
   check(
     'rails scroll smoothly',
-    (await page.$eval('#row-movies', (el) => getComputedStyle(el).scrollBehavior)) === 'smooth',
+    (await page.$eval(
+      '#row-movies',
+      (el) => getComputedStyle(el).scrollBehavior,
+    )) === 'smooth',
   );
   await page.close();
 
-  const context = await browser.newContext({ reducedMotion: 'reduce', viewport: { width: 1440, height: 900 } });
+  const context = await browser.newContext({
+    reducedMotion: 'reduce',
+    viewport: { width: 1440, height: 900 },
+  });
   const still = await context.newPage();
   await signIn(still);
   await openHome(still);
   check(
     'prefers-reduced-motion turns smooth scrolling off',
-    (await still.$eval('#row-movies', (el) => getComputedStyle(el).scrollBehavior)) === 'auto',
+    (await still.$eval(
+      '#row-movies',
+      (el) => getComputedStyle(el).scrollBehavior,
+    )) === 'auto',
   );
-  await still.locator('#row-movies').locator('xpath=ancestor::section[1]').locator('.rail__nav--next').click();
+  await still
+    .locator('#row-movies')
+    .locator('xpath=ancestor::section[1]')
+    .locator('.rail__nav--next')
+    .click();
   await still.waitForTimeout(200);
   check(
     'the rail still scrolls under reduced motion',
@@ -477,12 +645,16 @@ const readRails = (page) =>
     'rows are opaque under reduced motion',
     (await still.$eval('.row', (el) => getComputedStyle(el).opacity)) === '1',
   );
-  const before = await still.getAttribute('.hero__slide.is-active', 'data-title');
+  const before = await still.getAttribute(
+    '.hero__slide.is-active',
+    'data-title',
+  );
   await still.click('.hero__dot:last-child');
   await still.waitForTimeout(200);
   check(
     'the hero still switches slides under reduced motion',
-    (await still.getAttribute('.hero__slide.is-active', 'data-title')) !== before,
+    (await still.getAttribute('.hero__slide.is-active', 'data-title')) !==
+      before,
   );
   await still.screenshot({ path: `${OUT}/07-reduced-motion.png` });
   await context.close();
@@ -491,22 +663,30 @@ const readRails = (page) =>
 /* ------------------------------------------------ search */
 
 {
-  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  const page = await browser.newPage({
+    viewport: { width: 1440, height: 900 },
+  });
   await signIn(page);
   await openHome(page);
   await page.fill('#search-input', 'dark');
   await page.click('#search-form button');
   await page.waitForTimeout(1200);
-  const titles = await page.$$eval('#row-results .card__title', (els) => els.map((e) => e.textContent.trim()));
+  const titles = await page.$$eval('#row-results .card__title', (els) =>
+    els.map((e) => e.textContent.trim()),
+  );
   check(
     'search fills #row-results with the dark titles',
     titles.includes('The Dark Knight') && titles.includes('Dark'),
     titles.join(', '),
   );
-  check('#row-results-wrap becomes visible', await page.locator('#row-results-wrap').isVisible());
+  check(
+    '#row-results-wrap becomes visible',
+    await page.locator('#row-results-wrap').isVisible(),
+  );
   check(
     'the results row links through to /browse',
-    (await page.getAttribute('#row-results-wrap a.browse-link', 'href')) === '/browse?q=dark',
+    (await page.getAttribute('#row-results-wrap a.browse-link', 'href')) ===
+      '/browse?q=dark',
   );
 
   await page.fill('#search-input', 'zzzznotathing');
@@ -524,7 +704,10 @@ const readRails = (page) =>
     (await page.locator('#row-results .card').count()) === 0 &&
       (await page.locator('#row-results-wrap').isVisible()),
   );
-  check('the empty state says so', await page.locator('#row-results-wrap .row__empty').isVisible());
+  check(
+    'the empty state says so',
+    await page.locator('#row-results-wrap .row__empty').isVisible(),
+  );
   await page.screenshot({ path: `${OUT}/08-search-results.png` });
   await page.close();
 }
@@ -532,7 +715,9 @@ const readRails = (page) =>
 /* ------------------------------------------------ tail loading asks a cursor for the next page */
 
 {
-  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  const page = await browser.newPage({
+    viewport: { width: 1440, height: 900 },
+  });
   await signIn(page);
   await openHome(page);
 
@@ -541,14 +726,21 @@ const readRails = (page) =>
       authorization: `Bearer ${sessionStorage.getItem('cflix_token')}`,
       'x-cflix-profile': JSON.parse(sessionStorage.getItem('cflix_profile')).id,
     };
-    const get = (q) => fetch(`/api/catalog/browse?${q}`, { headers: auth }).then((r) => r.json());
+    const get = (q) =>
+      fetch(`/api/catalog/browse?${q}`, { headers: auth }).then((r) =>
+        r.json(),
+      );
     const plain = await get('kind=movie');
     const paged = await get('kind=movie&limit=5&skip=20&cursor=20');
     const searchAt = (cursor) =>
       fetch('/api/catalog/search', {
         method: 'POST',
         headers: { ...auth, 'content-type': 'application/json' },
-        body: JSON.stringify({ text: 'one piece', limit: 12, ...(cursor ? { cursor } : {}) }),
+        body: JSON.stringify({
+          text: 'one piece',
+          limit: 12,
+          ...(cursor ? { cursor } : {}),
+        }),
       }).then((r) => r.json());
     const one = await searchAt(null);
     const two = await searchAt(one.nextCursor);
@@ -582,7 +774,8 @@ const readRails = (page) =>
 
   check(
     'browse rails carry no tail sentinel',
-    (await page.locator('.row:not(#row-results-wrap) .row__tail').count()) === 0,
+    (await page.locator('.row:not(#row-results-wrap) .row__tail').count()) ===
+      0,
   );
   check(
     'the cursor-backed results row carries one tail sentinel',
@@ -636,7 +829,9 @@ const readRails = (page) =>
 /* ------------------------------------------------ a missing backdrop falls back to a gradient */
 
 {
-  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  const page = await browser.newPage({
+    viewport: { width: 1440, height: 900 },
+  });
   await signIn(page);
   await page.addInitScript(() => {
     const real = window.fetch;
@@ -669,10 +864,15 @@ const readRails = (page) =>
       wordmark: !!el.querySelector('.hero__logo'),
     })),
   );
-  check('the hero still renders five slides with no art at all', fallback.length >= 4, JSON.stringify(fallback.map((s) => s.title)));
+  check(
+    'the hero still renders five slides with no art at all',
+    fallback.length >= 4,
+    JSON.stringify(fallback.map((s) => s.title)),
+  );
   check(
     'every slide with no backdropUrl falls back to a .ph--* gradient',
-    fallback.length > 0 && fallback.every((s) => s.backdrop === 'no' && s.gradient),
+    fallback.length > 0 &&
+      fallback.every((s) => s.backdrop === 'no' && s.gradient),
     JSON.stringify(fallback),
   );
   check(
@@ -687,7 +887,9 @@ const readRails = (page) =>
 /* ------------------------------------------------ a poster that 404s falls back to a gradient */
 
 {
-  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  const page = await browser.newPage({
+    viewport: { width: 1440, height: 900 },
+  });
   await signIn(page);
   await page.route('**/poster/**', (route) => route.abort());
   await openHome(page, { waitForArt: false });
@@ -698,7 +900,11 @@ const readRails = (page) =>
       painted: getComputedStyle(el).backgroundImage,
     })),
   );
-  check('poster requests really failed', arts.length > 0, `${arts.length} cards`);
+  check(
+    'poster requests really failed',
+    arts.length > 0,
+    `${arts.length} cards`,
+  );
   check(
     'every card whose poster 404s falls back to a painted gradient',
     arts.every((a) => a.gradient && !a.img && a.painted !== 'none'),
