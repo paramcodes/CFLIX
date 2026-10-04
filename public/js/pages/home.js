@@ -26,7 +26,8 @@ const ESCAPES = {
   "'": '&#39;',
 };
 
-const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ESCAPES[c]);
+const esc = (value) =>
+  String(value ?? '').replace(/[&<>"']/g, (c) => ESCAPES[c]);
 
 /** A URL safe to interpolate into an attribute. */
 const safeUrl = (value) => {
@@ -53,7 +54,9 @@ const gradientOf = (id) => {
  */
 const picture = (url, className) =>
   `<div class="${className} ${gradientOf(url.id)}">${
-    safeUrl(url.src) ? `<img src="${esc(safeUrl(url.src))}" alt="" onerror="this.remove()" />` : ''
+    safeUrl(url.src)
+      ? `<img src="${esc(safeUrl(url.src))}" alt="" onerror="this.remove()" />`
+      : ''
   }</div>`;
 
 const titleHref = (id) => `/title?id=${encodeURIComponent(id)}`;
@@ -67,7 +70,9 @@ const summarise = (text, max) => {
 };
 
 const browse = (query = '') =>
-  api(`/api/catalog/browse${query ? `?${query}` : ''}`).catch(() => ({ items: [] }));
+  api(`/api/catalog/browse${query ? `?${query}` : ''}`).catch(() => ({
+    items: [],
+  }));
 
 function shuffled(list) {
   const out = [...list];
@@ -156,7 +161,9 @@ function mountHero(items) {
       slide.classList.toggle('is-active', i === index);
       slide.toggleAttribute('inert', i !== index);
     });
-    dots.forEach((dot, i) => dot.setAttribute('aria-current', String(i === index)));
+    dots.forEach((dot, i) =>
+      dot.setAttribute('aria-current', String(i === index)),
+    );
     prev.disabled = index === 0;
     next.disabled = index === tracks.length - 1;
   };
@@ -172,7 +179,9 @@ function mountHero(items) {
 /** The best-rated titles that carry a backdrop, reshuffled on every load. */
 const heroPool = (items) => {
   const withArt = items.filter((item) => safeUrl(item.backdropUrl));
-  const pool = (withArt.length ? withArt : items).sort(byRating).slice(0, HERO_POOL);
+  const pool = (withArt.length ? withArt : items)
+    .sort(byRating)
+    .slice(0, HERO_POOL);
   return shuffled(pool).slice(0, HERO_SLIDES);
 };
 
@@ -182,7 +191,7 @@ function card(item, { index, shape, rank, pct }) {
   const maturity = MATURITY_LABEL[item.maturity];
   const filled = pct > 0 ? `${pct.toFixed(1)}%` : null;
 
-  return `<a class="card card--${shape}${rank ? ' card--rank' : ''}${filled ? ' card--progress' : ''}" href="${titleHref(item.id)}"${filled ? ` data-pct="${pct.toFixed(1)}"` : ''} style="--i:${index}">
+  return `<a class="card card--${shape}${rank ? ' card--rank' : ''}${filled ? ' card--progress' : ''}" href="${titleHref(item.id)}" data-id="${esc(item.id)}"${filled ? ` data-pct="${pct.toFixed(1)}"` : ''} style="--i:${index}">
     ${rank ? `<span class="card__num">${rank}</span>` : ''}
     ${picture({ id: item.id, src: item.posterUrl }, 'card__art')}
     ${maturity ? `<div class="card__badges"><span class="badge-maturity">${maturity}</span></div>` : ''}
@@ -212,7 +221,8 @@ function mount(section, shape, { hideWhenEmpty = true } = {}) {
     const atEnd = rail.scrollLeft >= max - 1;
     prev.disabled = atStart;
     next.disabled = atEnd;
-    rail.dataset.more = max <= 1 ? '' : atStart ? 'end' : atEnd ? 'start' : 'both';
+    rail.dataset.more =
+      max <= 1 ? '' : atStart ? 'end' : atEnd ? 'start' : 'both';
   };
   rail.addEventListener('scroll', sync, { passive: true });
   new ResizeObserver(sync).observe(rail);
@@ -224,7 +234,12 @@ function mount(section, shape, { hideWhenEmpty = true } = {}) {
       .map((entry, i) => {
         const { item, pct = null } = entry.item ? entry : { item: entry };
         const index = shown + i;
-        return card(item, { index, shape, rank: ranked ? index + 1 : null, pct });
+        return card(item, {
+          index,
+          shape,
+          rank: ranked ? index + 1 : null,
+          pct,
+        });
       })
       .join('');
 
@@ -310,7 +325,8 @@ function resumeEntries(rows) {
       const total = Number(item.durationSeconds);
       return {
         item,
-        pct: total > 0 ? Math.min(100, ((Number(seconds) || 0) / total) * 100) : 0,
+        pct:
+          total > 0 ? Math.min(100, ((Number(seconds) || 0) / total) * 100) : 0,
       };
     });
 }
@@ -344,12 +360,12 @@ export default async function home() {
       }),
     ]),
   );
-  for (const section of document.querySelectorAll('.row')) entering.observe(section);
+  for (const section of document.querySelectorAll('.row'))
+    entering.observe(section);
 
   const nav = document.querySelector('.nav');
-  new IntersectionObserver(
-    ([entry]) =>
-      nav?.classList.toggle('is-raised', entry.boundingClientRect.bottom <= 0),
+  new IntersectionObserver(([entry]) =>
+    nav?.classList.toggle('is-raised', entry.boundingClientRect.bottom <= 0),
   ).observe(document.getElementById('hero'));
 
   const [mixed, movies, series, anime, history] = await Promise.all([
@@ -386,24 +402,30 @@ export default async function home() {
   const search = async (from) =>
     api('/api/catalog/search', {
       method: 'POST',
-      body: { text: query, limit: SEARCH_PAGE, ...(from ? { cursor: from } : {}) },
+      body: {
+        text: query,
+        limit: SEARCH_PAGE,
+        ...(from ? { cursor: from } : {}),
+      },
     }).catch(() => ({ items: [], nextCursor: null }));
 
-  document.querySelector('#search-form').addEventListener('submit', async (event) => {
-    event.preventDefault();
-    query = document.querySelector('#search-input').value.trim();
-    const { items, nextCursor } = await search(null);
-    cursor = nextCursor;
-    exhausted = !nextCursor;
-    results.fill(items);
-    wrap.hidden = false;
-    empty.hidden = items.length > 0;
-    browseLink.hidden = !query;
-    browseLink.href = `/browse?q=${encodeURIComponent(query)}`;
-    browseLink.textContent = `Browse all results for “${query}”`;
-    wrap.dataset.enter = 'true';
-    wrap.scrollIntoView({ block: 'nearest' });
-  });
+  document
+    .querySelector('#search-form')
+    .addEventListener('submit', async (event) => {
+      event.preventDefault();
+      query = document.querySelector('#search-input').value.trim();
+      const { items, nextCursor } = await search(null);
+      cursor = nextCursor;
+      exhausted = !nextCursor;
+      results.fill(items);
+      wrap.hidden = false;
+      empty.hidden = items.length > 0;
+      browseLink.hidden = !query;
+      browseLink.href = `/browse?q=${encodeURIComponent(query)}`;
+      browseLink.textContent = `Browse all results for “${query}”`;
+      wrap.dataset.enter = 'true';
+      wrap.scrollIntoView({ block: 'nearest' });
+    });
 
   tailLoader(wrap, async () => {
     if (exhausted) return;
