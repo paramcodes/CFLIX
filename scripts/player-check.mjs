@@ -306,16 +306,49 @@ check(
 );
 
 const seekBefore = Number(await value('#seek'));
+const liveForSeek = await until(async () => {
+  const info = await ytInfo();
+  return info && info.state === 1 && info.buffered > 0.05 && info.current > 1;
+}, 15000);
+check(
+  'precondition: media is playing with a buffered range before the seek test',
+  !!liveForSeek,
+  JSON.stringify(liveForSeek),
+);
 await page.focus('#seek');
+const focusOnSeek = await page.evaluate(
+  () => document.activeElement?.id || document.activeElement?.tagName,
+);
+check(
+  'focus lands on the scrub bar',
+  focusOnSeek === 'seek',
+  `activeElement=${focusOnSeek}`,
+);
+await page.evaluate(() => {
+  window.__seekEvents = [];
+  const el = document.querySelector('#seek');
+  for (const type of ['keydown', 'input', 'change', 'keyup']) {
+    el.addEventListener(type, (e) =>
+      window.__seekEvents.push(`${type}:${e.key ?? el.value}`),
+    );
+  }
+});
 await page.keyboard.press('End');
+const seekTrace = await page.evaluate(() => ({
+  afterPress: window.__seekEvents.splice(0),
+  value: document.querySelector('#seek').value,
+}));
 const seekEnd = await until(
   async () => (await ytInfo())?.current > (reported.duration || 0) - 4,
   8000,
 );
+const seekTraceAfterWait = await page.evaluate(() =>
+  window.__seekEvents.splice(0),
+);
 check(
   'keyboard End on the scrub bar seeks to the end',
   !!seekEnd && Math.abs(Number(await value('#seek')) - reported.duration) <= 2,
-  `value=${await value('#seek')} current=${(await ytInfo())?.current} duration=${reported.duration}`,
+  `value=${await value('#seek')} current=${(await ytInfo())?.current} duration=${reported.duration} events=${JSON.stringify(seekTrace.afterPress)} valueAtPress=${seekTrace.value} eventsAfterWait=${JSON.stringify(seekTraceAfterWait)}`,
 );
 await page.keyboard.press('Home');
 const seekHome = await until(async () => (await ytInfo())?.current < 4, 8000);
@@ -371,9 +404,13 @@ check(
   !!fullscreen,
   `fullscreenElement=${await page.evaluate(() => !!document.fullscreenElement)}`,
 );
+const fullPressed = await until(
+  async () => (await attr('#btn-full', 'aria-pressed')) === 'true',
+  3000,
+);
 check(
   'fullscreen button reports aria-pressed',
-  (await attr('#btn-full', 'aria-pressed')) === 'true',
+  !!fullPressed,
   `aria-pressed=${await attr('#btn-full', 'aria-pressed')}`,
 );
 // Escape does not leave fullscreen in headless Chromium, so exit through the API and
@@ -390,16 +427,32 @@ check(
   `fullscreenElement=${await page.evaluate(() => !!document.fullscreenElement)}`,
 );
 
+const frameInfo = await page.evaluate(() => {
+  const frame = document.querySelector('.player__frame iframe');
+  return frame ? { tabIndex: frame.tabIndex, title: frame.title } : null;
+});
+check(
+  'media iframe is out of the sequential focus order',
+  !!frameInfo && frameInfo.tabIndex === -1 && !!frameInfo.title,
+  JSON.stringify(frameInfo),
+);
+
 await page.keyboard.press('Tab');
 const reached = new Set();
+const sweep = [];
 const operations = {};
 for (let i = 0; i < 40; i++) {
   const info = await page.evaluate(() => {
     const el = document.activeElement;
-    if (!el) return { id: '', tag: '' };
-    return { id: el.id || '', tag: el.tagName.toLowerCase() };
+    if (!el) return { id: '', tag: '', disabled: false };
+    return {
+      id: el.id || '',
+      tag: el.tagName.toLowerCase(),
+      disabled: !!el.disabled,
+    };
   });
   reached.add(info.id || info.tag);
+  sweep.push(`${info.id || info.tag}${info.disabled ? ':disabled' : ''}`);
   if (info.id === 'seek' && !operations.seek) {
     const before = await value('#seek');
     await page.keyboard.press('ArrowRight');
@@ -448,7 +501,7 @@ for (const id of expected) {
   check(
     `keyboard reaches #${id}`,
     reached.has(id),
-    `reached=${[...reached].join(',')}`,
+    `reached=${[...reached].join(',')} sweep=${sweep.join('>')}`,
   );
 }
 check('keyboard operates #seek', !!operations.seek, JSON.stringify(operations));
