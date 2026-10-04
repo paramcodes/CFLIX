@@ -25,6 +25,8 @@ const MEDIA_CONTROLS = [
   '#seek',
   '#btn-full',
 ];
+const HIDE_AFTER_MS = 3000;
+const RUNNING = new Set(['playing', 'buffering']);
 
 const $ = (selector) => document.querySelector(selector);
 const clock = (seconds) => fmt(Math.max(0, Math.floor(seconds)));
@@ -88,6 +90,9 @@ export default async function player() {
     mute: $('#btn-mute'),
     full: $('#btn-full'),
     finish: $('#btn-finish'),
+    root: $('.player'),
+    transport: $('.player__transport'),
+    still: $('.player__still'),
   };
 
   const state = {
@@ -110,6 +115,8 @@ export default async function player() {
   let posted = false;
   let previous = null;
   let ticker = null;
+  let hideAt = 0;
+  let hideTimer = 0;
 
   const showNotice = (kind, badge) => {
     els.badge.textContent = badge;
@@ -139,7 +146,7 @@ export default async function player() {
     const live = state.ready;
     const at = state.current;
     const total = state.duration;
-    const running = state.status === 'playing' || state.status === 'buffering';
+    const running = isRunning();
 
     els.elapsed.textContent = clock(at);
     els.time.textContent = `${clock(at)} / ${clock(total)}`;
@@ -230,6 +237,68 @@ export default async function player() {
     Promise.resolve(request).catch(() => {});
   };
 
+  const isRunning = () => RUNNING.has(state.status);
+
+  const transportKeyboardFocused = () => {
+    const active = document.activeElement;
+    if (!active || !els.transport.contains(active)) return false;
+    try {
+      return active.matches(':focus-visible');
+    } catch {
+      return false;
+    }
+  };
+
+  const hideAllowed = () =>
+    state.ready && isRunning() && !scrubbing && !transportKeyboardFocused();
+
+  const scheduleHide = () => {
+    clearTimeout(hideTimer);
+    hideTimer = 0;
+    els.root.classList.remove('is-idle');
+    if (!hideAllowed()) return;
+    hideTimer = setTimeout(
+      () => {
+        hideTimer = 0;
+        if (!hideAllowed()) return;
+        els.root.classList.add('is-idle');
+      },
+      Math.max(0, hideAt - performance.now()),
+    );
+  };
+
+  const poke = () => {
+    hideAt = performance.now() + HIDE_AFTER_MS;
+    scheduleHide();
+  };
+
+  const onKeydown = (event) => {
+    poke();
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
+    if (!state.ready || event.repeat) return;
+    const key = event.key?.toLowerCase();
+    if (key === ' ') {
+      const target = event.target;
+      const tag = target?.tagName?.toLowerCase();
+      // Space activates a focused control natively, so the page must stand
+      // down there or a button toggles twice.
+      if (
+        tag === 'button' ||
+        tag === 'input' ||
+        tag === 'select' ||
+        tag === 'textarea' ||
+        target?.isContentEditable
+      ) {
+        return;
+      }
+      event.preventDefault();
+      toggle();
+      return;
+    }
+    if (key === 'f') toggleFullscreen();
+    else if (key === 'm') toggleMute();
+  };
+
   const tick = () => {
     if (typeof state.player?.getCurrentTime !== 'function') return;
     const time = state.player.getCurrentTime();
@@ -251,20 +320,27 @@ export default async function player() {
     render();
   };
 
-  els.seek.addEventListener('pointerdown', () => {
+  els.seek.addEventListener('pointerdown', (event) => {
     scrubbing = true;
+    try {
+      els.seek.setPointerCapture(event.pointerId);
+    } catch {}
+    scheduleHide();
   });
   window.addEventListener('pointerup', () => {
     scrubbing = false;
+    poke();
   });
   els.seek.addEventListener('keydown', () => {
     scrubbing = true;
   });
   els.seek.addEventListener('keyup', () => {
     scrubbing = false;
+    scheduleHide();
   });
   els.seek.addEventListener('blur', () => {
     scrubbing = false;
+    scheduleHide();
   });
   els.seek.addEventListener('change', () => seek(Number(els.seek.value)));
   els.vol.addEventListener('input', () => setVolume(Number(els.vol.value)));
@@ -278,6 +354,12 @@ export default async function player() {
     state.fullscreen = !!document.fullscreenElement;
     render();
   });
+  document.addEventListener('pointermove', poke);
+  document.addEventListener('click', poke);
+  document.addEventListener('keydown', onKeydown);
+  els.transport.addEventListener('focusin', scheduleHide);
+  els.transport.addEventListener('focusout', () => setTimeout(scheduleHide));
+  els.still.addEventListener('click', toggle);
 
   const ytPromise = loadYouTubeApi();
   const parentPromise =
@@ -365,7 +447,6 @@ export default async function player() {
     host: YT_HOST,
     playerVars: {
       autoplay: 1,
-      mute: 1,
       playsinline: 1,
       enablejsapi: 1,
       origin: location.origin,
@@ -396,10 +477,12 @@ export default async function player() {
         setControlsEnabled(true);
         if (!ticker) ticker = setInterval(tick, 250);
         render();
+        poke();
       },
       onStateChange: (event) => {
         state.status = YT_STATES[event.data] || 'ready';
         render();
+        scheduleHide();
       },
       onError: () => {
         state.ready = false;
@@ -407,6 +490,7 @@ export default async function player() {
         showNotice('blocked', 'UNAVAILABLE');
         setControlsEnabled(false);
         render();
+        scheduleHide();
       },
     },
   });

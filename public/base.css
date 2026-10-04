@@ -656,6 +656,9 @@ a {
   aspect-ratio: 16/9;
   background: #000;
   overflow: hidden;
+  /* `hidden` still scrolls programmatically on focus; `clip` does not. The first
+     line is the fallback for engines without `clip`. */
+  overflow: clip;
 }
 .player__still {
   position: absolute;
@@ -665,9 +668,8 @@ a {
   position: absolute;
   left: 0;
   right: 0;
-  top: 0;
-  height: 3px;
-  background: rgba(255, 255, 255, 0.28);
+  top: auto;
+  bottom: 0;
 }
 .player__scrub i {
   display: block;

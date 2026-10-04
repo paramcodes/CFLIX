@@ -512,6 +512,196 @@ check(
   JSON.stringify(operations),
 );
 
+const barBox = await page.evaluate(() => {
+  const box = (selector) => {
+    const r = document.querySelector(selector).getBoundingClientRect();
+    return {
+      top: Math.round(r.top),
+      bottom: Math.round(r.bottom),
+      left: Math.round(r.left),
+      right: Math.round(r.right),
+      width: Math.round(r.width),
+    };
+  };
+  return {
+    scrub: box('.player__scrub'),
+    stage: box('.player__stage'),
+    player: box('.player'),
+    transport: box('.player__transport'),
+    parent: document.querySelector('.player__scrub').parentElement.className,
+  };
+});
+check(
+  'seek bar lies along the bottom edge of the stage',
+  barBox.parent === 'player__transport' &&
+    Math.abs(barBox.scrub.bottom - barBox.stage.bottom) <= 1 &&
+    Math.abs(barBox.scrub.bottom - barBox.player.bottom) <= 1 &&
+    Math.abs(barBox.scrub.left - barBox.player.left) <= 1 &&
+    Math.abs(barBox.scrub.width - barBox.player.width) <= 1 &&
+    barBox.scrub.top >= barBox.transport.top - 1,
+  JSON.stringify(barBox),
+);
+
+const glyph = await page.evaluate(() => {
+  const svg = document.querySelector('#btn-full svg');
+  return {
+    paths: [...svg.querySelectorAll('path')].map((p) => p.getAttribute('d')),
+    circles: svg.querySelectorAll('circle').length,
+  };
+});
+check(
+  '#btn-full draws an expand glyph, not a cast glyph',
+  glyph.circles === 0 &&
+    glyph.paths.join('|') ===
+      [
+        'M8 3H5a2 2 0 0 0-2 2v3',
+        'M21 8V5a2 2 0 0 0-2-2h-3',
+        'M3 16v3a2 2 0 0 0 2 2h3',
+        'M16 21h3a2 2 0 0 0 2-2v-3',
+      ].join('|'),
+  JSON.stringify(glyph),
+);
+
+await page.evaluate(() => document.activeElement?.blur());
+const blurredTo = await page.evaluate(
+  () => document.activeElement?.tagName || '',
+);
+const spaceBefore = await attr('#btn-toggle', 'aria-label');
+await page.keyboard.press('Space');
+const spaceFlipped = await until(
+  async () => (await attr('#btn-toggle', 'aria-label')) !== spaceBefore,
+  5000,
+);
+check(
+  'Space toggles play/pause with no form control focused',
+  !!spaceFlipped && blurredTo === 'BODY',
+  `active=${blurredTo} ${spaceBefore} -> ${await attr('#btn-toggle', 'aria-label')}`,
+);
+await page.keyboard.press('Space');
+const spaceBack = await until(
+  async () => (await attr('#btn-toggle', 'aria-label')) === spaceBefore,
+  5000,
+);
+check(
+  'Space toggles play/pause back',
+  !!spaceBack,
+  `aria-label=${await attr('#btn-toggle', 'aria-label')} expected=${spaceBefore}`,
+);
+
+await page.focus('#btn-toggle');
+const spaceButtonBefore = await attr('#btn-toggle', 'aria-label');
+await page.keyboard.press('Space');
+const spaceButtonFlipped = await until(
+  async () => (await attr('#btn-toggle', 'aria-label')) !== spaceButtonBefore,
+  5000,
+);
+await sleep(600);
+const spaceButtonAfter = await attr('#btn-toggle', 'aria-label');
+check(
+  'Space on a focused button activates it exactly once',
+  !!spaceButtonFlipped && spaceButtonAfter !== spaceButtonBefore,
+  `${spaceButtonBefore} -> ${spaceButtonAfter}`,
+);
+await page.keyboard.press('Space');
+const spaceButtonBack = await until(
+  async () => (await attr('#btn-toggle', 'aria-label')) === spaceButtonBefore,
+  5000,
+);
+check(
+  'Space on a focused button toggles back',
+  !!spaceButtonBack,
+  `aria-label=${await attr('#btn-toggle', 'aria-label')} expected=${spaceButtonBefore}`,
+);
+
+await page.keyboard.press('f');
+const fEntered = await until(
+  async () => page.evaluate(() => !!document.fullscreenElement),
+  5000,
+);
+check(
+  'f enters fullscreen',
+  !!fEntered,
+  `fullscreenElement=${await page.evaluate(() => !!document.fullscreenElement)}`,
+);
+await page.keyboard.press('f');
+const fExited = await until(
+  async () => page.evaluate(() => !document.fullscreenElement),
+  5000,
+);
+check(
+  'f exits fullscreen again',
+  !!fExited,
+  `fullscreenElement=${await page.evaluate(() => !!document.fullscreenElement)}`,
+);
+
+const muteBefore = await attr('#btn-mute', 'aria-pressed');
+await page.keyboard.press('m');
+const mFlipped = await until(
+  async () => (await attr('#btn-mute', 'aria-pressed')) !== muteBefore,
+  5000,
+);
+check(
+  'm toggles aria-pressed on the mute button',
+  !!mFlipped && muteBefore === 'false',
+  `${muteBefore} -> ${await attr('#btn-mute', 'aria-pressed')}`,
+);
+await page.keyboard.press('m');
+const mBack = await until(
+  async () => (await attr('#btn-mute', 'aria-pressed')) === muteBefore,
+  5000,
+);
+check(
+  'm toggles the mute button back',
+  !!mBack,
+  `aria-pressed=${await attr('#btn-mute', 'aria-pressed')} expected=${muteBefore}`,
+);
+
+await page.evaluate(() => document.activeElement?.blur());
+const idleLive = await until(async () => {
+  const info = await ytInfo();
+  return info && (info.state === 1 || info.state === 3) ? info : null;
+}, 8000);
+check(
+  'precondition: playback is running before the idle test',
+  !!idleLive,
+  JSON.stringify(idleLive),
+);
+const idleHidden = await until(async () => {
+  const opacities = await page.evaluate(() => ({
+    transport: getComputedStyle(document.querySelector('.player__transport'))
+      .opacity,
+    head: getComputedStyle(document.querySelector('.player__head')).opacity,
+    elapsed: getComputedStyle(document.querySelector('.player__elapsed'))
+      .opacity,
+    finish: getComputedStyle(document.querySelector('.note')).opacity,
+    cursor: getComputedStyle(document.querySelector('.player')).cursor,
+  }));
+  return opacities.transport === '0' ? opacities : null;
+}, 7000);
+check(
+  'overlay fades to opacity 0 after stillness and hides the cursor',
+  !!idleHidden &&
+    idleHidden.head === '0' &&
+    idleHidden.elapsed === '0' &&
+    idleHidden.finish === '0' &&
+    idleHidden.cursor === 'none',
+  JSON.stringify(idleHidden),
+);
+await page.mouse.move(720, 450);
+const idleShown = await until(
+  async () =>
+    (await page.evaluate(
+      () =>
+        getComputedStyle(document.querySelector('.player__transport')).opacity,
+    )) === '1',
+  5000,
+);
+check(
+  'a mouse move restores the overlay at once',
+  !!idleShown,
+  `opacity=${await page.evaluate(() => getComputedStyle(document.querySelector('.player__transport')).opacity)}`,
+);
+
 await page.focus('#seek');
 await page.screenshot({
   path: `${OUT_DIR}/player-trailer-controls-${stamp}.png`,

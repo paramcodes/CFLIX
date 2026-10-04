@@ -20,22 +20,6 @@
           <div id="yt-player"></div>
         </div>
 
-        <div class="player__scrub">
-          <span class="player__buffer"></span>
-          <i></i>
-          <input
-            class="player__seek"
-            id="seek"
-            type="range"
-            min="0"
-            max="1"
-            step="1"
-            value="0"
-            aria-label="Seek"
-            aria-valuetext="0:00:00 of 0:00:00"
-          />
-        </div>
-
         <p class="player__elapsed" id="elapsed">0:00:00</p>
 
         <div class="player__head">
@@ -69,6 +53,22 @@
       </div>
 
       <div class="player__transport">
+        <div class="player__scrub">
+          <span class="player__buffer"></span>
+          <i></i>
+          <input
+            class="player__seek"
+            id="seek"
+            type="range"
+            min="0"
+            max="1"
+            step="1"
+            value="0"
+            aria-label="Seek"
+            aria-valuetext="0:00:00 of 0:00:00"
+          />
+        </div>
+
         <button
           class="player__ctrl"
           id="btn-back"
@@ -223,18 +223,10 @@
           disabled
         >
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <path d="M2 16.1A5.1 5.1 0 0 1 7.1 21" />
-            <path d="M2 12.05A9 9 0 0 1 12 20" />
-            <path
-              d="M2 8V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"
-            />
-            <circle
-              cx="6.2"
-              cy="17.9"
-              r="1.5"
-              fill="currentColor"
-              stroke="none"
-            />
+            <path d="M8 3H5a2 2 0 0 0-2 2v3" />
+            <path d="M21 8V5a2 2 0 0 0-2-2h-3" />
+            <path d="M3 16v3a2 2 0 0 0 2 2h3" />
+            <path d="M16 21h3a2 2 0 0 0 2-2v-3" />
           </svg>
         </button>
       </div>
