@@ -44,6 +44,7 @@ export default async function signin() {
         body: { idToken: `google:${email}` },
       });
       ses.token = session.token;
+      ses.profile = null;
       location.href = '/profiles';
     } catch (e) {
       errEl.textContent = e.message;
