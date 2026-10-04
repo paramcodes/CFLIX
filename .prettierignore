@@ -2,6 +2,7 @@ artifacts/
 docs/
 node_modules/
 .worktrees/
+.opencode/
 package-lock.json
 *.png
 *.mp4

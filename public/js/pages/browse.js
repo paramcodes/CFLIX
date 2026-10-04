@@ -263,7 +263,7 @@ export default async function browse() {
       : { status: 'loading', rows: [], nextCursor: null, failure: null };
     render({ reset: !appending, add: [], skeletons: true });
 
-    let fresh = [];
+    let fresh;
     try {
       const data = await api(request.path, {
         method: request.method,

@@ -176,7 +176,7 @@ const within = async (ms, promise) =>
   ];
   for (const [label, body] of corrupt) {
     await writeFile(path, body);
-    let hit = 'threw';
+    let hit;
     try {
       hit = await store.get('k');
     } catch (err) {
@@ -215,7 +215,7 @@ const within = async (ms, promise) =>
     left.filter((f) => !f.endsWith('.json')),
     [],
   );
-  let parsed = null;
+  let parsed;
   try {
     parsed = JSON.parse(await readFile(join(dir, left[0]), 'utf8'));
   } catch (err) {
