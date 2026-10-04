@@ -26,7 +26,7 @@ const ID_PROVIDER = { 'kitsu:': 'kitsu' };
 
 const BROWSE_LIMIT = 24;
 const RELATED_LIMIT = 12;
-const EPISODE_ID = /:e\d+$/;
+const EPISODE_ID = /:e\d+$|:\d+:\d+$/;
 
 /** `PROVIDER=off` forces the seed catalog. It is not in ADAPTER_ORDER, so no real name collides. */
 const providerName = () =>
