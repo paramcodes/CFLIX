@@ -365,7 +365,6 @@ export default async function player() {
     host: YT_HOST,
     playerVars: {
       autoplay: 1,
-      mute: 1,
       playsinline: 1,
       enablejsapi: 1,
       origin: location.origin,
