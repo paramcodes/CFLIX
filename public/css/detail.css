@@ -1,0 +1,272 @@
+/* The title page only. Every rule here targets a `.detail*` or `.ep*` name, so nothing here
+   can reach another owner's page. base.css is shared and still carries the pre-provider mock
+   (.detail as a two-column grid, .detail__artwork span blurred), so both are overridden. */
+
+.detail {
+  display: block;
+  min-height: 0;
+  padding-bottom: 72px;
+}
+
+.detail__hero {
+  position: relative;
+  min-height: 66vh;
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+}
+/* Two background layers, not two elements: a child `.ph` would paint over the parent's
+   background-image and hide the photo. `--photo` is set from the item, `--fallback` never is,
+   so a null or failed backdrop still leaves the gradient showing. */
+.detail__backdrop {
+  --photo: none;
+  --fallback: linear-gradient(160deg, #1b1b1b, #060606);
+  position: absolute;
+  inset: 0;
+  background-image: var(--photo), var(--fallback);
+  background-size: cover;
+  background-position: center 16%;
+}
+.detail__scrim {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      90deg,
+      var(--tb-90) 0%,
+      var(--tb-60) 34%,
+      rgba(0, 0, 0, 0.1) 70%
+    ),
+    linear-gradient(
+      0deg,
+      var(--page) 1%,
+      rgba(0, 0, 0, 0.8) 26%,
+      rgba(0, 0, 0, 0.2) 60%,
+      var(--tb-30) 100%
+    );
+}
+/* The hero is a flex row, so `.wrap`'s `margin: 0 auto` would centre the copy over the bright
+   middle of the photo. Pinning it left puts every line over the darkest part of the scrim. */
+.detail__content {
+  position: relative;
+  max-width: 780px;
+  margin: 0;
+  padding-bottom: 7%;
+}
+
+/* The wordmark when a provider has one, styled text when it does not. The heading keeps the
+   text either way: it is the accessible name, and .detail__sr hides only the rendering. */
+.detail__artwork {
+  height: auto;
+  min-height: 68px;
+  margin: 0 0 18px;
+  gap: 20px;
+}
+.detail__logo {
+  display: block;
+  flex: none;
+  max-height: 78px;
+  max-width: 460px;
+  width: auto;
+}
+.detail__title {
+  margin: 0;
+  max-width: 20ch;
+}
+.detail__artwork span {
+  filter: none;
+  color: #fff;
+  font-size: var(--fs-hero);
+  font-weight: 800;
+  line-height: 1.02;
+  letter-spacing: -1.5px;
+}
+.detail__sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.detail__meta {
+  display: block;
+  margin: 0 0 20px;
+}
+.detail__metarow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 0;
+  font-size: var(--fs-body);
+}
+.detail__metarow > span {
+  line-height: 2.1;
+}
+.detail__sep {
+  margin: 0 11px;
+  color: var(--grey-350);
+}
+.detail__match {
+  color: var(--green);
+  font-weight: 700;
+}
+
+.detail__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+.detail__actions svg {
+  width: 22px;
+  height: 22px;
+  flex: none;
+}
+.detail__actions .ico {
+  stroke: #fff;
+  fill: none;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.detail__actions .ico--solid {
+  fill: #fff;
+  stroke: none;
+}
+.detail__actions [aria-disabled='true'] {
+  opacity: 0.5;
+  cursor: default;
+}
+.detail__soon {
+  min-height: 19px;
+  margin: 0 0 10px;
+  color: var(--grey-150);
+  font-size: var(--fs-caption-1);
+}
+
+.detail__synopsis {
+  margin: 0 0 18px;
+  max-width: 62ch;
+  line-height: 1.55;
+}
+.detail__facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  margin: 0;
+  font-size: var(--fs-small-body);
+}
+.detail__facts dt {
+  color: var(--grey-300);
+}
+.detail__facts dd {
+  margin: 0;
+  color: var(--grey-100);
+}
+
+.detail__section {
+  max-width: var(--shell-w);
+  margin: 0 auto;
+  padding: 0 4% 44px;
+}
+.detail__seasons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 22px;
+}
+.detail__seasons button {
+  min-width: 78px;
+  height: 40px;
+  padding: 0 18px;
+  background: transparent;
+  border: 1px solid var(--grey-500);
+  border-radius: var(--r-sm);
+  color: var(--grey-100);
+  font: inherit;
+  font-size: var(--fs-small-body);
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+.detail__seasons button:hover {
+  border-color: var(--grey-200);
+  color: #fff;
+}
+.detail__seasons button[aria-pressed='true'] {
+  background: #fff;
+  border-color: #fff;
+  color: #000;
+}
+.detail__ephead {
+  margin: 0 0 4px;
+  color: #fff;
+  font-size: var(--fs-headline-1);
+  font-weight: 700;
+}
+.detail__episodes {
+  max-width: 920px;
+}
+
+.episode-link {
+  width: 100%;
+  align-items: flex-start;
+}
+.episode-link:hover .ep__name {
+  text-decoration: underline;
+}
+.episode-link:focus-visible {
+  border-radius: var(--r-sm);
+  box-shadow: var(--focus-ring);
+}
+.ep__still {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.ep__body {
+  flex: 1;
+  min-width: 0;
+}
+.ep__line {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.ep__run {
+  flex: none;
+  color: var(--grey-200);
+  font-size: var(--fs-caption-1);
+}
+.ep__desc {
+  display: block;
+}
+.ep__progress {
+  display: block;
+  width: min(320px, 100%);
+  background: var(--grey-600);
+}
+.ep__progress i {
+  display: block;
+  height: 100%;
+  background: var(--primary-red);
+}
+.ep__resume {
+  display: block;
+  margin-top: 6px;
+  color: var(--grey-200);
+  font-size: var(--fs-caption-2);
+}
+
+.detail__empty {
+  margin: 0;
+  color: var(--grey-300);
+  font-size: var(--fs-small-body);
+}

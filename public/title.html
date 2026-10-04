@@ -6,171 +6,99 @@
     <title>Title detail</title>
     <link rel="stylesheet" href="/tokens.css" />
     <link rel="stylesheet" href="/base.css" />
-    <style>
-      .detail {
-        height: 100vh;
-        min-height: 0;
-        overflow: hidden;
-      }
-      .detail__leftfoot {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-      }
-      .detail__badgesfoot {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-      }
-      .detail__actions svg {
-        width: 26px;
-        height: 26px;
-        flex: none;
-      }
-      .detail__actions .ico {
-        stroke: #fff;
-        fill: none;
-        stroke-width: 1.7;
-        stroke-linecap: round;
-        stroke-linejoin: round;
-      }
-      .detail__actions .ico--solid {
-        fill: #fff;
-        stroke: none;
-      }
-      .detail__meta {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 9px;
-      }
-      .detail__metarow {
-        display: flex;
-        gap: 14px;
-        align-items: center;
-        flex-wrap: wrap;
-      }
-      .detail__plus svg {
-        width: 16px;
-        height: 16px;
-        stroke: #fff;
-        fill: none;
-        stroke-width: 1.9;
-        stroke-linecap: round;
-      }
-    </style>
+    <link rel="stylesheet" href="/css/detail.css" />
   </head>
   <body class="shell" data-page="detail">
     <main class="detail">
-      <div class="detail__left">
-        <div class="detail__still">
-          <div class="ph ph--still"></div>
-        </div>
-        <div class="detail__leftfoot">
-          <div class="detail__badgesfoot">
-            <span class="badge-pill badge-pill--red">New</span>
-            <span class="badge-maturity">TV-MA</span>
-          </div>
-          <div class="detail__actions">
-            <svg
-              class="ico ico--solid"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              stroke="none"
-              aria-hidden="true"
-            >
-              <path d="M8 5v14l11-7z" />
-            </svg>
-            <svg
-              class="ico"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              aria-hidden="true"
-            >
-              <path d="M12 5v14M5 12h14" />
-            </svg>
-            <svg
-              class="ico"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              aria-hidden="true"
-            >
-              <path
-                d="M7 10.5V21H4.6A1.6 1.6 0 0 1 3 19.4v-7.3a1.6 1.6 0 0 1 1.6-1.6H7zm0 0 4.3-7.1a1.9 1.9 0 0 1 3.4 1.7l-1.1 5.4h5.5a1.9 1.9 0 0 1 1.9 2.3l-1.1 7.2a2.1 2.1 0 0 1-2.1 1.8H7"
-              />
-            </svg>
-            <svg
-              class="ico"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              aria-hidden="true"
-            >
-              <path d="M12 4v14M6 13l6 6 6-6" />
-            </svg>
-          </div>
-          <div class="detail__advisory">Content Advisory</div>
-        </div>
-      </div>
+      <section class="detail__hero">
+        <div class="detail__backdrop" id="detail-backdrop"></div>
+        <div class="detail__scrim"></div>
 
-      <div class="detail__right">
-        <div class="detail__mark">
-          <svg viewBox="0 0 124 44" aria-hidden="true">
-            <defs><path id="arc-detail" d="M4 38 Q62 10 120 38" /></defs>
-            <text>
-              <textPath
-                href="#arc-detail"
-                startOffset="50%"
-                text-anchor="middle"
+        <div class="detail__content wrap">
+          <div class="detail__artwork" id="detail-artwork">
+            <img class="detail__logo" id="detail-logo" alt="" hidden />
+            <h1 class="detail__title" id="detail-heading">
+              <span id="detail-title"></span>
+            </h1>
+          </div>
+
+          <div class="detail__meta" id="detail-meta">
+            <p class="detail__metarow" id="detail-metarow"></p>
+          </div>
+
+          <div class="detail__actions" id="detail-actions">
+            <button class="btn btn--play" id="btn-play" type="button">
+              <svg
+                class="ico ico--solid"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
               >
-                CFLIX
-              </textPath>
-            </text>
-          </svg>
-        </div>
-
-        <div class="detail__meta">
-          <div class="detail__metarow">
-            <span>3 Seasons</span>
-            <span>2h 18m</span>
-            <span>2021</span>
-          </div>
-          <div class="detail__metarow">
-            <span class="badge-quality">HD</span>
-          </div>
-          <div class="detail__metarow">
-            <span>Violent · Dark · Action</span>
-          </div>
-        </div>
-
-        <div class="detail__artwork">
-          <span>Rurouni Kenshin</span>
-        </div>
-
-        <div class="detail__badges">
-          <div class="detail__plus">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              aria-hidden="true"
+                <path d="M8 5v14l11-7z" />
+              </svg>
+              Play
+            </button>
+            <button
+              class="btn btn--ghost"
+              type="button"
+              data-soon="My List"
+              aria-disabled="true"
+              title="Coming soon"
             >
-              <path d="M12 5v14M5 12h14" />
-            </svg>
+              <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              My List
+            </button>
+            <button
+              class="btn btn--ghost"
+              type="button"
+              data-soon="Like"
+              aria-disabled="true"
+              title="Coming soon"
+            >
+              <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  d="M7 10.5V21H4.6A1.6 1.6 0 0 1 3 19.4v-7.3a1.6 1.6 0 0 1 1.6-1.6H7zm0 0 4.3-7.1a1.9 1.9 0 0 1 3.4 1.7l-1.1 5.4h5.5a1.9 1.9 0 0 1 1.9 2.3l-1.1 7.2a2.1 2.1 0 0 1-2.1 1.8H7"
+                />
+              </svg>
+              Like
+            </button>
+            <button
+              class="btn btn--ghost"
+              type="button"
+              data-soon="Share"
+              aria-disabled="true"
+              title="Coming soon"
+            >
+              <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 4v14M6 13l6 6 6-6" />
+              </svg>
+              Share
+            </button>
           </div>
-        </div>
 
-        <button class="btn btn--play" id="btn-play" style="margin: 12px 0">
-          Play
-        </button>
-        <p class="detail__synopsis">
-          Before he was a protector, Kenshin was a fearsome assassin known as
-          Battosai. But when he meets the gentle Tomoe Yukishiro, his story
-          begins to change.
-        </p>
-      </div>
-      <div id="episodes" style="padding: 0 4%; max-width: 640px"></div>
+          <p class="detail__soon" id="detail-soon" role="status"></p>
+          <p class="detail__synopsis" id="detail-synopsis"></p>
+          <dl class="detail__facts" id="detail-facts"></dl>
+        </div>
+      </section>
+
+      <section class="detail__section" id="episodes-wrap">
+        <div
+          class="detail__seasons"
+          id="detail-seasons"
+          role="group"
+          aria-label="Seasons"
+          hidden
+        ></div>
+        <div id="episodes" class="detail__episodes"></div>
+      </section>
+
+      <section class="detail__section" id="related-wrap">
+        <h2 class="row__title">More Like This</h2>
+        <div class="row__rail" id="row-related"></div>
+        <p class="detail__empty" id="related-empty" hidden></p>
+      </section>
     </main>
 
     <script type="module" src="/wire.js"></script>
