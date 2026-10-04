@@ -375,7 +375,10 @@ check(
 check('Escape returns focus to the avatar', state.focusIsAvatar);
 
 await openNavMenu();
-await page.click('.hero__title');
+// Viewport centre: blank hero artwork, below the bar and left of the menu box.
+// .hero__title is clip-path hidden whenever a logo image renders, so it is not
+// a click target on this page.
+await page.mouse.click(720, 450);
 state = await page.evaluate(() => ({
   hidden: document.querySelector('.nav__menu').hidden,
   expanded: document

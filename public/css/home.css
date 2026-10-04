@@ -1,0 +1,423 @@
+/* Page-scoped rules for /home. Loaded after base.css, so these win on ties. */
+
+.row[hidden],
+.row [hidden] {
+  display: none !important;
+}
+
+.rows--pad {
+  padding: 0 4% 60px;
+}
+.rows--overlap {
+  margin-top: -96px;
+  position: relative;
+  z-index: 2;
+}
+
+/* ------------------------------------------------------------------ rails */
+
+.row__rail,
+.row__rail--portrait,
+.row__rail--landscape,
+.row__rail--short,
+.row__rail--rank {
+  display: grid;
+  grid-auto-flow: column;
+  gap: 10px;
+  padding-block: 10px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  scroll-padding-inline: 10px;
+  scroll-padding-block: 10px;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: none;
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+
+.row__rail::-webkit-scrollbar {
+  display: none;
+}
+
+.row__rail {
+  grid-auto-columns: 240px;
+}
+.row__rail--portrait {
+  grid-auto-columns: 200px;
+}
+.row__rail--landscape {
+  grid-auto-columns: 300px;
+}
+.row__rail--short {
+  grid-auto-columns: 260px;
+}
+.row__rail--rank {
+  grid-auto-columns: 290px;
+}
+
+.row__rail[data-more='start'],
+.row__rail[data-more='end'],
+.row__rail[data-more='both'] {
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    transparent 0,
+    #000 46px,
+    #000 calc(100% - 46px),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    90deg,
+    transparent 0,
+    #000 46px,
+    #000 calc(100% - 46px),
+    transparent 100%
+  );
+}
+.row__rail[data-more='start'] {
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    #000 calc(100% - 46px),
+    transparent 100%
+  );
+  mask-image: linear-gradient(90deg, #000 calc(100% - 46px), transparent 100%);
+}
+.row__rail[data-more='end'] {
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 46px);
+  mask-image: linear-gradient(90deg, transparent 0, #000 46px);
+}
+
+.rail {
+  position: relative;
+}
+
+.rail__nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 3;
+  width: 42px;
+  height: 74%;
+  min-height: 56px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: rgba(20, 20, 20, 0.72);
+  color: var(--grey-25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition:
+    opacity var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out);
+}
+.rail__nav--prev {
+  left: 0;
+}
+.rail__nav--next {
+  right: 0;
+}
+.rail__nav[disabled] {
+  opacity: 0;
+  pointer-events: none;
+}
+.rail__nav:not([disabled]):hover {
+  background: rgba(60, 60, 60, 0.9);
+  color: #fff;
+}
+.rail__nav svg {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.row__head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+.row__head .row__title {
+  margin: 0;
+}
+
+.row__empty {
+  margin: 4px 0 0;
+  color: var(--grey-250);
+  font-size: var(--fs-small-body);
+}
+
+.row__tail {
+  display: block;
+  height: 1px;
+}
+
+/* ------------------------------------------------------------------ cards */
+
+.row[data-enter='false'] {
+  opacity: 0;
+}
+
+.row {
+  animation: rowIn var(--dur-base) var(--ease-out) both;
+}
+
+@keyframes rowIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+}
+
+.card {
+  z-index: 0;
+  scroll-snap-align: start;
+  animation: cardIn var(--dur-base) var(--ease-out) both;
+  animation-delay: calc(min(var(--i, 0), 14) * 24ms);
+}
+
+@keyframes cardIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+.card:hover,
+.card:focus-visible {
+  z-index: 2;
+}
+
+.card__art img,
+.hero__bg img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+.hero__bg img {
+  object-position: center 16%;
+}
+
+.card__badges {
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+.card:hover .card__badges,
+.card:focus-visible .card__badges {
+  opacity: 1;
+}
+
+.card--progress .card__title {
+  padding-bottom: 14px;
+}
+.card--progress .card__progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: var(--tw-35);
+}
+.card--progress .card__progress i {
+  display: block;
+  height: 100%;
+  background: var(--primary-red);
+}
+
+.card--rank .card__num {
+  position: relative;
+  z-index: 2;
+  flex: none;
+  width: 62px;
+  margin-right: 0;
+  font-size: 78px;
+}
+.card--rank .card__art,
+.card--rank .card__title {
+  left: 54px;
+}
+
+/* ------------------------------------------------------------------ hero */
+
+.hero__slide {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity var(--dur-base) var(--ease-out),
+    visibility var(--dur-base) var(--ease-out);
+}
+.hero__slide.is-active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.hero__bg {
+  background-repeat: no-repeat;
+  z-index: 0;
+}
+
+/*
+ * The scrim is a ::before on the slide, so without an explicit order it paints before the
+ * backdrop element and the artwork lands on top of it, leaving the copy over raw brightness.
+ */
+.hero__slide::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background:
+    linear-gradient(
+      90deg,
+      rgba(0, 0, 0, 0.93) 20%,
+      rgba(0, 0, 0, 0.5) 52%,
+      rgba(0, 0, 0, 0.12) 76%
+    ),
+    linear-gradient(
+      0deg,
+      var(--page) 1%,
+      rgba(0, 0, 0, 0.5) 30%,
+      transparent 58%
+    );
+}
+
+.hero__inner {
+  z-index: 2;
+  padding: 0 4% 14%;
+  max-width: 640px;
+}
+
+.hero__titlewrap {
+  position: relative;
+  margin-bottom: 8px;
+}
+.hero__logo {
+  display: block;
+  max-height: 96px;
+  max-width: 100%;
+  width: auto;
+  margin-bottom: 6px;
+}
+.hero__logo ~ .hero__title {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.hero__nav {
+  position: absolute;
+  z-index: 6;
+  top: 44%;
+  transform: translateY(-50%);
+  width: 46px;
+  height: 84px;
+  border: 0;
+  background: rgba(0, 0, 0, 0.32);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out);
+}
+.hero__nav--prev {
+  left: 0;
+}
+.hero__nav--next {
+  right: 0;
+}
+.hero__nav[disabled] {
+  display: none;
+}
+.hero:hover .hero__nav,
+.hero__nav:focus-visible {
+  opacity: 1;
+}
+.hero__nav:not([disabled]):hover {
+  background: rgba(40, 40, 40, 0.75);
+}
+.hero__nav svg {
+  width: 26px;
+  height: 26px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.hero__dots {
+  position: absolute;
+  z-index: 6;
+  left: 4%;
+  bottom: 5%;
+  display: flex;
+  gap: 4px;
+}
+.hero__dot {
+  width: 26px;
+  height: 22px;
+  padding: 9px 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.hero__dot::before {
+  content: '';
+  display: block;
+  height: 4px;
+  background: var(--tw-50);
+  transition: background-color var(--dur-fast) var(--ease-out);
+}
+.hero__dot:hover::before {
+  background: var(--tw-70);
+}
+.hero__dot[aria-current='true']::before {
+  background: #fff;
+}
+
+/* ------------------------------------------------------------------ nav */
+
+body[data-page='home'] .nav {
+  position: fixed;
+  transition: background-color var(--dur-base) var(--ease-out);
+}
+body[data-page='home'] .nav.is-raised {
+  background: #000;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .row[data-enter='false'],
+  .hero__slide {
+    opacity: 1;
+    visibility: visible;
+  }
+  .card,
+  .row {
+    animation: none;
+  }
+}
