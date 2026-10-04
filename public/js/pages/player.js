@@ -109,7 +109,7 @@ export default async function player() {
   let postedAt = 0;
   let posted = false;
   let previous = null;
-  let clocking = false;
+  let ticker = null;
 
   const showNotice = (kind, badge) => {
     els.badge.textContent = badge;
@@ -184,7 +184,13 @@ export default async function player() {
 
   const seek = (seconds) => {
     if (!state.player || !state.duration) return;
-    const target = Math.min(Math.max(seconds, 0), state.duration);
+    // getDuration() hands back an integer until exact metadata lands, so a target
+    // at "the end" can overshoot the real stream end, which YouTube answers by
+    // ending the video in place instead of moving.
+    const target = Math.min(
+      Math.max(seconds, 0),
+      Math.max(0, state.duration - 0.5),
+    );
     state.player.seekTo(target, true);
     state.current = target;
     render();
@@ -328,6 +334,7 @@ export default async function player() {
   });
 
   els.finish.addEventListener('click', async () => {
+    clearInterval(ticker);
     await api('/api/progress', {
       method: 'POST',
       body: { itemId: item.id, seconds: 0 },
@@ -371,6 +378,13 @@ export default async function player() {
     events: {
       onReady: (event) => {
         const ready = event.target;
+        // Every operation is exposed through our own controls, and the embed
+        // document is cross-origin: letting sequential focus enter it traps Tab.
+        const frame = ready.getIframe?.();
+        if (frame) {
+          frame.tabIndex = -1;
+          frame.title = 'Trailer player';
+        }
         state.ready = true;
         state.volume = ready.getVolume();
         state.muted = ready.isMuted();
@@ -380,10 +394,7 @@ export default async function player() {
           state.duration = duration;
         if (resume > 0 && resume < state.duration) ready.seekTo(resume, true);
         setControlsEnabled(true);
-        if (!clocking) {
-          clocking = true;
-          setInterval(tick, 250);
-        }
+        if (!ticker) ticker = setInterval(tick, 250);
         render();
       },
       onStateChange: (event) => {
