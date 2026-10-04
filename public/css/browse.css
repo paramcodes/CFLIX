@@ -131,11 +131,12 @@
   border: 1px solid var(--grey-600);
   border-radius: var(--r-md);
   background: linear-gradient(
-    100deg,
-    var(--panel-2) 30%,
-    var(--panel-3) 50%,
-    var(--panel-2) 70%
-  ) 0 0 / 300% 100%;
+      100deg,
+      var(--panel-2) 30%,
+      var(--panel-3) 50%,
+      var(--panel-2) 70%
+    )
+    0 0 / 300% 100%;
   animation: browse-shimmer 1.4s linear infinite;
 }
 

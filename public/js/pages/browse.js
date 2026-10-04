@@ -44,10 +44,7 @@ const FAILURE_KIND = {
 const TITLE_CASE = (slug) => slug.charAt(0).toUpperCase() + slug.slice(1);
 
 const esc = (value) =>
-  String(value ?? '').replace(
-    /[&<>"']/g,
-    (c) => `&#${c.charCodeAt(0)};`,
-  );
+  String(value ?? '').replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
 /** The same title must always get the same placeholder gradient, so a reload does not reshuffle. */
 const gradient = (id) => {
@@ -164,7 +161,9 @@ export default async function browse() {
 
   el.genre.innerHTML =
     '<option value="">All genres</option>' +
-    GENRES.map((g) => `<option value="${g}">${TITLE_CASE(g)}</option>`).join('');
+    GENRES.map((g) => `<option value="${g}">${TITLE_CASE(g)}</option>`).join(
+      '',
+    );
 
   el.tabs.innerHTML = KINDS.map(
     (k, i) =>
@@ -237,7 +236,8 @@ export default async function browse() {
           : kind === 'profile'
             ? 'Pick a profile'
             : 'The catalog could not be reached';
-      el.error.querySelector('[data-error-copy]').textContent = view.failure.message;
+      el.error.querySelector('[data-error-copy]').textContent =
+        view.failure.message;
       el.retry.hidden = kind !== 'upstream';
       el.errorLink.hidden = kind === 'upstream';
       el.errorLink.href = kind === 'auth' ? '/signin' : '/profiles';
@@ -355,7 +355,8 @@ export default async function browse() {
     if (!Number.isInteger(from)) return;
     let to = null;
     if (ev.key === 'ArrowRight') to = (from + 1) % KINDS.length;
-    else if (ev.key === 'ArrowLeft') to = (from + KINDS.length - 1) % KINDS.length;
+    else if (ev.key === 'ArrowLeft')
+      to = (from + KINDS.length - 1) % KINDS.length;
     else if (ev.key === 'Home') to = 0;
     else if (ev.key === 'End') to = KINDS.length - 1;
     if (to === null) return;

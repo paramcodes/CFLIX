@@ -13,7 +13,10 @@
       <a class="nav__logo" href="/home">CFLIX</a>
       <div class="nav__links">
         <a class="nav__link" href="/home">Home</a>
-        <a class="nav__link nav__link--active" href="/browse" aria-current="page"
+        <a
+          class="nav__link nav__link--active"
+          href="/browse"
+          aria-current="page"
           >Browse</a
         >
       </div>
@@ -25,12 +28,7 @@
       <h1 class="browse__heading">Browse</h1>
 
       <div class="browse__toolbar">
-        <form
-          class="browse__control"
-          id="browse-form"
-          role="search"
-          novalidate
-        >
+        <form class="browse__control" id="browse-form" role="search" novalidate>
           <label class="browse__label" for="browse-q">Search titles</label>
           <input
             class="browse__input"
@@ -78,7 +76,11 @@
           <button class="btn btn--red" type="button" id="browse-retry">
             Try again
           </button>
-          <a class="btn btn--ghost" id="browse-error-link" href="/profiles" hidden
+          <a
+            class="btn btn--ghost"
+            id="browse-error-link"
+            href="/profiles"
+            hidden
             >Choose a profile</a
           >
         </div>

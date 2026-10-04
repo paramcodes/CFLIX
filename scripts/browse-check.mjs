@@ -1,14 +1,18 @@
 import { chromium } from 'playwright';
 import { mkdirSync } from 'node:fs';
 
-const B = process.env.PORT ? `http://localhost:${process.env.PORT}` : 'http://localhost:3000';
+const B = process.env.PORT
+  ? `http://localhost:${process.env.PORT}`
+  : 'http://localhost:3000';
 const OUT = process.argv[2] || 'artifacts/verify-cflix/browse';
 mkdirSync(OUT, { recursive: true });
 
 let failures = 0;
 const skipped = [];
 function check(name, cond, detail = '') {
-  console.log(`${cond ? 'PASS' : 'FAIL'}  ${name}${detail ? `  ${detail}` : ''}`);
+  console.log(
+    `${cond ? 'PASS' : 'FAIL'}  ${name}${detail ? `  ${detail}` : ''}`,
+  );
   if (!cond) failures++;
 }
 function skip(name, why) {
@@ -16,25 +20,33 @@ function skip(name, why) {
   console.log(`SKIP  ${name}  ${why}`);
 }
 const eq = (name, actual, expected) =>
-  check(name, actual === expected, `got ${JSON.stringify(actual)}, want ${JSON.stringify(expected)}`);
+  check(
+    name,
+    actual === expected,
+    `got ${JSON.stringify(actual)}, want ${JSON.stringify(expected)}`,
+  );
 
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
 page.on('pageerror', (err) => console.log(`  pageerror: ${err.message}`));
 
 const shot = (name) =>
-  page.screenshot({ path: `${OUT}/${name}.png`, fullPage: true }).then(() => name);
+  page
+    .screenshot({ path: `${OUT}/${name}.png`, fullPage: true })
+    .then(() => name);
 
 const titles = () =>
   page.locator('#browse-grid .browse__card .card__title').allTextContents();
 const kinds = () =>
-  page.locator('#browse-grid .browse__card').evaluateAll((els) =>
-    els.map((e) => e.dataset.kind),
-  );
+  page
+    .locator('#browse-grid .browse__card')
+    .evaluateAll((els) => els.map((e) => e.dataset.kind));
 const ids = () =>
-  page.locator('#browse-grid .browse__card').evaluateAll((els) =>
-    els.map((e) => new URL(e.href).searchParams.get('id')),
-  );
+  page
+    .locator('#browse-grid .browse__card')
+    .evaluateAll((els) =>
+      els.map((e) => new URL(e.href).searchParams.get('id')),
+    );
 const selectedTab = () =>
   page.locator('#browse-tabs [aria-selected="true"]').textContent();
 const visible = (sel) => page.locator(sel).isVisible();
@@ -74,7 +86,8 @@ const profileId = await page.evaluate(async () => {
     }).then((r) => r.json());
   const email = `browse${Date.now()}@test.dev`;
   let r = await post('/api/auth/signup', { email, password: 'pw123456' });
-  if (r.error) r = await post('/api/auth/signin', { email, password: 'pw123456' });
+  if (r.error)
+    r = await post('/api/auth/signin', { email, password: 'pw123456' });
   const p = await fetch('/api/profiles', {
     method: 'POST',
     headers: {
@@ -103,7 +116,10 @@ const live = await page
     profileId,
   )
   .catch(() => false);
-if (!live) console.log('note: the catalog provider returned nothing; provider-backed checks skip.');
+if (!live)
+  console.log(
+    'note: the catalog provider returned nothing; provider-backed checks skip.',
+  );
 
 /* ------------------------------------------------------------------ route and first render */
 
@@ -159,7 +175,9 @@ if (!live) console.log('note: the catalog provider returned nothing; provider-ba
   );
   eq(
     'each sample row carries a Sample badge',
-    await page.locator('#browse-grid .badge-quality', { hasText: 'Sample' }).count(),
+    await page
+      .locator('#browse-grid .badge-quality', { hasText: 'Sample' })
+      .count(),
     2,
   );
   await shot('02-browse-search-dark');
@@ -184,10 +202,26 @@ if (!live) console.log('note: the catalog provider returned nothing; provider-ba
 {
   await page.goto(B + '/browse?q=the&kind=movie&genre=horror');
   await settle();
-  eq('all three params round-trip: query', await page.inputValue('#browse-q'), 'the');
-  eq('all three params round-trip: kind', (await selectedTab()).trim(), 'Movies');
-  eq('all three params round-trip: genre', await page.inputValue('#browse-genre'), 'horror');
-  eq('seed titles carry no genres, so the genre filter drops them', (await titles()).length, 0);
+  eq(
+    'all three params round-trip: query',
+    await page.inputValue('#browse-q'),
+    'the',
+  );
+  eq(
+    'all three params round-trip: kind',
+    (await selectedTab()).trim(),
+    'Movies',
+  );
+  eq(
+    'all three params round-trip: genre',
+    await page.inputValue('#browse-genre'),
+    'horror',
+  );
+  eq(
+    'seed titles carry no genres, so the genre filter drops them',
+    (await titles()).length,
+    0,
+  );
   eq('which is the empty state', await visible('#browse-empty'), true);
   eq('and not an error state', await visible('#browse-error'), false);
   await shot('04-browse-three-params-empty');
@@ -211,17 +245,41 @@ if (!live) console.log('note: the catalog provider returned nothing; provider-ba
 
   await page.goBack();
   await settle();
-  eq('back restores kind=movie in the URL', new URL(page.url()).search, '?q=dark&kind=movie');
+  eq(
+    'back restores kind=movie in the URL',
+    new URL(page.url()).search,
+    '?q=dark&kind=movie',
+  );
   eq('back restores the selected tab', (await selectedTab()).trim(), 'Movies');
-  eq('back restores the search box', await page.inputValue('#browse-q'), 'dark');
-  eq('back re-renders the movie rows', (await titles()).join(' | '), 'The Dark Knight');
+  eq(
+    'back restores the search box',
+    await page.inputValue('#browse-q'),
+    'dark',
+  );
+  eq(
+    'back re-renders the movie rows',
+    (await titles()).join(' | '),
+    'The Dark Knight',
+  );
   await shot('05-browse-back');
 
   await page.goForward();
   await settle();
-  eq('forward restores kind=series in the URL', new URL(page.url()).search, '?q=dark&kind=series');
-  eq('forward re-selects the Series tab', (await selectedTab()).trim(), 'Series');
-  eq('forward re-renders the series rows', (await titles()).join(' | '), 'Dark');
+  eq(
+    'forward restores kind=series in the URL',
+    new URL(page.url()).search,
+    '?q=dark&kind=series',
+  );
+  eq(
+    'forward re-selects the Series tab',
+    (await selectedTab()).trim(),
+    'Series',
+  );
+  eq(
+    'forward re-renders the series rows',
+    (await titles()).join(' | '),
+    'Dark',
+  );
 }
 
 /* ------------------------------------------------------------------ kind tabs */
@@ -234,7 +292,11 @@ if (!live) console.log('note: the catalog provider returned nothing; provider-ba
   await page.locator('#browse-tabs [data-kind="movie"]').focus();
   await page.keyboard.press('ArrowRight');
   await settle();
-  eq('ArrowRight moves to the next tab', (await selectedTab()).trim(), 'Series');
+  eq(
+    'ArrowRight moves to the next tab',
+    (await selectedTab()).trim(),
+    'Series',
+  );
   eq('and commits it to the URL', new URL(page.url()).search, '?kind=series');
   await page.keyboard.press('End');
   await settle();
@@ -242,7 +304,11 @@ if (!live) console.log('note: the catalog provider returned nothing; provider-ba
   await page.keyboard.press('Home');
   await settle();
   eq('Home jumps back to the first tab', (await selectedTab()).trim(), 'All');
-  eq('and Home clears the URL back to bare /browse', new URL(page.url()).search, '');
+  eq(
+    'and Home clears the URL back to bare /browse',
+    new URL(page.url()).search,
+    '',
+  );
 }
 
 for (const [kind, label] of [
@@ -252,11 +318,18 @@ for (const [kind, label] of [
   await page.goto(B + `/browse?kind=${kind}`);
   await settle();
   if (!live) {
-    skip(`kind=${kind} returns only ${kind}`, 'the catalog provider returned nothing');
+    skip(
+      `kind=${kind} returns only ${kind}`,
+      'the catalog provider returned nothing',
+    );
     continue;
   }
   eq(`kind=${kind} renders 24 titles`, (await titles()).length, 24);
-  eq(`kind=${kind} returns only ${kind}`, [...new Set(await kinds())].join(','), kind);
+  eq(
+    `kind=${kind} returns only ${kind}`,
+    [...new Set(await kinds())].join(','),
+    kind,
+  );
   eq(`kind=${kind} tab is selected`, (await selectedTab()).trim(), label);
   await shot(`06-browse-kind-${kind}`);
 }
@@ -271,9 +344,9 @@ for (const [kind, label] of [
   );
   eq(
     'the Anime empty state says anime is search-only',
-    (await page.locator('#browse-empty [data-empty-copy]').textContent()).includes(
-      'search-only',
-    ),
+    (
+      await page.locator('#browse-empty [data-empty-copy]').textContent()
+    ).includes('search-only'),
     true,
   );
   eq('the Anime empty state renders no rows', (await titles()).length, 0);
@@ -290,11 +363,21 @@ if (live) {
   await page.selectOption('#browse-genre', 'horror');
   await settle();
   eq('the genre is in the URL', new URL(page.url()).search, '?genre=horror');
-  eq('the select stays in sync with the URL', await page.inputValue('#browse-genre'), 'horror');
+  eq(
+    'the select stays in sync with the URL',
+    await page.inputValue('#browse-genre'),
+    'horror',
+  );
   const horror = await titles();
-  check('the genre narrows the grid', horror.length < unfiltered.length, `${unfiltered.length} -> ${horror.length}`);
+  check(
+    'the genre narrows the grid',
+    horror.length < unfiltered.length,
+    `${unfiltered.length} -> ${horror.length}`,
+  );
   eq('the filtered grid is anchored on a real title', horror[0], 'Backrooms');
-  const provider = (await catalog('/api/catalog/browse?genre=horror')).map((i) => i.title);
+  const provider = (await catalog('/api/catalog/browse?genre=horror')).map(
+    (i) => i.title,
+  );
   eq(
     'every rendered title is one the provider tagged horror',
     horror.join(' | '),
@@ -312,7 +395,10 @@ if (live) {
   eq('and it renders the empty state', await visible('#browse-empty'), true);
   await shot('09-browse-genre-espionage-empty');
 } else {
-  skip('the genre filter narrows results', 'the catalog provider returned nothing');
+  skip(
+    'the genre filter narrows results',
+    'the catalog provider returned nothing',
+  );
 }
 
 /* ------------------------------------------------------------------ empty state */
@@ -322,14 +408,28 @@ if (live) {
   await settle();
   await search('zzzq');
   eq('a nonsense query updates the URL', new URL(page.url()).search, '?q=zzzq');
-  eq('a nonsense query renders the empty state', await visible('#browse-empty'), true);
+  eq(
+    'a nonsense query renders the empty state',
+    await visible('#browse-empty'),
+    true,
+  );
   eq('a nonsense query renders no rows', (await titles()).length, 0);
-  eq('a nonsense query is not the top catalog', (await titles()).length === 24, false);
+  eq(
+    'a nonsense query is not the top catalog',
+    (await titles()).length === 24,
+    false,
+  );
   eq('a nonsense query is not an error', await visible('#browse-error'), false);
-  eq('a nonsense query leaves no skeletons', await page.locator('#browse-grid .browse__skeleton').count(), 0);
+  eq(
+    'a nonsense query leaves no skeletons',
+    await page.locator('#browse-grid .browse__skeleton').count(),
+    0,
+  );
   eq(
     'the empty state names the query that failed',
-    (await page.locator('#browse-empty [data-empty-copy]').textContent()).includes('zzzq'),
+    (
+      await page.locator('#browse-empty [data-empty-copy]').textContent()
+    ).includes('zzzq'),
     true,
   );
   await shot('10-browse-empty');
@@ -345,12 +445,24 @@ if (live) {
   });
   await page.locator('#browse-q').fill('odyssey');
   await page.locator('#browse-panel[aria-busy="true"]').waitFor();
-  eq('a slow request shows skeletons', await page.locator('#browse-grid .browse__skeleton').count(), 12);
+  eq(
+    'a slow request shows skeletons',
+    await page.locator('#browse-grid .browse__skeleton').count(),
+    12,
+  );
   eq('and shows no stale rows', (await titles()).length, 0);
   await shot('11-browse-skeletons');
   await settle();
-  eq('results replace the skeletons', await page.locator('#browse-grid .browse__skeleton').count(), 0);
-  eq('and the rows are the real ones', (await titles()).join(' | '), 'Space Odyssey');
+  eq(
+    'results replace the skeletons',
+    await page.locator('#browse-grid .browse__skeleton').count(),
+    0,
+  );
+  eq(
+    'and the rows are the real ones',
+    (await titles()).join(' | '),
+    'Space Odyssey',
+  );
   await page.unroute('**/api/catalog/**');
 }
 
@@ -371,9 +483,21 @@ if (live) {
     await page.locator('#browse-more').click();
     await settle();
     const second = await titles();
-    check('load more appends', second.length > first.length, `${first.length} -> ${second.length}`);
-    eq('load more keeps every earlier title', second.slice(0, first.length).join(' | '), first.join(' | '));
-    eq('load more adds no duplicate titles', new Set(second).size, second.length);
+    check(
+      'load more appends',
+      second.length > first.length,
+      `${first.length} -> ${second.length}`,
+    );
+    eq(
+      'load more keeps every earlier title',
+      second.slice(0, first.length).join(' | '),
+      first.join(' | '),
+    );
+    eq(
+      'load more adds no duplicate titles',
+      new Set(second).size,
+      second.length,
+    );
     eq(
       'load more appends instead of re-rendering, so posters are not refetched',
       await page.evaluate(
@@ -394,7 +518,10 @@ if (live) {
   await settle();
   eq(
     'a card links to its title page',
-    await page.locator('#browse-grid .browse__card').first().getAttribute('href'),
+    await page
+      .locator('#browse-grid .browse__card')
+      .first()
+      .getAttribute('href'),
     '/title?id=m1',
   );
   eq(
@@ -428,17 +555,29 @@ const isRemoteAsset = (url) => url.origin !== new URL(B).origin;
   await page.goto(B + '/browse?q=naruto&kind=anime');
   await settle();
   await page.waitForFunction(
-    () => document.querySelectorAll('#browse-grid .browse__card img').length === 0,
+    () =>
+      document.querySelectorAll('#browse-grid .browse__card img').length === 0,
   );
-  eq('a poster that 404s is dropped from every card', await page.locator('#browse-grid .browse__card img').count(), 0);
+  eq(
+    'a poster that 404s is dropped from every card',
+    await page.locator('#browse-grid .browse__card img').count(),
+    0,
+  );
   eq(
     'the gradient is still painted behind it',
-    await art.evaluate((e) => getComputedStyle(e).backgroundImage.includes('gradient')),
+    await art.evaluate((e) =>
+      getComputedStyle(e).backgroundImage.includes('gradient'),
+    ),
     true,
   );
   eq(
     'and the title survives the failed poster',
-    (await page.locator('#browse-grid .browse__card .card__title').first().textContent()).length > 0,
+    (
+      await page
+        .locator('#browse-grid .browse__card .card__title')
+        .first()
+        .textContent()
+    ).length > 0,
     true,
   );
   await shot('17-browse-poster-fallback');
@@ -453,7 +592,10 @@ const isRemoteAsset = (url) => url.origin !== new URL(B).origin;
     const r = await fetch('/api/auth/signup', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ email: `kid${Date.now()}@test.dev`, password: 'pw123456' }),
+      body: JSON.stringify({
+        email: `kid${Date.now()}@test.dev`,
+        password: 'pw123456',
+      }),
     }).then((x) => x.json());
     const p = await fetch('/api/profiles', {
       method: 'POST',
@@ -468,8 +610,14 @@ const isRemoteAsset = (url) => url.origin !== new URL(B).origin;
   });
   await page.goto(B + '/browse');
   await settle();
-  const badges = await page.locator('#browse-grid .badge-maturity').allTextContents();
-  check('a child profile is never offered an R title', !badges.includes('R'), badges.join(',') || '(no rows)');
+  const badges = await page
+    .locator('#browse-grid .badge-maturity')
+    .allTextContents();
+  check(
+    'a child profile is never offered an R title',
+    !badges.includes('R'),
+    badges.join(',') || '(no rows)',
+  );
 }
 
 /* ------------------------------------------------------------------ upstream failure and retry */
@@ -480,7 +628,10 @@ const isRemoteAsset = (url) => url.origin !== new URL(B).origin;
     const r = await fetch('/api/auth/signup', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ email: `grown${Date.now()}@test.dev`, password: 'pw123456' }),
+      body: JSON.stringify({
+        email: `grown${Date.now()}@test.dev`,
+        password: 'pw123456',
+      }),
     }).then((x) => x.json());
     const p = await fetch('/api/profiles', {
       method: 'POST',
@@ -498,35 +649,57 @@ const isRemoteAsset = (url) => url.origin !== new URL(B).origin;
 
   await page.route('**/api/catalog/search', (route) => route.abort('failed'));
   await search('one piece');
-  eq('an upstream failure renders the error state', await visible('#browse-error'), true);
+  eq(
+    'an upstream failure renders the error state',
+    await visible('#browse-error'),
+    true,
+  );
   eq('and not the empty state', await visible('#browse-empty'), false);
   eq(
     'the error names the failure',
-    (await page.locator('#browse-error [data-error-title]').textContent()).trim(),
+    (
+      await page.locator('#browse-error [data-error-title]').textContent()
+    ).trim(),
     'The catalog could not be reached',
   );
   eq('the error offers a retry', await visible('#browse-retry'), true);
-  eq('the error offers no dead-end link', await visible('#browse-error-link'), false);
+  eq(
+    'the error offers no dead-end link',
+    await visible('#browse-error-link'),
+    false,
+  );
   await shot('13-browse-error');
 
   await page.unroute('**/api/catalog/search');
   await page.locator('#browse-retry').click();
   await settle();
   eq('retry clears the error', await visible('#browse-error'), false);
-  eq('retry renders the titles the query asked for', (await titles())[0], 'One Piece');
+  eq(
+    'retry renders the titles the query asked for',
+    (await titles())[0],
+    'One Piece',
+  );
   await shot('14-browse-error-retried');
 }
 
 /* ------------------------------------------------------------------ rejected session */
 
 {
-  await page.evaluate(() => sessionStorage.setItem('cflix_token', 'not-a-real-token'));
+  await page.evaluate(() =>
+    sessionStorage.setItem('cflix_token', 'not-a-real-token'),
+  );
   await page.goto(B + '/browse?q=dark');
   await settle();
-  eq('a rejected session renders the error state', await visible('#browse-error'), true);
+  eq(
+    'a rejected session renders the error state',
+    await visible('#browse-error'),
+    true,
+  );
   eq(
     'a rejected session is distinguished from an upstream failure',
-    (await page.locator('#browse-error [data-error-title]').textContent()).trim(),
+    (
+      await page.locator('#browse-error [data-error-title]').textContent()
+    ).trim(),
     'Sign in again',
   );
   eq(
@@ -534,7 +707,11 @@ const isRemoteAsset = (url) => url.origin !== new URL(B).origin;
     await visible('#browse-retry'),
     false,
   );
-  eq('the sign-in control points at /signin', await page.locator('#browse-error-link').getAttribute('href'), '/signin');
+  eq(
+    'the sign-in control points at /signin',
+    await page.locator('#browse-error-link').getAttribute('href'),
+    '/signin',
+  );
   await shot('15-browse-error-auth');
 }
 
@@ -546,7 +723,10 @@ const isRemoteAsset = (url) => url.origin !== new URL(B).origin;
     const r = await fetch('/api/auth/signup', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ email: `stale${Date.now()}@test.dev`, password: 'pw123456' }),
+      body: JSON.stringify({
+        email: `stale${Date.now()}@test.dev`,
+        password: 'pw123456',
+      }),
     }).then((x) => x.json());
     sessionStorage.setItem('cflix_token', r.session.token);
     sessionStorage.setItem(
@@ -556,13 +736,23 @@ const isRemoteAsset = (url) => url.origin !== new URL(B).origin;
   });
   await page.goto(B + '/browse');
   await settle();
-  eq('a stale profile id renders the error state', await visible('#browse-error'), true);
+  eq(
+    'a stale profile id renders the error state',
+    await visible('#browse-error'),
+    true,
+  );
   eq(
     'a stale profile id is distinguished from a rejected session',
-    (await page.locator('#browse-error [data-error-title]').textContent()).trim(),
+    (
+      await page.locator('#browse-error [data-error-title]').textContent()
+    ).trim(),
     'Pick a profile',
   );
-  eq('and offers the profile picker', await page.locator('#browse-error-link').getAttribute('href'), '/profiles');
+  eq(
+    'and offers the profile picker',
+    await page.locator('#browse-error-link').getAttribute('href'),
+    '/profiles',
+  );
   await shot('16-browse-error-profile');
 }
 
