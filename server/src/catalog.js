@@ -339,8 +339,7 @@ async function playProvider(profile, profileId, ref) {
   }
 
   // An episode ref has to name its series, because progress and the maturity gate hang off the
-  // series rather than the episode.
-  // An unsplittable ref falls through as its own id and resolves as a title or not at all, which
+  // series rather than the episode. A ref no adapter can split falls through as its own id, which
   // is the TVmaze case: its episode ids name no series, so only the series ref can be played.
   const owner = await resolveItem(
     ref.kind === 'episode' ? (episodeOwnerId(id) ?? id) : id,
