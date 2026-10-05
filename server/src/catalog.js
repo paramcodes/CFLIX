@@ -1,5 +1,5 @@
 import { db, progressOf } from './store.js';
-import { movies, series, seriesListing } from './catalog-data.js';
+import { movies, series } from './catalog-data.js';
 import { maturityAllowed } from './types.js';
 import { DomainError } from './errors.js';
 import { activeProvider, cacheKey } from './providers/contract.js';
@@ -34,8 +34,9 @@ const RELATED_LIMIT = 12;
  * form Kitsu emits, so a Cinemeta episode id was never reduced to its series, the lookup resolved
  * the raw episode, and the maturity gate blocked every profile with `MATURITY_BLOCKED`. PR #40
  * restored that shape by adding one alternative by hand, and this keeps each shape beside the code
- * that mints it so the next provider needs no hand edit here. Seed episode ids carry no provider
- * and are matched by identity in `findSeed` before this is reached.
+ * that mints it so the next provider needs no hand edit here. Seed refs are matched by identity in
+ * `findSeed` before this is reached, and a seed episode id copies Cinemeta's shape, so even a stale
+ * one splits back to `seed:s1` rather than to a provider.
  *
  * Precedence is `ADAPTERS` insertion order. A shape has to be specific enough not to claim another
  * adapter's ids, because the first adapter to answer ends the walk.
@@ -120,20 +121,13 @@ const watchedIds = (profileId) =>
 
 /* ------------------------------------------------------------------ seed fixture */
 
-const seedMovies = () => movies;
-const seedSeries = () => series.map(seriesListing);
-
-const seedEpisodesOf = (s) => s.seasons.flatMap((season) => season.episodes);
-
-function findSeedEpisode(id) {
+const findSeedEpisode = (id) => {
   for (const s of series) {
-    for (const season of s.seasons) {
-      const ep = season.episodes.find((e) => e.id === id);
-      if (ep) return ep;
-    }
+    const ep = s.episodes.find((e) => e.id === id);
+    if (ep) return ep;
   }
   return null;
-}
+};
 
 const findSeed = (id) =>
   movies.find((m) => m.id === id) ||
@@ -154,9 +148,9 @@ function withInheritedMaturity(item, owner) {
 }
 
 function seedBrowseItems(kind) {
-  if (kind === 'movie') return seedMovies();
-  if (kind === 'series') return seedSeries();
-  return [...seedMovies(), ...seedSeries()];
+  if (kind === 'movie') return movies;
+  if (kind === 'series') return series;
+  return [...movies, ...series];
 }
 
 const seedSearchItems = ({ text, kind }) => {
@@ -247,7 +241,7 @@ function providerEpisodes(item) {
 
 async function episodesOf(item) {
   const owned = episodeOwner(item.id);
-  return owned ? seedEpisodesOf(owned) : providerEpisodes(item);
+  return owned ? owned.episodes : providerEpisodes(item);
 }
 
 /* ------------------------------------------------------------------ resolution */
@@ -320,10 +314,7 @@ function playSeed(profile, profileId, ref, seeded) {
   }
   if (ref.kind === 'series' && seeded.kind === 'series') {
     assertCanWatch(profile, seeded);
-    const episode = nextUnwatched(
-      watchedIds(profileId),
-      seedEpisodesOf(seeded),
-    );
+    const episode = nextUnwatched(watchedIds(profileId), seeded.episodes);
     if (!episode) throw notFound('no such episode');
     return playback(profile, profileId, episode, 'seed');
   }
@@ -379,7 +370,7 @@ export const CatalogService = {
     return { items: await browseItems(requireProfile(profileId), kind, genre) };
   },
 
-  /** Both id namespaces: `m1` and `s1e1` from the fixture, `tt0111161` from the provider. */
+  /** Both id namespaces: `seed:m1` and `seed:s1:1:1` from the fixture, `tt0111161` from the provider. */
   async get(profileId, id) {
     const profile = requireProfile(profileId);
     const found = await resolveItem(String(id ?? ''));

@@ -515,13 +515,17 @@ if (live) {
 {
   await page.goto(B + '/browse?q=dark&kind=movie');
   await settle();
-  eq(
-    'a card links to its title page',
+  const cardUrl = new URL(
     await page
       .locator('#browse-grid .browse__card')
       .first()
       .getAttribute('href'),
-    '/title?id=m1',
+    B,
+  );
+  eq(
+    'a card links to its title page',
+    `${cardUrl.pathname}?id=${cardUrl.searchParams.get('id')}`,
+    '/title?id=seed:m1',
   );
   eq(
     'a card renders portrait 2/3',
@@ -532,8 +536,15 @@ if (live) {
     '2 / 3',
   );
   await page.locator('#browse-grid .browse__card').first().click();
-  await page.waitForURL('**/title?id=m1');
-  eq('clicking a card opens that title', new URL(page.url()).search, '?id=m1');
+  await page.waitForURL(
+    (url) =>
+      url.pathname === '/title' && url.searchParams.get('id') === 'seed:m1',
+  );
+  eq(
+    'clicking a card opens that title',
+    new URL(page.url()).searchParams.get('id'),
+    'seed:m1',
+  );
 }
 
 const isRemoteAsset = (url) => url.origin !== new URL(B).origin;

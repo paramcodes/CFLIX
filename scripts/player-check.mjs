@@ -78,7 +78,7 @@ const series =
   (await get('/api/catalog/browse?kind=series', auth)).data.items || [];
 const trailerMovie = movies.find((m) => m.trailerYtId);
 const trailerSeries = series.find((s) => s.trailerYtId);
-const seedMovie = (await get('/api/catalog/get?id=m1', auth)).data;
+const seedMovie = (await get('/api/catalog/get?id=seed:m1', auth)).data;
 check(
   'catalog has a movie with a trailer',
   !!trailerMovie,
@@ -764,7 +764,7 @@ await page.screenshot({
 await page.setViewportSize({ width: 1440, height: 900 });
 await sleep(300);
 
-await openWatch({ kind: 'movie', id: 'm1' });
+await openWatch({ kind: 'movie', id: 'seed:m1' });
 const posterBadge = (await text('#media-badge')).trim();
 const posterNote = (await text('#media-note')).trim();
 check(

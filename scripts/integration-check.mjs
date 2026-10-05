@@ -171,20 +171,24 @@ async function liveChecks(base) {
   );
   check('provider movie source', providerMovie.data.source, 'provider');
 
-  const seedMovie = await api.get('/api/catalog/get?id=m1', token, adult);
-  check('legacy seed id still resolves', seedMovie.data.id, 'm1');
+  const seedMovie = await api.get('/api/catalog/get?id=seed:m1', token, adult);
+  check('legacy seed id still resolves', seedMovie.data.id, 'seed:m1');
   check('legacy seed title', seedMovie.data.title, 'The Dark Knight');
   check('legacy seed source', seedMovie.data.source, 'seed');
 
-  const seedEpisode = await api.get('/api/catalog/get?id=s1e1', token, adult);
-  check('legacy seed episode id resolves', seedEpisode.data.id, 's1e1');
+  const seedEpisode = await api.get(
+    '/api/catalog/get?id=seed:s1:1:1',
+    token,
+    adult,
+  );
+  check('legacy seed episode id resolves', seedEpisode.data.id, 'seed:s1:1:1');
   check(
     'a seed episode inherits its series maturity',
     seedEpisode.data.maturity,
     'teen',
   );
   const seedEpisodeForChild = await api.get(
-    '/api/catalog/get?id=s1e1',
+    '/api/catalog/get?id=seed:s1:1:1',
     token,
     child,
   );
@@ -193,7 +197,7 @@ async function liveChecks(base) {
     seedEpisodeForChild.status,
     404,
   );
-  const seedSeries = await api.get('/api/catalog/get?id=s1', token, adult);
+  const seedSeries = await api.get('/api/catalog/get?id=seed:s1', token, adult);
   check('legacy seed series id resolves', seedSeries.data.title, 'Dark');
 
   const namespaced = await api.get(
@@ -338,7 +342,7 @@ async function liveChecks(base) {
     [],
   );
 
-  const blocked = await api.get('/api/catalog/get?id=m4', token, child);
+  const blocked = await api.get('/api/catalog/get?id=seed:m4', token, child);
   check('child is 404 on an adult seed title', blocked.status, 404);
   check(
     'child gets no detail about the adult title',
@@ -350,7 +354,7 @@ async function liveChecks(base) {
   for (const [id, kind] of [
     ['tt0111161', 'movie'],
     ['tt5753856', 'series'],
-    ['m1', 'movie'],
+    ['seed:m1', 'movie'],
   ]) {
     const res = await api.get(`/api/catalog/related?id=${id}`, token, adult);
     truthy(
@@ -459,11 +463,15 @@ async function liveChecks(base) {
 
   const seedPlay = await api.post(
     '/api/play',
-    { ref: { kind: 'series', id: 's1' } },
+    { ref: { kind: 'series', id: 'seed:s1' } },
     token,
     adult,
   );
-  check('seed series play still resolves s1e1', seedPlay.data.item.id, 's1e1');
+  check(
+    'seed series play still resolves seed:s1:1:1',
+    seedPlay.data.item.id,
+    'seed:s1:1:1',
+  );
 
   const history = await api.get('/api/history', token, adult);
   truthy(
@@ -492,14 +500,14 @@ async function offlineCheck() {
     check(
       'browse falls back to the seed ids',
       res.data.items.map((i) => i.id),
-      ['m1', 'm2', 'm3', 'm4', 's1', 's2'],
+      ['seed:m1', 'seed:m2', 'seed:m3', 'seed:m4', 'seed:s1', 'seed:s2'],
     );
     check(
       'every fallback item is stamped seed',
       [...new Set(res.data.items.map((i) => i.source))],
       ['seed'],
     );
-    const title = await api.get('/api/catalog/get?id=m1', token, adult);
+    const title = await api.get('/api/catalog/get?id=seed:m1', token, adult);
     check(
       'get still resolves a seed with no provider',
       title.data.title,
@@ -507,14 +515,14 @@ async function offlineCheck() {
     );
     const played = await api.post(
       '/api/play',
-      { ref: { kind: 'series', id: 's1' } },
+      { ref: { kind: 'series', id: 'seed:s1' } },
       token,
       adult,
     );
     check(
       'play still resolves a seed episode with no provider',
       played.data.item.id,
-      's1e1',
+      'seed:s1:1:1',
     );
     console.log(
       `        titles     ${JSON.stringify(res.data.items.map((i) => i.title))}`,

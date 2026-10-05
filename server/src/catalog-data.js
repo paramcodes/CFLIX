@@ -1,127 +1,144 @@
+/**
+ * The offline fixture, shaped exactly like `CatalogItem` and `Episode` in
+ * `server/src/providers/contract.js`: every declared key, nothing extra, and every id
+ * namespaced `seed:` so no provider can mint or claim one. Episode ids are derived from
+ * their own coordinates (series, season, number), which is how two series stopped minting
+ * the same `s2e1`.
+ *
+ * `scripts/fixture-conformance-check.mjs` fails `npm test` when any of that stops holding.
+ */
+const episode = (
+  seriesId,
+  seasonNumber,
+  episodeNumber,
+  title,
+  durationSeconds,
+) => ({
+  id: `${seriesId}:${seasonNumber}:${episodeNumber}`,
+  seriesId,
+  seasonNumber,
+  episodeNumber,
+  title,
+  durationSeconds,
+  synopsis: null,
+  stillUrl: null,
+});
+
 export const movies = [
   {
     kind: 'movie',
-    id: 'm1',
+    id: 'seed:m1',
     title: 'The Dark Knight',
     synopsis: 'Batman raises the stakes in Gotham.',
     posterUrl: '/posters/m1.jpg',
+    backdropUrl: null,
+    logoUrl: null,
     year: 2008,
     durationSeconds: 9120,
     maturity: 'teen',
+    genres: [],
+    cast: [],
+    rating: null,
+    trailerYtId: null,
+    provider: 'seed',
   },
   {
     kind: 'movie',
-    id: 'm2',
+    id: 'seed:m2',
     title: 'Space Odyssey',
     synopsis: 'A trip to Jupiter.',
     posterUrl: '/posters/m2.jpg',
+    backdropUrl: null,
+    logoUrl: null,
     year: 1968,
     durationSeconds: 8520,
     maturity: 'teen',
+    genres: [],
+    cast: [],
+    rating: null,
+    trailerYtId: null,
+    provider: 'seed',
   },
   {
     kind: 'movie',
-    id: 'm3',
+    id: 'seed:m3',
     title: 'Kids Cartoon Movie',
     synopsis: 'A very safe film.',
     posterUrl: '/posters/m3.jpg',
+    backdropUrl: null,
+    logoUrl: null,
     year: 2020,
     durationSeconds: 5400,
     maturity: 'child',
+    genres: [],
+    cast: [],
+    rating: null,
+    trailerYtId: null,
+    provider: 'seed',
   },
   {
     kind: 'movie',
-    id: 'm4',
+    id: 'seed:m4',
     title: 'Red Harvest',
     synopsis: 'Noir detective tale.',
     posterUrl: '/posters/m4.jpg',
+    backdropUrl: null,
+    logoUrl: null,
     year: 2019,
     durationSeconds: 6600,
     maturity: 'adult',
+    genres: [],
+    cast: [],
+    rating: null,
+    trailerYtId: null,
+    provider: 'seed',
   },
 ];
+
+const DARK = 'seed:s1';
+const KID_SHOW = 'seed:s2';
 
 export const series = [
   {
     kind: 'series',
-    id: 's1',
+    id: DARK,
     title: 'Dark',
     synopsis: 'Time travel in a small town.',
     posterUrl: '/posters/s1.jpg',
+    backdropUrl: null,
+    logoUrl: null,
     year: 2017,
+    durationSeconds: null,
     maturity: 'teen',
-    seasons: [
-      {
-        seasonNumber: 1,
-        episodes: [
-          {
-            id: 's1e1',
-            seriesId: 's1',
-            seasonNumber: 1,
-            episodeNumber: 1,
-            title: 'Secret',
-            durationSeconds: 3300,
-          },
-          {
-            id: 's1e2',
-            seriesId: 's1',
-            seasonNumber: 1,
-            episodeNumber: 2,
-            title: 'Lies',
-            durationSeconds: 3200,
-          },
-        ],
-      },
-      {
-        seasonNumber: 2,
-        episodes: [
-          {
-            id: 's2e1',
-            seriesId: 's1',
-            seasonNumber: 2,
-            episodeNumber: 1,
-            title: 'Knots',
-            durationSeconds: 3100,
-          },
-        ],
-      },
+    genres: [],
+    cast: [],
+    rating: null,
+    trailerYtId: null,
+    provider: 'seed',
+    seasonCount: 2,
+    episodes: [
+      episode(DARK, 1, 1, 'Secret', 3300),
+      episode(DARK, 1, 2, 'Lies', 3200),
+      episode(DARK, 2, 1, 'Knots', 3100),
     ],
   },
   {
     kind: 'series',
-    id: 's2',
+    id: KID_SHOW,
     title: 'Kid Show',
     synopsis: 'Cartoon series for kids.',
     posterUrl: '/posters/s2.jpg',
+    backdropUrl: null,
+    logoUrl: null,
     year: 2021,
+    durationSeconds: null,
     maturity: 'child',
-    seasons: [
-      {
-        seasonNumber: 1,
-        episodes: [
-          {
-            id: 's2e1',
-            seriesId: 's2',
-            seasonNumber: 1,
-            episodeNumber: 1,
-            title: 'Pilot',
-            durationSeconds: 1500,
-          },
-        ],
-      },
-    ],
+    genres: [],
+    cast: [],
+    rating: null,
+    trailerYtId: null,
+    provider: 'seed',
+    seasonCount: 1,
+    episodes: [episode(KID_SHOW, 1, 1, 'Pilot', 1500)],
   },
 ];
-
-export function seriesListing(s) {
-  return {
-    kind: 'series',
-    id: s.id,
-    title: s.title,
-    synopsis: s.synopsis,
-    posterUrl: s.posterUrl,
-    year: s.year,
-    maturity: s.maturity,
-    seasonCount: s.seasons.length,
-  };
-}

@@ -35,8 +35,8 @@ await runWithServerAndBrowser(async ({ baseUrl, page }) => {
     sessionStorage.setItem('cflix_profile', JSON.stringify(profile));
   }, setup);
 
-  // 2. Open title detail for a series (s1)
-  await page.goto(`${baseUrl}/title?id=s1`);
+  // 2. Open title detail for a series (seed:s1)
+  await page.goto(`${baseUrl}/title?id=seed:s1`);
   await page.waitForSelector('.detail__artwork span, .detail__title', {
     timeout: 6000,
   });
@@ -79,7 +79,7 @@ await runWithServerAndBrowser(async ({ baseUrl, page }) => {
           authorization: `Bearer ${token}`,
           'x-cflix-profile': profileId,
         },
-        body: JSON.stringify({ itemId: 's1e1', seconds: 180 }),
+        body: JSON.stringify({ itemId: 'seed:s1:1:1', seconds: 180 }),
       });
 
       const res = await fetch('/api/history', {
