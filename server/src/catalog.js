@@ -142,11 +142,15 @@ const findSeed = (id) =>
 
 const episodeOwner = (id) => series.find((s) => s.id === id) || null;
 
-/** A seed episode carries no maturity of its own; the owning series is what the gate reads. */
-function withInheritedMaturity(item) {
+/**
+ * An episode carries no rating of its own: the `Episode` typedef in contract.js has no maturity
+ * field and no upstream publishes a per-episode genre or certificate, so an episode inherits the
+ * rating of the series it belongs to. The owner is passed in because the two id namespaces reach
+ * an episode differently, and looking it up from `seriesId` only ever finds the seed fixture.
+ */
+function withInheritedMaturity(item, owner) {
   if (item.maturity) return item;
-  const owner = episodeOwner(item.seriesId);
-  return owner ? { ...item, maturity: owner.maturity } : item;
+  return owner?.maturity ? { ...item, maturity: owner.maturity } : item;
 }
 
 function seedBrowseItems(kind) {
@@ -252,14 +256,24 @@ async function resolveItem(id) {
   const wanted = String(id ?? '');
   if (!wanted) return null;
   const seeded = findSeed(wanted);
-  if (seeded) return { item: withInheritedMaturity(seeded), source: 'seed' };
+  if (seeded) {
+    return {
+      item: withInheritedMaturity(seeded, episodeOwner(seeded.seriesId)),
+      source: 'seed',
+    };
+  }
 
   const ownerId = episodeOwnerId(wanted);
   if (ownerId) {
     const owner = await resolveItem(ownerId);
     if (!owner) return null;
     const episode = (await episodesOf(owner.item)).find((e) => e.id === wanted);
-    return episode ? { item: episode, source: owner.source } : null;
+    return episode
+      ? {
+          item: withInheritedMaturity(episode, owner.item),
+          source: owner.source,
+        }
+      : null;
   }
 
   const item = await providerGetItem(wanted);
