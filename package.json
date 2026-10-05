@@ -6,8 +6,9 @@
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
-    "test": "node scripts/test-runner.mjs && node scripts/provider-routing-check.mjs",
+    "test": "node scripts/test-runner.mjs && node scripts/provider-routing-check.mjs && node scripts/episode-maturity-check.mjs",
     "test:smoke": "node scripts/smoke.mjs",
+    "test:maturity": "node scripts/episode-maturity-check.mjs",
     "test:routing": "node scripts/provider-routing-check.mjs",
     "test:adapters": "node scripts/cache-check.mjs && node scripts/cinemeta-check.mjs && node scripts/tvmaze-check.mjs && node scripts/kitsu-check.mjs",
     "verify": "node scripts/verify/verify-all.mjs",
