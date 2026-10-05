@@ -29,6 +29,7 @@
     "verify:profiles": "node scripts/verify/verify-profiles.mjs",
     "verify:browse": "node scripts/verify/verify-browse.mjs",
     "verify:playback": "node scripts/verify/verify-playback.mjs",
+    "timing": "node scripts/timing/run.mjs",
     "capture": "node scripts/capture.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

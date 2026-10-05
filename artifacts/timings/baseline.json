@@ -1,0 +1,467 @@
+{
+  "startedAt": "2026-10-05T12:51:36.743Z",
+  "head": "c57cac350a7f6283965039ddede43ba2a20a2208",
+  "dirty": 212,
+  "machine": {
+    "cores": 4,
+    "load1": 4.62,
+    "node": "v26.8.2"
+  },
+  "config": {
+    "phases": [
+      "gates",
+      "api",
+      "pages"
+    ],
+    "runs": 5,
+    "coldRuns": 5,
+    "warmRuns": 20
+  },
+  "gates": [
+    {
+      "gate": "npm test",
+      "summary": {
+        "n": 5,
+        "median": 3527.3,
+        "min": 2380.6,
+        "max": 6736
+      },
+      "samples": [
+        2381,
+        4969,
+        6736,
+        3296,
+        3527
+      ],
+      "failedRuns": 0,
+      "load": [
+        4.62,
+        5.09,
+        9.47,
+        9.7,
+        7.75
+      ]
+    },
+    {
+      "gate": "npm run verify",
+      "summary": {
+        "n": 5,
+        "median": 26691.4,
+        "min": 23965.6,
+        "max": 42836.7
+      },
+      "samples": [
+        23966,
+        42837,
+        26548,
+        26691,
+        28512
+      ],
+      "failedRuns": 0,
+      "load": [
+        5.28,
+        8.38,
+        10.28,
+        8.17,
+        8.66
+      ]
+    }
+  ],
+  "api": {
+    "liveId": "tt6933238",
+    "results": [
+      {
+        "label": "GET /api/catalog/browse?kind=movie",
+        "expectSource": "provider",
+        "cold": {
+          "n": 5,
+          "median": 730.4,
+          "min": 560.6,
+          "max": 1741.8
+        },
+        "warm": {
+          "n": 20,
+          "median": 5.2,
+          "min": 2.7,
+          "max": 11.7
+        },
+        "coldSamples": [
+          1741.77664,
+          702.200836,
+          1240.101543,
+          730.375891,
+          560.577464
+        ],
+        "warmSamples": [
+          10.286435,
+          9.404821,
+          9.427432,
+          7.054274,
+          11.687128,
+          4.99385,
+          7.791077,
+          9.690133,
+          4.67053,
+          2.807231,
+          2.660606,
+          4.378002,
+          4.018091,
+          4.913686,
+          3.105225,
+          5.432316,
+          3.610469,
+          4.772437,
+          5.359737,
+          7.151273
+        ],
+        "coldStatus": 200,
+        "warmStatus": 200,
+        "itemCount": 24,
+        "sources": [
+          "provider"
+        ]
+      },
+      {
+        "label": "GET /api/catalog/browse?kind=series",
+        "expectSource": "provider",
+        "cold": {
+          "n": 5,
+          "median": 254.3,
+          "min": 213.5,
+          "max": 417.5
+        },
+        "warm": {
+          "n": 20,
+          "median": 4.6,
+          "min": 2.7,
+          "max": 10.6
+        },
+        "coldSamples": [
+          417.460312,
+          213.511315,
+          327.072119,
+          254.318485,
+          227.943742
+        ],
+        "warmSamples": [
+          3.493877,
+          3.836771,
+          3.953731,
+          10.598469,
+          7.749623,
+          8.30732,
+          5.361924,
+          4.601589,
+          5.568301,
+          5.607303,
+          5.168205,
+          3.782208,
+          2.695418,
+          2.661852,
+          3.687734,
+          4.628968,
+          6.315667,
+          4.03551,
+          5.195495,
+          4.20663
+        ],
+        "coldStatus": 200,
+        "warmStatus": 200,
+        "itemCount": 24,
+        "sources": [
+          "provider"
+        ]
+      },
+      {
+        "label": "POST /api/catalog/search {\"text\":\"matrix\"}",
+        "expectSource": "provider",
+        "cold": {
+          "n": 5,
+          "median": 74.4,
+          "min": 65,
+          "max": 98.5
+        },
+        "warm": {
+          "n": 20,
+          "median": 3.5,
+          "min": 2.5,
+          "max": 6.2
+        },
+        "coldSamples": [
+          74.389435,
+          81.879291,
+          72.013044,
+          65.015615,
+          98.476643
+        ],
+        "warmSamples": [
+          4.905072,
+          6.229141,
+          3.057413,
+          3.334245,
+          4.006118,
+          3.492694,
+          2.495453,
+          3.13249,
+          2.813042,
+          3.011481,
+          3.496394,
+          3.115579,
+          2.594357,
+          3.301436,
+          3.966528,
+          3.798598,
+          4.860705,
+          3.795466,
+          4.011429,
+          4.043295
+        ],
+        "coldStatus": 200,
+        "warmStatus": 200,
+        "itemCount": 18,
+        "sources": [
+          "provider"
+        ]
+      },
+      {
+        "label": "POST /api/catalog/search {\"text\":\"dark\"}",
+        "expectSource": "seed",
+        "cold": {
+          "n": 5,
+          "median": 2.9,
+          "min": 2.3,
+          "max": 3.1
+        },
+        "warm": {
+          "n": 20,
+          "median": 2.7,
+          "min": 2,
+          "max": 4.2
+        },
+        "coldSamples": [
+          3.144144,
+          2.288816,
+          2.426192,
+          2.952486,
+          2.880855
+        ],
+        "warmSamples": [
+          2.644366,
+          2.468251,
+          3.258854,
+          2.895592,
+          2.899153,
+          2.739494,
+          2.407264,
+          2.15457,
+          2.777173,
+          3.290114,
+          4.209027,
+          2.673935,
+          2.048375,
+          2.144193,
+          2.652154,
+          3.631062,
+          3.898056,
+          2.928538,
+          2.415324,
+          2.386082
+        ],
+        "coldStatus": 200,
+        "warmStatus": 200,
+        "itemCount": 1,
+        "sources": [
+          "seed"
+        ]
+      },
+      {
+        "label": "GET /api/catalog/get?id=<live movie>",
+        "expectSource": "provider",
+        "cold": {
+          "n": 5,
+          "median": 222,
+          "min": 179.9,
+          "max": 1111.2
+        },
+        "warm": {
+          "n": 20,
+          "median": 3.3,
+          "min": 2.2,
+          "max": 7.1
+        },
+        "coldSamples": [
+          1111.224162,
+          203.579917,
+          265.798294,
+          179.898588,
+          221.985794
+        ],
+        "warmSamples": [
+          4.246638,
+          4.233129,
+          7.130509,
+          3.272364,
+          4.736244,
+          3.258581,
+          3.137606,
+          2.982829,
+          2.807235,
+          2.525349,
+          5.216636,
+          4.904703,
+          2.725413,
+          2.669024,
+          3.251481,
+          3.362026,
+          2.676992,
+          3.275252,
+          2.162384,
+          2.503196
+        ],
+        "coldStatus": 200,
+        "warmStatus": 200,
+        "itemCount": 1,
+        "sources": [
+          "provider"
+        ]
+      }
+    ]
+  },
+  "pages": {
+    "liveId": "tt6933238",
+    "trailerId": "tt6933238",
+    "results": [
+      {
+        "path": "/",
+        "what": "landing headline in the document",
+        "n": 5,
+        "median": 180.1,
+        "min": 133.1,
+        "max": 476.2,
+        "failures": 0,
+        "samples": [
+          306.30000000074506,
+          180.10000000149012,
+          476.19999999925494,
+          160.80000000074506,
+          133.09999999776483
+        ],
+        "firstRunMs": 338.3999999985099,
+        "landedOn": [
+          "/"
+        ],
+        "errors": []
+      },
+      {
+        "path": "/signin",
+        "what": "sign-in form in the document",
+        "n": 5,
+        "median": 275,
+        "min": 223.9,
+        "max": 349.4,
+        "failures": 0,
+        "samples": [
+          349.4000000022352,
+          284.69999999925494,
+          260.8999999985099,
+          223.89999999850988,
+          275
+        ],
+        "firstRunMs": 277.8999999985099,
+        "landedOn": [
+          "/signin"
+        ],
+        "errors": []
+      },
+      {
+        "path": "/home",
+        "what": "first trending card rendered",
+        "n": 5,
+        "median": 556.2,
+        "min": 423.3,
+        "max": 1031.5,
+        "failures": 0,
+        "samples": [
+          731,
+          543.0999999977648,
+          1031.5,
+          556.1999999992549,
+          423.29999999701977
+        ],
+        "firstRunMs": 3488.5,
+        "landedOn": [
+          "/home"
+        ],
+        "errors": []
+      },
+      {
+        "path": "/browse",
+        "what": "first browse card rendered",
+        "n": 5,
+        "median": 243.1,
+        "min": 175.4,
+        "max": 312.4,
+        "failures": 0,
+        "samples": [
+          312.3999999985099,
+          243.10000000149012,
+          198.5,
+          253.89999999850988,
+          175.40000000223517
+        ],
+        "firstRunMs": 422.80000000074506,
+        "landedOn": [
+          "/browse"
+        ],
+        "errors": []
+      },
+      {
+        "path": "/title?id=tt6933238",
+        "what": "detail title populated from the API",
+        "n": 5,
+        "median": 252.1,
+        "min": 186.5,
+        "max": 283.5,
+        "failures": 0,
+        "samples": [
+          252.10000000149012,
+          283.5,
+          267.19999999925494,
+          216.60000000149012,
+          186.5
+        ],
+        "firstRunMs": 311.1000000014901,
+        "landedOn": [
+          "/title"
+        ],
+        "errors": []
+      },
+      {
+        "path": "/watch",
+        "what": "player title populated from /api/play",
+        "n": 5,
+        "median": 137.6,
+        "min": 125.3,
+        "max": 186.9,
+        "failures": 0,
+        "samples": [
+          125.30000000074506,
+          137.60000000149012,
+          186.89999999850988,
+          143,
+          136.29999999701977
+        ],
+        "firstRunMs": 277.29999999701977,
+        "landedOn": [
+          "/watch"
+        ],
+        "errors": []
+      }
+    ]
+  },
+  "machineAtEnd": {
+    "cores": 4,
+    "load1": 8.88,
+    "node": "v26.8.2"
+  }
+}
