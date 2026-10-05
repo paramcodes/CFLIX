@@ -1,18 +1,22 @@
 import { chromium } from 'playwright';
 import { mkdirSync } from 'node:fs';
+import { startServerForRun } from './verify/harness.mjs';
 
-const B = process.env.PORT
-  ? `http://localhost:${process.env.PORT}`
-  : 'http://localhost:3311';
+const B = await startServerForRun();
 const OUT = 'artifacts/verify-cflix/home-page';
 mkdirSync(OUT, { recursive: true });
 
 let failures = 0;
+const skipped = [];
 const check = (name, cond, detail = '') => {
   console.log(
     `${cond ? 'PASS' : 'FAIL'}  ${name}${detail ? `  ${detail}` : ''}`,
   );
   if (!cond) failures++;
+};
+const skip = (name, why) => {
+  skipped.push(name);
+  console.log(`SKIP  ${name}  ${why}`);
 };
 
 const browser = await chromium.launch();
@@ -766,21 +770,33 @@ const readRails = (page) =>
     api.pagedFirst === api.plainFirst && api.pagedCount === 24,
     `plain starts ${api.plainFirst} with 24, skip=20&cursor=20 starts ${api.pagedFirst} with ${api.pagedCount}`,
   );
-  check(
-    'the search response does carry nextCursor',
-    api.searchKeys.includes('nextCursor') && !!api.nextCursor,
-    `${api.page1.length}-item page returned nextCursor=${JSON.stringify(api.nextCursor)}, whose page holds ${api.page2.length}`,
-  );
+  // The rest of this block walks a page 2, so when the provider answers with one page there
+  // is nothing to walk. Skip explicitly rather than fail on a page the API never offered.
+  const paged = api.searchKeys.includes('nextCursor') && !!api.nextCursor;
+  if (paged) {
+    check(
+      'the search response does carry nextCursor',
+      true,
+      `${api.page1.length}-item page returned nextCursor=${JSON.stringify(api.nextCursor)}, whose page holds ${api.page2.length}`,
+    );
+  } else {
+    skip(
+      'the search response does carry nextCursor',
+      `the live catalog returned ${api.page1.length} hits for one page, so nextCursor=${JSON.stringify(api.nextCursor)}`,
+    );
+  }
 
   check(
     'browse rails carry no tail sentinel',
     (await page.locator('.row:not(#row-results-wrap) .row__tail').count()) ===
       0,
   );
-  check(
-    'the cursor-backed results row carries one tail sentinel',
-    (await page.locator('#row-results-wrap .row__tail').count()) === 1,
-  );
+  if (paged) {
+    check(
+      'the cursor-backed results row carries one tail sentinel',
+      (await page.locator('#row-results-wrap .row__tail').count()) === 1,
+    );
+  }
 
   const bodies = [];
   page.on('request', (req) => {
@@ -788,7 +804,9 @@ const readRails = (page) =>
       bodies.push(req.postDataJSON());
   });
 
-  const expected = [...api.page1, ...api.page2].map((id) => `/title?id=${id}`);
+  const expected = (paged ? [...api.page1, ...api.page2] : api.page1).map(
+    (id) => `/title?id=${id}`,
+  );
   await page.fill('#search-input', 'one piece');
   await page.click('#search-form button');
   await page.waitForFunction(
@@ -802,7 +820,9 @@ const readRails = (page) =>
     els.map((e) => e.getAttribute('href')),
   );
   check(
-    `the tail appended page 2, so the rail is the API's full cursor walk (${expected.length} cards)`,
+    paged
+      ? `the tail appended page 2, so the rail is the API's full cursor walk (${expected.length} cards)`
+      : `the rail is the API's single page (${expected.length} cards)`,
     shown.join('|') === expected.join('|'),
     `rail ${shown.length} cards, api ${expected.length}; first mismatch at ${shown.findIndex((h, i) => h !== expected[i])}`,
   );
@@ -810,16 +830,27 @@ const readRails = (page) =>
     `every card is a distinct title id (${new Set(shown).size}/${shown.length})`,
     new Set(shown).size === shown.length,
   );
-  check(
-    `the tail request carried the cursor the first page returned (${JSON.stringify(api.nextCursor)})`,
-    bodies.length >= 2 && bodies[1].cursor === String(api.nextCursor),
-    JSON.stringify(bodies),
-  );
-  check(
-    'the tail stops asking once the API returns a null cursor',
-    api.page2Cursor === null && bodies.length === 2,
-    `page 2 nextCursor=${JSON.stringify(api.page2Cursor)} after ${bodies.length} search requests`,
-  );
+  if (paged) {
+    check(
+      `the tail request carried the cursor the first page returned (${JSON.stringify(api.nextCursor)})`,
+      bodies.length >= 2 && bodies[1].cursor === String(api.nextCursor),
+      JSON.stringify(bodies),
+    );
+    check(
+      'the tail stops asking once the API returns a null cursor',
+      api.page2Cursor === null && bodies.length === 2,
+      `page 2 nextCursor=${JSON.stringify(api.page2Cursor)} after ${bodies.length} search requests`,
+    );
+  } else {
+    // tailLoader appends its sentinel whether or not a second page exists, so the sentinel's
+    // presence proves nothing here. What proves the tail stopped is that home.js sets
+    // exhausted from the null cursor and returns before issuing another request.
+    check(
+      'a one-page search asks once, so the tail has nothing left to fetch',
+      bodies.length === 1,
+      `${bodies.length} search requests`,
+    );
+  }
   await page.locator('#row-results-wrap').scrollIntoViewIfNeeded();
   await page.waitForTimeout(300);
   await page.screenshot({ path: `${OUT}/11-tail-loaded.png` });
@@ -917,4 +948,6 @@ const readRails = (page) =>
 
 await browser.close();
 console.log(`\n${failures ? `${failures} FAIL` : 'all checks passed'}`);
+if (skipped.length)
+  console.log(`${skipped.length} skipped: ${skipped.join(', ')}`);
 process.exit(failures ? 1 : 0);

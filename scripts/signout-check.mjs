@@ -1,9 +1,8 @@
 import { chromium } from 'playwright';
 import { mkdir } from 'node:fs/promises';
+import { startServerForRun } from './verify/harness.mjs';
 
-const B = process.env.PORT
-  ? `http://localhost:${process.env.PORT}`
-  : 'http://localhost:3000';
+const B = await startServerForRun();
 const SHOTS = new URL('../artifacts/verify-cflix/nav-signout/', import.meta.url)
   .pathname;
 

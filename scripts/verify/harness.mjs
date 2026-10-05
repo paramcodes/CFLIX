@@ -57,56 +57,99 @@ async function waitForServer(url, timeoutMs = 6000) {
   throw new Error(`Server at ${url} failed to respond within ${timeoutMs}ms`);
 }
 
-export async function runWithServerAndBrowser(fn) {
-  let serverProc = null;
-  let baseUrl =
-    process.env.BASE ||
-    (process.env.PORT ? `http://localhost:${process.env.PORT}` : null);
+const spawned = new Set();
+let handlersInstalled = false;
 
-  if (!baseUrl) {
-    const port = await getAvailablePort();
-    baseUrl = `http://localhost:${port}`;
-    console.log(`[harness] Spawning ephemeral server on port ${port}...`);
-    serverProc = spawn(process.execPath, ['server/index.js'], {
-      env: { ...process.env, PORT: String(port) },
-      stdio: ['ignore', 'pipe', 'inherit'],
-    });
-
-    const killServer = () => {
-      if (serverProc && !serverProc.killed) {
-        serverProc.kill('SIGTERM');
-        setTimeout(() => {
-          if (serverProc && !serverProc.killed) serverProc.kill('SIGKILL');
-        }, 500);
-      }
-    };
-
-    process.on('SIGINT', () => {
-      killServer();
-      process.exit(130);
-    });
-    process.on('SIGTERM', () => {
-      killServer();
-      process.exit(143);
-    });
-  }
-
-  const browser = await chromium.launch({ headless: true });
-  const context = await browser.newContext({
-    viewport: { width: 1440, height: 900 },
-  });
-  const page = await context.newPage();
-
-  try {
-    await waitForServer(`${baseUrl}/`);
-    console.log(`[harness] Server ready at ${baseUrl}. Executing checks...`);
-    await fn({ baseUrl, page, context, browser });
-  } finally {
-    await browser.close().catch(() => {});
-    if (serverProc) {
-      serverProc.kill('SIGTERM');
+function killServer(proc) {
+  spawned.delete(proc);
+  if (proc.exitCode !== null || proc.signalCode !== null) return;
+  proc.kill('SIGTERM');
+  setTimeout(() => {
+    if (proc.exitCode === null && proc.signalCode === null) {
+      proc.kill('SIGKILL');
     }
+  }, 500);
+}
+
+function installExitHandlers() {
+  if (handlersInstalled) return;
+  handlersInstalled = true;
+  process.on('exit', () => {
+    for (const proc of [...spawned]) killServer(proc);
+  });
+  process.on('SIGINT', () => {
+    for (const proc of [...spawned]) killServer(proc);
+    process.exit(130);
+  });
+  process.on('SIGTERM', () => {
+    for (const proc of [...spawned]) killServer(proc);
+    process.exit(143);
+  });
+}
+
+// Always an ephemeral server, ignoring BASE or PORT. A caller that needs a second,
+// differently-configured instance alongside a shared one uses this, not startServerForRun.
+export async function startServer(envOverrides = {}) {
+  installExitHandlers();
+  const port = await getAvailablePort();
+  const baseUrl = `http://localhost:${port}`;
+  console.log(`[harness] Spawning ephemeral server on port ${port}...`);
+  const proc = spawn(process.execPath, ['server/index.js'], {
+    env: { ...process.env, PORT: String(port), ...envOverrides },
+    stdio: ['ignore', 'pipe', 'inherit'],
+  });
+  spawned.add(proc);
+  await readyServer(baseUrl);
+  return { baseUrl, stop: () => killServer(proc) };
+}
+
+function externalServerUrl() {
+  return (
+    process.env.BASE ||
+    (process.env.PORT ? `http://localhost:${process.env.PORT}` : null)
+  );
+}
+
+async function readyServer(baseUrl) {
+  await waitForServer(`${baseUrl}/`);
+  console.log(`[harness] Server ready at ${baseUrl}. Executing checks...`);
+  return baseUrl;
+}
+
+// The base URL a check script runs against. Reuses BASE or PORT when set, otherwise spawns an
+// ephemeral server that dies with this process, so a script body can stay top-level and still
+// never leave a listener behind. It waits for the server here, so an unreachable URL fails
+// here by name instead of surfacing later as an obscure page.goto error.
+export async function startServerForRun() {
+  const external = externalServerUrl();
+  return external ? readyServer(external) : (await startServer()).baseUrl;
+}
+
+async function withServer(fn) {
+  const external = externalServerUrl();
+  if (external) return fn(await readyServer(external));
+  const server = await startServer();
+  try {
+    return await fn(server.baseUrl);
+  } finally {
+    server.stop();
   }
+}
+
+export async function runWithServerAndBrowser(fn) {
+  await withServer(async (baseUrl) => {
+    const browser = await chromium.launch({ headless: true });
+    const context = await browser.newContext({
+      viewport: { width: 1440, height: 900 },
+    });
+    const page = await context.newPage();
+
+    try {
+      await fn({ baseUrl, page, context, browser });
+    } finally {
+      await browser.close().catch(() => {});
+    }
+  });
 
   console.log(`\nVerification Summary: ${passes} PASS, ${failures} FAIL`);
   if (failures > 0) {

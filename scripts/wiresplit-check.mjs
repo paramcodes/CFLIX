@@ -1,10 +1,12 @@
 import { chromium } from 'playwright';
+import { startServerForRun } from './verify/harness.mjs';
 
-const B =
-  process.env.BASE_URL || `http://localhost:${process.env.PORT || 3194}`;
+const B = await startServerForRun();
 const EMAIL = `wiresplit-${Date.now()}@test.dev`;
 const PASSWORD = 'pw123456';
 const PROFILE = 'Kid';
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let failures = 0;
 const rows = [];
@@ -12,6 +14,15 @@ function check(name, cond, detail = '') {
   rows.push(`${cond ? 'PASS' : 'FAIL'}  ${name} :: ${detail}`);
   console.log(rows.at(-1));
   if (!cond) failures++;
+}
+async function until(fn, timeoutMs, everyMs = 300) {
+  const started = Date.now();
+  let value = await fn();
+  while (!value && Date.now() - started < timeoutMs) {
+    await sleep(everyMs);
+    value = await fn();
+  }
+  return value;
 }
 
 const browser = await chromium.launch();
@@ -31,6 +42,8 @@ page.on('console', (m) => {
   const text = m.text();
   if (m.type() !== 'error') return;
   if (text.includes('Failed to load resource')) return;
+  // Emitted inside the YouTube iframe's own document; the app does not own that policy.
+  if (text.includes('Permissions policy violation')) return;
   pageErrors.push(`console: ${text}`);
 });
 
@@ -304,24 +317,46 @@ check(
   `title="${playTitle}"`,
 );
 
+// The embed needs several seconds before window.YT exists and playback starts, and 12s is
+// not reliably more than that. Poll for the clock to move instead, with a deadline wide
+// enough to cover a cold start.
 const elapsedAt = async () => (await text('.player__elapsed')).trim();
 const before = await elapsedAt();
-await page.waitForTimeout(12000);
-const after = await elapsedAt();
+const deadline = Date.now() + 30000;
+let after = before;
+while (after === before && Date.now() < deadline) {
+  await page.waitForTimeout(500);
+  after = await elapsedAt();
+}
 check(
   '.player__elapsed advances while playing',
   before !== after,
   `${before} -> ${after}`,
 );
-const history = await page.evaluate(async () => {
-  const r = await fetch('/api/history', {
-    headers: {
-      authorization: `Bearer ${sessionStorage.getItem('cflix_token')}`,
-      'x-cflix-profile': JSON.parse(sessionStorage.getItem('cflix_profile')).id,
-    },
+// player.js posts progress only once currentTime >= 1, so this lands just after the clock
+// moves and races the in-flight POST. It gets its own deadline: sharing the elapsed poll's
+// would let a slow cold start leave this loop with no budget, and an empty history then
+// reads as a progress-posting defect rather than as a timeout.
+const historyDeadline = Date.now() + 30_000;
+let history = { items: [] };
+while (
+  !history.items.some((h) => h.seconds > 0) &&
+  Date.now() < historyDeadline
+) {
+  history = await page.evaluate(async () => {
+    const r = await fetch('/api/history', {
+      headers: {
+        authorization: `Bearer ${sessionStorage.getItem('cflix_token')}`,
+        'x-cflix-profile': JSON.parse(sessionStorage.getItem('cflix_profile'))
+          .id,
+      },
+    });
+    return r.json();
   });
-  return r.json();
-});
+  if (!history.items.some((h) => h.seconds > 0)) {
+    await page.waitForTimeout(500);
+  }
+}
 check(
   'progress reached GET /api/history with seconds > 0',
   history.items.some((h) => h.seconds > 0),
@@ -372,11 +407,18 @@ check(
   guard.url(),
 );
 await guard.evaluate(() => sessionStorage.removeItem('cflix_profile'));
-await guard.goto(`${B}/home`);
-await guard.waitForURL('**/profiles');
+// The guard redirects client-side, which aborts whichever navigation is in flight when it
+// wins the race against load, so both the goto and a waitForURL can reject with
+// ERR_ABORTED. Where the page lands is the behavior under test, so poll the pathname and
+// let the check below report it.
+await guard.goto(`${B}/home`).catch(() => {});
+const landed = await until(
+  async () => new URL(guard.url()).pathname === '/profiles',
+  10_000,
+);
 check(
   'guard: /home without cflix_profile redirects to /profiles',
-  new URL(guard.url()).pathname === '/profiles',
+  !!landed,
   guard.url(),
 );
 await guard.evaluate(
