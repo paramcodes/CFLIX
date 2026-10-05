@@ -32,8 +32,10 @@ const RELATED_LIMIT = 12;
  * of the ids it mints, so this asks them rather than holding an alternation that has to learn each
  * new provider format by hand. PR #39 shipped a bug that way: its regex carried only the `:e123`
  * form Kitsu emits, so a Cinemeta episode id was never reduced to its series, the lookup resolved
- * the raw episode, and the maturity gate blocked every profile with `MATURITY_BLOCKED`. Seed
- * episode ids carry no provider and are matched by identity in `findSeed` before this is reached.
+ * the raw episode, and the maturity gate blocked every profile with `MATURITY_BLOCKED`. PR #40
+ * restored that shape by adding one alternative by hand, and this keeps each shape beside the code
+ * that mints it so the next provider needs no hand edit here. Seed episode ids carry no provider
+ * and are matched by identity in `findSeed` before this is reached.
  *
  * Precedence is `ADAPTERS` insertion order. A shape has to be specific enough not to claim another
  * adapter's ids, because the first adapter to answer ends the walk.
