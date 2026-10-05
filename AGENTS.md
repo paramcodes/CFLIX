@@ -8,7 +8,9 @@
 - `public/wire.js` — page loader: it maps `document.body.dataset.page` to exactly one module under `public/js/pages/` (`signin.js`, `profiles.js`, `home.js`, `detail.js`, `player.js`). Shared helpers live in `public/js/core.js`, shared tokens in `public/tokens.css`, shared component classes in `public/base.css`.
 - `scripts/smoke.mjs` — smoke test against a running server.
 - `scripts/capture.mjs` — Playwright capture of screenshots and a tour video.
-- `scripts/*-check.mjs` — a check per adapter and per subsystem (`cinemeta-check.mjs`, `tvmaze-check.mjs`, `kitsu-check.mjs`, `cache-check.mjs`, `integration-check.mjs`, `wiresplit-check.mjs`). Run the matching one when you touch that adapter.
+- `scripts/*-check.mjs` — one check per adapter and per subsystem. Run the matching one when you touch
+  that adapter. `git ls-files 'scripts/*-check.mjs'` lists them all; several are in no npm script yet,
+  so check for one before assuming `npm test` covered it.
 - `docs/revamp/` — before/after media.
 - `design.md` — domain model and types, but stale for the catalog: it still types `posterUrl` as a non-null `string` and predates the provider adapters entirely. `server/src/providers/contract.js` is the source of truth for catalog items, where every optional field is `string | null`, never a partial object, and `maturity` is always derived server-side.
 - `.opencode/skills/verify-cflix/` — project-local verification skill (`SKILL.md` plus `features/`) that drives the 16 screens and the JSON API. It resolves only when the session's working directory is inside the repo; started from `~` the skill stays invisible to discovery until the session moves to the repo root.
@@ -16,7 +18,8 @@
 ## Run tests
 
 ```sh
-npm test                # Automatic hermetic smoke test (finds free port, boots server, asserts 26 checks, tears down)
+npm test                # Hermetic: checks AGENTS.md citations, finds a free port, boots the server, runs smoke and routing checks, tears down. `npm test | grep -c PASS` gives the total.
+npm run test:paths      # AGENTS.md path citations only, no server
 npm run verify          # Full automated Playwright browser verification across all features
 npm run verify:<feature> # Targeted browser verification (auth, profiles, browse, playback)
 npm run lint            # ESLint static analysis (catches missing imports, undeclared variables, async bugs)
