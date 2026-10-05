@@ -9,8 +9,9 @@
 - `scripts/smoke.mjs` — smoke test against a running server.
 - `scripts/capture.mjs` — Playwright capture of screenshots and a tour video.
 - `scripts/*-check.mjs` — one check per adapter and per subsystem. Run the matching one when you touch
-  that adapter. `git ls-files 'scripts/*-check.mjs'` lists them all; several are in no npm script yet,
-  so check for one before assuming `npm test` covered it.
+  that adapter. `git ls-files 'scripts/*-check.mjs'` lists them all and every one has a matching
+  `check:` npm key, but `npm test` chains only a few, so check which before assuming a gate covered
+  your change.
 - `docs/revamp/` — before/after media.
 - `design.md` — domain model and types, but stale for the catalog: it still types `posterUrl` as a non-null `string` and predates the provider adapters entirely. `server/src/providers/contract.js` is the source of truth for catalog items, where every optional field is `string | null`, never a partial object, and `maturity` is always derived server-side.
 - `.opencode/skills/verify-cflix/` — project-local verification skill (`SKILL.md` plus `features/`) that drives the 16 screens and the JSON API. It resolves only when the session's working directory is inside the repo; started from `~` the skill stays invisible to discovery until the session moves to the repo root.
@@ -18,16 +19,22 @@
 ## Run tests
 
 ```sh
-npm test                # Hermetic: checks AGENTS.md citations, finds a free port, boots the server, runs smoke and routing checks, tears down. `npm test | grep -c PASS` gives the total.
+npm test                # Hermetic: AGENTS.md citation checks, then smoke, routing, and maturity. `npm test | grep -c PASS` gives the total.
 npm run test:paths      # AGENTS.md path citations only, no server
 npm run test:symbols    # AGENTS.md symbol citations only, no server
+npm run check:player    # One subsystem check on its own; every check script has a matching key
+npm run test:maturity   # Episode maturity guard on its own
 npm run verify          # Full automated Playwright browser verification across all features
 npm run verify:<feature> # Targeted browser verification (auth, profiles, browse, playback)
+npm run timing          # Gate, API, and page-load timings; writes artifacts/timings/
 npm run lint            # ESLint static analysis (catches missing imports, undeclared variables, async bugs)
 npm run lint:fix        # Auto-fix lint issues
 npm run format:check    # Check prettier formatting across repository
 npm run format          # Auto-format with prettier
 ```
+
+`node -e "console.log(Object.keys(require('./package.json').scripts).join('\n'))"` is the command that
+lists every gate; `git ls-files 'scripts/*-check.mjs'` lists the scripts they front.
 
 The test runner handles port allocation and server teardown automatically. You can run `npm test` repeatedly without port collisions or `EMAIL_TAKEN` failures.
 
@@ -70,8 +77,10 @@ node scripts/capture.mjs <outdir> [baseUrl]
 
 ## Learned Workspace Facts
 
-Each rule below names the command that answers it or the check that enforces it. A rule with no
-enforcer is a rule that has already failed, so this section does not carry one.
+Each rule below names a command that answers it, a check that enforces it, or a distinctive symbol
+you can grep for. Only the first two are machine-enforced: `npm run test:paths` and
+`npm run test:symbols` read this file, and nothing here reads the rules they cannot check, such as
+the no-line-number rule or one-writer-per-tree. Treat those as advice, not gates.
 
 ### Every rule here has a gate
 
@@ -85,13 +94,13 @@ enforcer is a rule that has already failed, so this section does not carry one.
   `scripts/agents-symbols-check.mjs` (`npm run test:symbols`) fails when a bullet names a source
   file and a symbol that file no longer contains, which is the drift a path check cannot see.
 - **Cite a symbol or a command, never a line number.** A path resolves until it is deleted, but a
-  line number is wrong the moment anything above it changes, and this file has already burned eight
-  PRs on staleness. PR #58 rewrote `server/src/catalog.js` and invalidated four line numbers here in
-  a single merge while every path stayed valid. Name the symbol, and let
-  `scripts/agents-symbols-check.mjs` catch the rename.
-- Eight of the 47 PRs merged through 2026-10-05 existed only to maintain this file, and each one
-  was a restatement of a fact no gate read. That is the defect class these two checks close, and the
-  count is why the next change to a rule should arrive with the check that enforces it.
+  line number is wrong the moment anything above it changes. Name the symbol, and let
+  `scripts/agents-symbols-check.mjs` catch the rename. This rule is not machine-enforced: adding
+  `public/base.css:667` to any bullet passes both checks (measured 2026-10-05).
+- PRs #55, #56 and #57 each existed only to correct a citation in this file, and #48, #49, #51 and
+  #52 restated facts about it. That is the defect class these two checks close, and it is why the
+  next change to a rule should arrive with the check that enforces it (measured 2026-10-05:
+  `git log --oneline origin/main -- AGENTS.md` lists the commits behind them).
 
 ### Trunk is the authority, never the local checkout
 
@@ -155,10 +164,11 @@ enforcer is a rule that has already failed, so this section does not carry one.
 ### Repository invariants
 
 - `artifacts/` must stay committable, because the conventions require screenshots in PRs and some
-  are already tracked. `git check-ignore artifacts/` and `git ls-files artifacts | wc -l` are the
-  commands that answer it; `.gitignore` must never list `artifacts/`, while `.ignore` and
-  `.prettierignore` may (measured 2026-10-05: `git ls-files artifacts` returns 192 tracked files
-  and `grep -c '^artifacts' .gitignore` returns 0).
+  are already tracked. `git ls-files artifacts | wc -l` is the command that answers how many, and
+  `git check-ignore artifacts/` answers whether something hides it; `.gitignore` must never list
+  `artifacts/`, while `.ignore` and `.prettierignore` may. Do not write a count into this file: it
+  goes stale the moment a landing PR adds an artifact, which is why a written total was removed
+  here before and again now.
 - `providerForKind` in `server/src/catalog.js` is the one place a kind becomes a provider, so both
   the browse and the search path route through it and a second list path cannot route around the
   table. `KIND_PROVIDER` is the table it reads (read-from-code). Until PR #47 only search consulted
@@ -166,9 +176,11 @@ enforcer is a rule that has already failed, so this section does not carry one.
   Kitsu. If anime ever stops returning anime, `providerForKind` is the single place to look.
   `providerForKind` returns `null` under `PROVIDER=off`, which now forces the fixture even for
   `kind=anime`; it did not before PR #58, because the old table lookup ran ahead of the flag
-  (read-from-code). `scripts/integration-check.mjs` is the only in-repo consumer of `PROVIDER=off`,
-  and its offline browse assertions pass no `kind`, so nothing in the suite covers that
-  combination (read-from-code).
+  (read-from-code). That combination is covered: `scripts/provider-routing-check.mjs` boots a server
+  under `PROVIDER=off` and browses `?kind=anime`, asserting every item is sourced `seed`
+  (read-from-code, and it is stage 4 of `npm test`). The offline assertions in
+  `scripts/integration-check.mjs` browse with no `kind`, so they do not cover it
+  (read-from-code).
 - `server/src/providers/contract.js` is the source of truth for catalog items: every optional
   field is `string | null`, never a partial object, and `maturity` is always derived server-side.
   `design.md` is stale for the catalog, still typing `posterUrl` as a non-null `string` in three
