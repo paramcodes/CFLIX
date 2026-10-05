@@ -4,26 +4,38 @@
 
 - `server/index.js` — Node static server and JSON API entrypoint.
 - `server/src/` — server-side modules (`store.js`, `services.js`, `catalog-data.js`, `types.js`, plus `auth.js`, `catalog.js`, `errors.js`, `profiles.js`) and `server/src/providers/` (the Cinemeta, TVMaze, and Kitsu adapters alongside `cache.js`, `maturity.js`, `contract.js`).
-- `public/` — static assets. Pages live at the root (`index.html`, `profiles.html`, `home.html`, `title.html`, `watch.html`) plus `public/(auth)/signin.html`, served through clean URLs via `PAGE_MAP` in `server/index.js` (`/`, `/signin`, `/profiles`, `/home`, `/title`, `/watch`).
-- `public/wire.js` — page loader: it maps `document.body.dataset.page` to exactly one module under `public/js/pages/` (`signin.js`, `profiles.js`, `home.js`, `detail.js`, `player.js`). Shared helpers live in `public/js/core.js`, shared tokens in `public/tokens.css`, shared component classes in `public/base.css`.
+- `public/` — static assets. Pages live at the root (`index.html`, `profiles.html`, `home.html`, `title.html`, `watch.html`, `browse.html`) plus `public/(auth)/signin.html`, served through clean URLs via `PAGE_MAP` in `server/index.js` (`/`, `/signin`, `/profiles`, `/home`, `/title`, `/watch`, `/browse`).
+- `public/wire.js` — page loader: it maps `document.body.dataset.page` to exactly one module under `public/js/pages/` (`signin.js`, `profiles.js`, `home.js`, `detail.js`, `player.js`, `browse.js`). Shared helpers live in `public/js/core.js`, shared tokens in `public/tokens.css`, shared component classes in `public/base.css`.
 - `scripts/smoke.mjs` — smoke test against a running server.
 - `scripts/capture.mjs` — Playwright capture of screenshots and a tour video.
-- `scripts/*-check.mjs` — a check per adapter and per subsystem (`cinemeta-check.mjs`, `tvmaze-check.mjs`, `kitsu-check.mjs`, `cache-check.mjs`, `integration-check.mjs`, `wiresplit-check.mjs`). Run the matching one when you touch that adapter.
+- `scripts/*-check.mjs` — one check per adapter and per subsystem. Run the matching one when you touch
+  that adapter. `git ls-files 'scripts/*-check.mjs'` lists them all and every one has a matching
+  npm key, but `npm test` chains only a few, so check which before assuming a gate covered
+  your change.
 - `docs/revamp/` — before/after media.
-- `design.md` — domain model and types, but stale for the catalog: it still types `posterUrl` as a non-null `string` and predates the provider adapters entirely. `server/src/providers/contract.js` is the source of truth for catalog items, where every optional field is `string | null`, never a partial object, and `maturity` is always derived server-side.
-- `.opencode/skills/verify-cflix/` — project-local verification skill (`SKILL.md` plus `features/`) that drives the 16 screens and the JSON API. It resolves only when the session's working directory is inside the repo; started from `~` the skill stays invisible to discovery until the session moves to the repo root.
+- `design.md` — domain model and types, but stale for the catalog: it still types `posterUrl` as a non-null `string` and predates the provider adapters entirely. `server/src/providers/contract.js` is the source of truth for catalog items, where every optional field is `string | null` or `number | null`, never a partial object, and `maturity` is always derived server-side.
+- `.opencode/skills/verify-cflix/` — project-local verification skill (`SKILL.md` plus `features/`) that drives the 7 HTML pages and the JSON API. It resolves only when the session's working directory is inside the repo; started from `~` the skill stays invisible to discovery until the session moves to the repo root.
 
 ## Run tests
 
 ```sh
-npm test                # Automatic hermetic smoke test (finds free port, boots server, asserts 26 checks, tears down)
+npm test                # Hermetic: AGENTS.md citation checks, then smoke, routing, maturity, and fixture conformance. `npm test | grep -c '^PASS'` counts only lines that begin `PASS`, which excludes the fixture stage's `fixture-conformance  PASS, …` line and the per-stage summaries.
+npm run test:paths      # AGENTS.md path citations only, no server
+npm run test:symbols    # AGENTS.md symbol citations only, no server
+npm run check:player    # One subsystem check on its own; every check script has a matching key
+npm run test:maturity   # Episode maturity guard on its own
+npm run test:fixture    # Offline fixture against contract.js: every declared key, every id namespaced `seed:`, no duplicate id
 npm run verify          # Full automated Playwright browser verification across all features
 npm run verify:<feature> # Targeted browser verification (auth, profiles, browse, playback)
+npm run timing          # Gate, API, and page-load timings; writes artifacts/timings/
 npm run lint            # ESLint static analysis (catches missing imports, undeclared variables, async bugs)
 npm run lint:fix        # Auto-fix lint issues
 npm run format:check    # Check prettier formatting across repository
 npm run format          # Auto-format with prettier
 ```
+
+`node -e "console.log(Object.keys(require('./package.json').scripts).join('\n'))"` is the command that
+lists every gate; `git ls-files 'scripts/*-check.mjs'` lists the scripts they front.
 
 The test runner handles port allocation and server teardown automatically. You can run `npm test` repeatedly without port collisions or `EMAIL_TAKEN` failures.
 
@@ -54,22 +66,157 @@ node scripts/capture.mjs <outdir> [baseUrl]
 
 ## Workspace Architecture
 
-- **Search & Grep**: `.ignore` and `.prettierignore` exclude `.worktrees/`, `.opencode/`, and `artifacts/` to keep search instantaneous and prevent duplicate matches across worktrees.
+- **Search & Grep**: `.ignore` and `.prettierignore` exclude the worktrees directory, `.opencode/`,
+  and `artifacts/` to keep search instantaneous and prevent duplicate matches across worktrees.
 - **Provider Architecture**: `server/src/providers/` is the single source of truth for catalog adapters (Cinemeta, TVMaze, Kitsu, Cache Store).
-- **Frontend Pages**: `public/wire.js` delegates to `public/js/pages/*.js` — exactly one module per `data-page`, and `watch.html` loads only `wire.js`, so no `nav.js` runs there: `/watch` carries one global key listener, a `document` keydown in `player.js` that PR #53 added for `F`, `Space`, and `M`; the page still ships exactly one `<script>`, so nothing else competes with it. Shared helpers reside in `public/js/core.js`. Player layout note (trunk at `ae22982`): the seek bar sits at the BOTTOM of the frame — `base.css` sets `top: auto; bottom: 0` on `.player__scrub` (line 667 ff.) and `css/player.css` sets `height: 14px` but no `top` or `bottom`, inside `.player` where line 658 sets `overflow: hidden` and line 661 sets `overflow: clip`. Setting `bottom: 0` alone would be dropped as over-constrained while `top: 0` remains, which is why both are declared. Before PR #53 trunk anchored the bar `top: 0`, so read `git show <ref>:public/base.css` before repeating either layout.
-- **Worktrees**: the revamp program is finished, so no owner worktrees exist and `.worktrees/p-*` must not be recreated for merged work. As of 2026-10-05, `git worktree list` shows the root checkout on `main` plus `.worktrees/player-controls` on branch `feat/player-controls` (pushed to origin as PR #53, squash-merged into `main` as `ae22982`, at HEAD `511d374` on the branch; `git rev-list main..feat/player-controls` still reads 9 because a squash merge never makes branch HEADs ancestors, and the oldest is `f3def29` "start trailer unmuted"); its `node_modules` is a symlink to the root's `node_modules`, because worktrees do not get their own copy. `.worktrees/arena-player/` also exists but is a plain directory, not a worktree in `git worktree list`, and is gitignored scratch for design probes (`hide-probe.mjs`, `scroll-probe.mjs`, `end-seek-probe.mjs`, `layout-probe.mjs`, `glyph-visibility-probe.mjs`, `candidate-1`, `candidate-3`, `grounding.md`) — never treat it as tracked work. The program's own coordination state still sits in `.worktrees/program/`. In root, `git status` carries known noise: `.opencode/hooks/state/continual-learning.json` rewrites every session, and 25 scratch PNGs plus 5 `player-check-history-*.json` files under `artifacts/verify-cflix/` stay untracked, 30 untracked files and 1 tracked modification making 31 `git status -uall --porcelain` lines in all, counted on 2026-10-05. None of it is worth committing or ignoring.
+- **Frontend Pages**: `public/wire.js` delegates to `public/js/pages/*.js` — exactly one module per `data-page`, and `watch.html` loads only `wire.js`, so no `nav.js` runs there: `/watch` carries one global key listener, a `document` keydown in `player.js` that PR #53 added for `F`, `Space`, and `M`; the page still ships exactly one `<script>`, so nothing else competes with it. Shared helpers reside in `public/js/core.js`. The seek-bar anchor and the player's overflow pair moved in PR #53, so read `git show origin/main:public/base.css` rather than trusting a remembered line number.
+- **Worktrees**: worktrees live under the directory `.gitignore` excludes, and each needs its
+  `node_modules` symlinked to the root's because worktrees get no copy of their own. Treat any
+  unregistered directory there as scratch rather than work. `git worktree list` is the command that
+  answers what is real, and nothing under that directory may be cited as evidence, because a fresh
+  clone does not have it.
 
 ## Learned Workspace Facts
 
-- The root checkout now equals trunk: local `main` == `origin/main` after a user-approved `git reset --hard` on 2026-10-04 (both were `f28e281` right after the reset; both read `e28cb4f` when re-checked later that day, once PR #51 and `chore: stale things` landed), the index holds 0 gitlinks, and `.gitignore` matches trunk. The stale half of this fact is gone: `main` no longer lags trunk, `git pull --ff-only` works, `git ls-files` lists no gitlinks, and trunk's `.gitignore` entry for `.worktrees/` is present locally too. What still holds is that `0f6fc07` ("chore: added the dot files") is a local-only commit, not an ancestor of trunk and never will be: it committed 97 `.worktrees/*` gitlink entries, which made every worktree add or remove show up in `git status` and made clean nested worktrees report phantom modifications to siblings. Trunk fixed that in `a26f380` (PR #32), which gitignores `.worktrees/` and `children.tsv` and empties the gitlinks from the index. All 185 real files in `0f6fc07` are on trunk through later squashes; the 97 paths it lists that trunk lacks are the gitlink entries themselves, so nothing is stranded and the commit is safe to let the reflog expire. The standing rule survives the reset: the local checkout is not authority on trunk state, so ask trunk with `git show origin/main:<path>`. A backup of everything that reset displaced sat at `/tmp/opencode/root-backup-20261004-155000/` (a 2775-line tracked-changes patch, a 14-file untracked dump, and a gitignored 17-line `decisions.tsv`). That directory is gone as of 2026-10-05. The `decisions.tsv` content survives the loss: `f4c1c8f` untracked the file without erasing its history, and its 17-line blob `5f31939` is still reachable from `origin/main`. The never-merged `docs/features/` restructure does not survive, because `git rev-list --all --objects | grep -c docs/features` returns 0 and no copy of it exists on any ref. `.gitignore` still excludes `decisions*.tsv`.
-- The page-revamp program is finished: all 12 rows of `.worktrees/program/children.tsv` read MERGED, 111 worktrees were pruned with user approval on 2026-10-04, and all 42 non-`main` local branches were deleted, so `.git/worktrees/` was emptied. `git worktree list` showed only the root at that moment; the only additions since are `.worktrees/player-controls` (a registered worktree) and the plain gitignored directory `.worktrees/arena-player/`, recorded under Workspace Architecture. Do not go looking for `.worktrees/p-nav`, `p-home`, `p-browse`, `p-detail`, `p-player`, `w2-integrate`, or `w2-verify`: their content reached trunk through squashed PRs. The one survivor of that prune is `.worktrees/program/`, which holds the program's coordination state (`goal.md` with the tick log, `wave2-brief.md` as the shared brief, `children.tsv`, `contract.js`, `baseline.mjs`). None of it is tracked, because trunk gitignores `.worktrees/`, so those files exist only on disk in the root checkout and are lost if that directory is pruned. `children.tsv` is the record of which child tasks merged; read it before assuming work is still outstanding. The ownership rule behind the old layout still holds for any future fan-out: worktrees branched from one trunk commit do not see each other's edits, so never edit a sibling owner's tree.
-- Work lands through real GitHub PRs — remote `https://github.com/paramcodes/CFLIX.git`, default branch `main`, `gh` authed as `paramcodes` with `repo` scope — so decide "landed?" at both layers, and never from ancestry or a dirty tree alone. Work lands as squash merges, so `git merge-base --is-ancestor <head> origin/main` reports `NO` for a commit that already shipped, and a worktree whose branch is not an ancestor of `origin/main` is not automatically unmerged work: `p6-parallel-fetch` and `proto-routes` both looked live (branch off trunk, dirty tree) but were superseded, since their HEADs were already on trunk and their uncommitted files were older copies of files trunk had since replaced. Both were removed on 2026-10-04 after that check. The inverse trap is worse: a branch that reads merged can still hold content trunk lacks — `rev/p-player` read MERGED (PR #45) in `children.tsv` and was already pruned, yet it still held `e5d2a8d` with three real player fixes (the finish handler leaving the 250ms progress ticker running so `seconds: 0` got overwritten, `seek()` clamping to the integer `getDuration()` and overshooting the stream end, the cross-origin YouTube iframe trapping Tab in the sequential focus order) that trunk had none of; only a content diff, `git show origin/main:<file> | diff - <file>`, exposed the gap, and the commit shipped as PR #50. So diff content against `origin/main` before declaring work merged, before treating a dirty worktree as recoverable, and before trusting a PR count or branch name: ask the forge about the one PR you care about with `gh pr view <n> --json state,mergedAt`, because a repo total goes stale as soon as the next PR opens. #19 `branch-for-pr` is the only PR in the repo that has closed without merging, checked 2026-10-05. Note that the poteto-mode `autopilot-full` and `multi-phase-plan` playbooks are correct that the `origin` forge CLI is not installed here (measured 2026-10-05: `type -a origin` finds nothing, and no `origin` entry appears in `mise ls --installed`, `~/.local/bin`, or `~/.cargo/bin`; `gh` 2.102.0 is the only forge CLI on PATH); the git remote is named `origin`, which is the likeliest source of an earlier misread.
-- A server started as `(node server/index.js &)` inside a single shell tool call dies when that call ends; start it with the shell tool's background mode instead so it stays up for smoke tests and captures across calls.
-- **Never write AGENTS.md from a source that does not already contain its `Learned Workspace Facts` section.** A subagent's memory-updater flow rebuilt this file on 2026-10-04 11:19 from a version that predated the section and appended one bullet, destroying every fact above; nothing was committed at the time, so git held no copy and no other file on disk had them. Facts added here must be committed in the same change that adds them, or they are one overwriting write away from being unrecoverable. Since PR #48 this file is tracked on trunk — the working copy may carry an uncommitted delta, as it does during this reconciliation — so git does hold a copy now: read the current on-disk file in full before editing, and prove a rewrite against `git show origin/main:AGENTS.md`. Same distrust applies to every subagent artifact: this session 3 of 5 parallel designer spawns completed with no file written anywhere and no text response, on both long and short prompts and with relative and absolute output paths, so verify the expected output file exists instead of trusting a completed status.
-- API probing traps: `profileId` must travel in the `x-cflix-profile` header, never as `?profileId=` — the query param silently yields `{"error":{"code":"NOT_FOUND","message":"no such profile"}}`. Browse is `GET /api/catalog/browse?kind=&genre=` and the handler reads exactly those two params, so there is no `skip`/`limit`/`cursor` to send and the reply is `{items}` with no cursor: browse rails cannot page. Only `POST /api/catalog/search` returns `nextCursor`, and that cursor is an offset string (`String(from + size)`, parsed back with `parseInt`), not an opaque token. Detail and play data-contract traps, measured against the running app: `GET /api/catalog/get` returns a populated `episodes[]` only on the Cinemeta path — TVMaze and Kitsu both return `episodes: []` from `get()` even though the Kitsu adapter implements `episodes()`, so a Kitsu series page has no episode list and must handle the empty case explicitly. `/api/play` with `{kind:'episode', id:'<cinemeta id>'}` returns 404 NOT_FOUND because `catalog.js`'s `EPISODE_ID = /:e\d+$/` matches the seed fixture's `s1e1` style but not the `tt1844624:1:3` form Cinemeta emits, leaving `playProvider`'s owner lookup nothing to resolve; seed episode refs work, provider episode refs do not. The offline fixture also carries a duplicate episode id: `s2e1` is both Dark season 2 episode 1 "Knots" and another series' season 1 episode 1 "Pilot", and `findSeedEpisode` returns the first match, so such a ref is ambiguous. For authenticated probing, copy `scripts/player-check.mjs`: `POST /api/auth/signup` yields `data.session.token`, `POST /api/profiles` under `authorization: Bearer <token>` creates a profile, then every catalog/play call sends both `authorization: Bearer <token>` and `x-cflix-profile: <profile id>`; its `post()`/`get()` helpers return `{status, data}` rather than throwing, which standalone probes in `/tmp/opencode/` mirror. Browser contexts get the same auth by setting `sessionStorage.cflix_token` and `cflix_profile` in a Playwright `addInitScript` before navigation.
-- `artifacts/` must stay committable: `git ls-files artifacts | wc -l` counts its tracked files (a written total goes stale the moment a landing PR adds a file here) and the conventions require screenshots in PRs, so `.gitignore` must never list `artifacts/` — such an entry was added once and would have silently blocked page owners from committing their evidence. `.ignore` (ripgrep) and `.prettierignore` may still list it; that is fine. Root `git status` stays dirty for reasons that carry no signal: `.opencode/hooks/state/continual-learning.json` is tracked on trunk and rewrites itself every session, and 25 scratch PNGs plus 5 `player-check-history-*.json` files under `artifacts/verify-cflix/` sit untracked because nothing has added them, not because anything hides them: `git check-ignore` reports none of them ignored, and they were written on 2026-10-04 21:00-21:03, more than a day after `9b2ad25` removed the `artifacts/` entry that `bb367ea` had added. None of it is a problem to fix by committing or by re-adding the ignore entry.
-- Provider routing: `KIND_PROVIDER = { anime: 'kitsu' }` is consulted on both paths now — `providerBrowseItems` and `providerSearchItems` each resolve `KIND_PROVIDER[kind] ?? providerName()`. Until PR #47 only search consulted it, so `browse?kind=anime` answered with 24 Cinemeta movie/series items while the search box returned Kitsu. If anime ever stops returning anime, look at that expression first. Switching adapters mid-call is safe: `cacheKey(name, op, ...)` carries the provider name so entries cannot collide, both adapters accept `{kind, genre, limit}`, and `throughCache` refuses to cache an empty array so a cold-start miss self-heals instead of storing the fallback.
-- Search ships twice, deliberately: `home.html` renders matches inline in `#row-results-wrap` — a rail with tail-loading and a "Browse all results" link — while `/browse` renders a URL-driven grid with kind/genre filters. Both call `POST /api/catalog/search`; only home's is inline, and home is the only page with a `#search-form` (the nav has no search field). Change one and check the other: `scripts/home-check.mjs` and `scripts/verify/verify-browse.mjs` both assert the home path.
-- Logo and backdrop images are usually real, not null: `https://images.metahub.space/logo/medium/<imdbId>/img` returned HTTP 200 with a real generated wordmark PNG for 47 of 48 sampled titles and 404'd once, so `logoUrl` is almost always a working image rather than null the vast majority of the time as `.worktrees/program/wave2-brief.md` states — keep the styled-text fallback and the image error path, but the wordmark is the common case. To layer a photo over a gradient fallback on a single element, use two background layers through a custom property rather than a child element: an opaque child `.ph` gradient paints over its parent's `background-image`. A failed `<img>` still paints its broken-image glyph over whatever sits behind it even with an empty `alt`, so the element has to be removed, not visually covered.
-- Check-writing traps: Playwright treats `aria-disabled="true"` as disabled for actionability, so clicking such a button needs `{force: true}` — `signin.html`, `home.html` and `profiles.html` each ship one. `public/watch.html`'s `.player__title` is empty markup since #45 dropped the placeholder, so wait for `cflix_play_ref` to clear (the player consumed the ref) before asserting on the title. Media assertions — `.player__elapsed advances while playing` in `wiresplit-check.mjs` and the playback group in `player-check.mjs` — fail often and are not evidence that a change broke playback: measured 2026-10-04 with a probe driving the exact wiresplit path (`/home` → `#row-series .card` → `/title` → `#btn-play` → `/watch`, 12s wait), untouched `main` at `e28cb4f` gave 4 playable of 8 with the other 4 stuck as "iframe present, `onReady` fired, controls enabled, `.player__elapsed` frozen at `0:00:00`", and `feat/player-controls` gave 5 playable, 2 in that same state, and 1 where `onReady` never fired; `iframes` was 1 in all 16 runs, so the previously recorded `iframes=0` one-run-in-three signature never appeared — the real signature is a live iframe with an enabled toggle and a frozen clock. Re-run a media-only failure before believing it, and never attribute one to a player change without this control against `main`. Geometry trap on the watch page, measured 2026-10-04: `.player` (`public/base.css`) must not be a scroll container. `.player__seek` (`public/css/player.css`, `top: -2.5px; height: 18px`) sits in the 14px `.player__scrub`, so once the scrub is anchored `bottom: 0` — the shape since PR #53; before it trunk anchored `top: 0; height: 3px`, which overhangs upward and is not scrollable — the input hangs 1.5px past the player's bottom edge and makes the box scrollable (`scrollHeight` 902 vs `clientHeight` 900 at 1440x900). Focusing it (`page.focus('#seek')`, or reaching it in a Tab sweep) scrolls the whole surface 2px via scroll-into-view, and the symptom reads as broken layout rather than as a scroll: `.player__stage` reports `top: -2` while `.player` itself still measures 0..900, so a geometry check fails on numbers that look internally inconsistent; the probe read `scrollTop` 0 after load, 2 after `focus('#seek')`, 2 after a 12-key Tab sweep (`.worktrees/arena-player/scroll-probe.mjs`, gitignored, and the same numbers in commit `c6d086d`). Focus and Tab sweeps hold `scrollTop` at 0 on the top-anchored pre-PR-#53 shape, so re-read `.player.scrollTop` on the exact tree in question. The fix is `overflow: clip` on `.player` with `overflow: hidden` kept above it as the fallback for engines without `clip` — `clip` is not a scroll container, so focus cannot move it — on trunk at `base.css:661` as of PR #53; `c6d086d` is the branch commit and is not an ancestor of `main`, because PR #53 was squash-merged. `keyboard End on the scrub bar seeks to the end` is a race, not a regression: `seek()` sets `state.current` optimistically, the 250ms `tick()` overwrites it from `getCurrentTime()` (still pre-seek), and `render()` writes that stale number into `#seek.value` (`if (!scrubbing) els.seek.value = String(Math.min(at, total || 1))`); an atomic single-`evaluate` snapshot saw the stale value on 3 of 8 `feat/player-controls` runs and 5 of 8 untouched `main` runs, with seek-to-end latency equal (branch 147-280ms, main 139-464ms), so it pre-dates the player work (`.worktrees/arena-player/end-seek-probe.mjs`, gitignored). Gating trap: `npm test` exercises none of this — `scripts/test-runner.mjs` spawns only `scripts/smoke.mjs` (HTTP-level, 26 checks, zero Playwright), and neither `scripts/player-check.mjs` (864 lines) nor `scripts/wiresplit-check.mjs` appears in any npm script nor boots a server, so start one and run them directly with explicit `BASE_URL`/`PORT`: player-check defaults to `http://localhost:3217`, wiresplit-check to `http://localhost:3194`, where it hard-crashes with an unhandled navigation error if nothing listens (`npm run verify:playback` is a separate, lighter Playwright path). Cascade trap (inferred, not directly observed): player-check's keyboard Space/f/m tests are symmetric (toggle, then toggle back), so they inherit the play/pause state earlier checks left — the `keyboard operates #btn-toggle` flake (fixed 400ms window vs YouTube buffering, and it fails on untouched `main` too) is observed, while the cascade into `precondition: playback is running before the idle test` and the idle-fade assertions is a hypothesis, not a captured sequence; treat them as downstream candidates of that flake, not independent bugs, until the chain is seen.
-- Player-page probe traps, measured 2026-10-04 in the `.worktrees/player-controls` tree: (1) Every `MEDIA_CONTROLS` button (`btn-toggle`, `btn-bigplay`, `btn-rew`, `btn-fwd`, `btn-mute`, `#vol`, `#seek`, `btn-full`) is `disabled` until the YouTube `onReady` callback fires — `setControlsEnabled(true)` runs only there — and disabled buttons are unfocusable and skipped by sequential focus, so before readiness `page.focus('#btn-mute')` lands on `BODY` and a Tab sweep never reaches `btn-mute`/`btn-full`, while `#btn-finish` (excluded from `MEDIA_CONTROLS`) is still reached; a pre-ready probe reads as broken controls rather than as the readiness gate it is. (2) Any auto-hiding overlay chrome must hide with `opacity: 0` alone: of four hide styles driven against `page.click('#btn-toggle')`, `page.focus('#btn-mute')` and a Tab sweep (`.worktrees/arena-player/hide-probe.mjs`, gitignored scratch), only `opacity: 0` passes all three; `visibility: hidden` fails all three (click times out, focus lands on `BODY`, the sweep skips the element) and `opacity: 0` + `pointer-events: none` fails the click. (3) `/title?id=s1` resolves to seed series Dark, which has no `trailerYtId`, so `player.js` takes the NO PREVIEW early return, calls `setControlsEnabled(false)` and leaves controls disabled forever — probe trailer behavior against an item the live browse API reports with `trailerYtId`, the way `player-check.mjs` does with `movies.find((m) => m.trailerYtId)` (seed fixtures `m1`/`s1` have none; the Cinemeta id it matched on 2026-10-04, `tt6933238`, will drift). (4) Sound-on autoplay is NOT blocked in this environment: `mute: 1` was deleted from `playerVars` in `f3def29`, which shipped in PR #53, so `grep -c 'mute: 1' public/js/pages/player.js` returns 0 on trunk as of 2026-10-05 — and with zero user input the YT IFrame API object is simply absent for the first ~4.3-6.2s, then reaches state `3`, then state `1` with `muted: false` and `currentTime` climbing — sampling inside that window reads as blocked autoplay and has already driven two design agents to propose unnecessary muted-autoplay fallbacks; a genuinely blocked embed sits at state `-1` or `2`, never `3` then `1`. (5) Player chrome geometry is identical on the branch and untouched `main` — `#btn-full` [1342,846,40,40], `#time` [1227,857,98,19], `.player__transport` [0,832,1440,68] — and YouTube draws its watermark over that corner on BOTH trees, so the fullscreen button and the embed logo sharing space is pre-existing, not something the player work introduced; compare against `main` before blaming a branch for a screenshot. (6) Screenshot-reading trap: thin white strokes on a black player UI vanish when the viewer downscales the image, so a screenshot can look empty when it is not, and a corner-bracket glyph has an empty middle, so single-point sampling at its centre proves nothing — verify numerically over the whole known button box instead: `magick file.png -crop 40x40+X+Y +repage -threshold 78% -format "%[fx:mean*w*h]" info:`, treating nonzero (or `max=255`) as the signal.
+Each rule below names a command that answers it, a check that enforces it, or a distinctive symbol
+you can grep for. Only the first two are machine-enforced: `npm run test:paths` and
+`npm run test:symbols` read this file, and nothing here reads the rules they cannot check, such as
+the no-line-number rule or one-writer-per-tree. Treat those as advice, not gates.
+
+### What the gates enforce and what is advice
+
+- Two checks read this file, and both run first in `npm test` before a server boots.
+  `scripts/agents-paths-check.mjs` (`npm run test:paths`) fails when a cited path resolves to no
+  tracked file, resolving against `git ls-files` rather than the working tree so the verdict is
+  identical in a fresh clone and in a sibling worktree. A citation swallowed by an ignore rule
+  reports as `gitignored`, which is the more serious failure: a typo is a wrong sentence, but a
+  gitignored probe is a conclusion whose only evidence no longer exists. On 2026-10-05 it reported
+  19 failures, 9 of them the gitignored design probes under the worktrees directory.
+  `scripts/agents-symbols-check.mjs` (`npm run test:symbols`) fails when a bullet names a source
+  file and a symbol that file no longer contains, which is the drift a path check cannot see.
+- **Cite a symbol or a command, never a line number.** A path resolves until it is deleted, but a
+  line number is wrong the moment anything above it changes. Name the symbol, and let
+  `scripts/agents-symbols-check.mjs` catch the rename. This rule is not machine-enforced: adding
+  `public/base.css:667` to any bullet passes both checks (measured 2026-10-05).
+- PRs #55, #56 and #57 each existed only to correct a citation in this file, and #48, #51, #52 and
+  #54 restated facts about it. That is the defect class these two checks close, and it is why the
+  next change to a rule should arrive with the check that enforces it (measured 2026-10-06,
+  `git log --oneline origin/main -- AGENTS.md` lists them).
+
+### Trunk is the authority, never the local checkout
+
+- Ask trunk, not the working tree: `git show origin/main:<path>`. A local `main` can lag or lead
+  after a `git reset --hard`, so a claim about "what the repo has" read from the checkout is not
+  evidence. The local-only `0f6fc07`, a sibling of `a26f380`, committed 97 worktree gitlink
+  entries, `git merge-base --is-ancestor 0f6fc07 origin/main` exits 1, and
+  `git log --raw origin/main | grep -c 160000` returns 0, so nothing on trunk ever carried a
+  gitlink, and `a26f380` (PR #32) is the commit that added the worktrees directory and
+  `children.tsv` to `.gitignore` (its `.gitignore` change is exactly those two added lines with no
+  deletions; the commit as a whole changed 7 files with 212 insertions, measured 2026-10-06).
+- Decide "landed?" with the forge, never with ancestry: `gh pr view <n> --json state,mergedAt`.
+  Work lands as squash merges, so `git merge-base --is-ancestor <head> origin/main` reports `NO`
+  for a commit that already shipped, and a branch that reads merged can still hold content trunk
+  lacks (measured: `rev/p-player` read MERGED and held three real player fixes that reached trunk
+  only as PR #50). A repo-wide PR count goes stale the moment the next PR opens, so ask about the
+  one PR you care about.
+- `gh` is the only forge CLI here; the `origin` binary is not installed (measured 2026-10-05:
+  `type -a origin` finds nothing). The git remote is named `origin`, which is the likeliest source
+  of that earlier misread.
+
+### Reading and writing this file
+
+- Read the current on-disk `AGENTS.md` in full before rewriting it, and prove the rewrite against
+  `git show origin/main:AGENTS.md`. A memory-updater subagent rebuilt this file on 2026-10-04
+  from a version predating this section and destroyed every bullet in it; nothing was committed, so
+  git held no copy. Facts added here must land in the same change that adds them.
+- Never cite a path that a fresh clone will not have. The worktrees directory is gitignored, so
+  anything under it is scratch that dies with the machine, and a rule leaning on it is a rule
+  resting on evidence nobody else can open. `scripts/agents-paths-check.mjs` is the enforcer.
+- Verify a subagent wrote the file it claimed, rather than trusting a completed status. 3 of 5
+  parallel designer spawns once completed with no file written anywhere and no text response, on
+  both long and short prompts and with relative and absolute output paths. The enforcer is a bare
+  `test -f <path>` before you read the file, not the subagent's own word.
+
+### Probing the API
+
+- `profileId` travels in the `x-cflix-profile` header, never as `?profileId=`; the query param
+  yields `{"error":{"code":"NOT_FOUND","message":"no such profile"}}` (read-from-code:
+  `server/index.js` reads that header and no query parameter).
+- Browse is `GET /api/catalog/browse?kind=&genre=` and returns `{items}` with no cursor, so browse
+  rails cannot page. Only `POST /api/catalog/search` returns `nextCursor`, and it is a decimal
+  offset string rather than an opaque token (read-from-code).
+- `GET /api/catalog/get` fills `episodes[]` for a Cinemeta or TVMaze series but returns
+  `episodes: []` for a Kitsu series, so a Kitsu series page has no episode list and must handle the
+  empty case explicitly (measured 2026-10-06, five series ids each: Cinemeta 8/8/20/16/145,
+  TVMaze 26/19/46/5/12, Kitsu 0/0/0/0/0).
+- Each adapter declares the episode-ref shape it mints, and `episodeOwnerId` in
+  `server/src/catalog.js` asks the adapters rather than holding one alternation.
+  `server/src/providers/cinemeta.js` matches `:\d+:\d+$` (`tt1844624:1:3`) and
+  `server/src/providers/kitsu.js` matches `:e\d+$` (`kitsu:9001:e55501`), while
+  `server/src/providers/tvmaze.js` claims none because no TVmaze id separates an episode from a
+  show. Fixture episode ids carry the `seed:` namespace and derive from their own coordinates,
+  `seed:s1:1:1` being series `seed:s1` season 1 episode 1, and both `resolveItem` and `play` in
+  `server/src/catalog.js` match them by identity through `findSeed` before consulting any
+  grammar, so a fixture seed id never reaches an adapter's episode grammar (read-from-code). A claim that a seed
+  episode rides the Kitsu branch is wrong; PR #39 shipped that bug, when one alternation in
+  `catalog.js` carried only the Kitsu form and every Cinemeta episode resolved to itself and hit
+  `MATURITY_BLOCKED`.
+- Copy `scripts/player-check.mjs` for authenticated probing: `POST /api/auth/signup` yields
+  `data.session.token`, `POST /api/profiles` under `authorization: Bearer <token>` creates a
+  profile, and every later call sends both that header and `x-cflix-profile`. In a browser context
+  set `sessionStorage.cflix_token` and `cflix_profile` in an `addInitScript` before navigating.
+- Start a server with the shell tool's background mode. `(node server/index.js &)` inside a single
+  tool call dies when that call ends.
+
+### Repository invariants
+
+- `artifacts/` must stay committable, because the conventions require screenshots in PRs and some
+  are already tracked. `git ls-files artifacts | wc -l` is the command that answers how many, and
+  `git check-ignore artifacts/` answers whether something hides it; `.gitignore` must never list
+  `artifacts/`, while `.ignore` and `.prettierignore` may. Do not write a count into this file: it
+  goes stale the moment a landing PR adds an artifact, which is why a written total was removed
+  here before and again now.
+- `providerForKind` in `server/src/catalog.js` is the one place a kind becomes a provider, so both
+  the browse and the search path route through it and a second list path cannot route around the
+  table. `KIND_PROVIDER` is the table it reads (read-from-code). Until PR #47 only search consulted
+  that table, so `browse?kind=anime` answered with Cinemeta items while the search box returned
+  Kitsu. If anime ever stops returning anime, `providerForKind` is the single place to look.
+  `providerForKind` returns `null` under `PROVIDER=off`, which now forces the fixture even for
+  `kind=anime`; it did not before PR #58, because the old table lookup ran ahead of the flag
+  (read-from-code). That combination is covered: `scripts/provider-routing-check.mjs` boots a server
+  under `PROVIDER=off` and browses `?kind=anime`, asserting every item is sourced `seed`
+  (read-from-code, and it is stage 4 of `npm test`). The offline assertions in
+  `scripts/integration-check.mjs` browse with no `kind`, so they do not cover it
+  (read-from-code).
+- `server/src/providers/contract.js` is the source of truth for catalog items: every optional
+  field is `string | null` or `number | null`, never a partial object, and `maturity` is always
+  derived server-side. `design.md` is stale for the catalog: its `CatalogItem` union holds two
+  shapes (`Movie | SeriesListing`), both typing `posterUrl` as a non-null `string`.
+- Search ships twice on purpose. `home.html` renders matches inline in `#row-results-wrap` as a
+  rail with tail-loading, and the browse page renders a URL-driven grid; both call the same
+  endpoint, and home is the only page carrying a `#search-form`. Change one and check the other
+  with `scripts/home-check.mjs` and `scripts/verify/verify-browse.mjs`.
+- `logoUrl` is usually a working wordmark PNG rather than `null`, so keep the styled-text fallback
+  and the image error path while expecting the image to load (measured 2026-10-04: 47 of 48
+  sampled titles returned HTTP 200 from the metahub logo endpoint). A failed `img` still paints
+  its broken-image glyph over whatever sits behind it, so remove the element rather than covering
+  it.
+- Worktrees branched from one trunk commit cannot see each other's edits, so never edit a sibling
+  owner's tree. One writer per tree, always.
+
+### What the gates do not cover
+
+- `npm test` runs the path check and `scripts/smoke.mjs` over HTTP with no browser. The player and
+  detail conclusions below come from `scripts/player-check.mjs`, `scripts/wiresplit-check.mjs`,
+  and `scripts/verify/verify-playback.mjs`, none of which `npm test` executes, so read the CSS
+  before believing a player failure is new.
+- `.player` in `public/base.css` carries `overflow: hidden` then `overflow: clip` on the lines
+  below it, and `clip` is not a scroll container, so focusing the seek input cannot move the box.
+  The seek bar sits at the bottom of the frame via `top: auto; bottom: 0`.
+- Every media control is disabled until the YouTube `onReady` callback fires, so a probe that runs
+  before readiness reads as broken controls. Sound-on autoplay is not blocked in this environment;
+  the embed object is simply absent for the first several seconds, and sampling inside that window
+  reads as a policy block.
+- A media-only assertion failure is not evidence of a regression. Untouched `main` reproduced the
+  same "iframe present, controls enabled, clock frozen" signature on 4 of 8 runs (measured
+  2026-10-04), so re-run against `main` before attributing it to a change.
