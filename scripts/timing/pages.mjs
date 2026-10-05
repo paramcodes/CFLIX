@@ -1,47 +1,57 @@
 /**
- * Page-load timings for the six pages a user opens.
+ * Page-load timings for six of the seven routes `PAGE_MAP` serves. `/profiles` is the one
+ * omitted, and it is omitted rather than missed.
  *
- * The metric is time to a page-specific readiness signal measured inside the page with
- * `performance.now()`, not `load` and not Playwright's wall clock.
+ * The metric is time to a page-specific readiness signal read inside the page with
+ * `performance.now()`. Not `load`, not Playwright's wall clock.
  *
- * Why: every one of these pages renders its content from a `fetch` that starts after the
- * document is parsed, so `load` and `domContentLoaded` both fire before the user can read
- * anything. Waiting on the first rendered row is the point at which the page stops being a
- * spinner. Playwright's own wall clock would also include the CDP round trip, which is
- * harness overhead and not the page.
- *
- * `performance.now()` inside the page measures from navigation start, so it includes the
- * HTML fetch, the module fetch, and the API round trip the user actually waits through.
+ * `performance.now()` runs from navigation start, so the number covers the HTML fetch, the
+ * module fetch, and any API round trip the page waits on. For the four data pages that API
+ * round trip is the point: `load` and `domContentLoaded` both fire while the rails are still
+ * empty, so both would report a time the user never experiences as finished. `/` and
+ * `/signin` have no such fetch and their signals are satisfied by the parsed document, so
+ * for those two rows the number is document load. Playwright's wall clock would add the CDP
+ * round trip on top of all of it, which is harness cost rather than page cost.
  */
 import { chromium } from 'playwright';
-import { bootServer, signIn } from './boot.mjs';
+import { timingClient } from './boot.mjs';
 import { summarize } from './stats.mjs';
 
 const READY_TIMEOUT_MS = 15000;
 
-/** One navigation, discarded. The first one pays for script compilation and a cold JIT. */
-async function visitOnce(context, baseUrl, path, spec, auth) {
+/**
+ * One navigation. Returns the pathname the browser ended on as well as the time, so a page
+ * that redirected somewhere else cannot be filed under the route that was asked for.
+ */
+async function visitOnce(context, baseUrl, path, spec, headers, playRef) {
   const page = await context.newPage();
   await page.addInitScript(
-    ({ token, profile, playRef }) => {
+    ({ token, profile, ref }) => {
       sessionStorage.setItem('cflix_token', token);
       sessionStorage.setItem('cflix_profile', JSON.stringify(profile));
-      if (playRef)
-        sessionStorage.setItem('cflix_play_ref', JSON.stringify(playRef));
+      if (ref) sessionStorage.setItem('cflix_play_ref', JSON.stringify(ref));
     },
-    { token: auth.token, profile: auth.profile, playRef: spec.playRef ?? null },
+    {
+      token: headers.authorization.replace('Bearer ', ''),
+      profile: { id: headers['x-cflix-profile'] },
+      ref: playRef,
+    },
   );
-  await page.goto(`${baseUrl}${path}`, { waitUntil: 'commit' });
+
   try {
+    await page.goto(`${baseUrl}${path}`, { waitUntil: 'commit' });
     await page.waitForFunction(spec.ready, null, { timeout: READY_TIMEOUT_MS });
-    return await page.evaluate(() => ({
-      readyAt: performance.now(),
-      landedOn: location.pathname,
-    }));
-  } catch {
+    return {
+      readyAt: await page.evaluate(() => performance.now()),
+      landedOn: await page.evaluate(() => location.pathname),
+    };
+  } catch (err) {
     return {
       readyAt: null,
-      landedOn: await page.evaluate(() => location.pathname),
+      landedOn: await page
+        .evaluate(() => location.pathname)
+        .catch(() => '(page closed)'),
+      error: err.message.split('\n')[0],
     };
   } finally {
     await page.close().catch(() => {});
@@ -49,18 +59,18 @@ async function visitOnce(context, baseUrl, path, spec, auth) {
 }
 
 /**
- * One readiness predicate per page. Each is a literal a user could see: a rendered card,
- * a populated input, a resolved title. A page that never reaches it is a failure, not a
- * fast page.
+ * One readiness predicate per page. Each is a literal a user could see: a rendered card, a
+ * form they can type into, a title that came back from the API. A page that never reaches
+ * its signal is counted as a failure, not reported as a fast page.
  */
-export const PAGE_READY = {
+const STATIC_PAGE_READY = {
   '/': {
     ready: `!!document.querySelector('.land__h1')`,
-    what: 'landing headline painted',
+    what: 'landing headline in the document',
   },
   '/signin': {
     ready: `!!document.querySelector('#btn-signin')`,
-    what: 'sign-in form interactive',
+    what: 'sign-in form in the document',
   },
   '/home': {
     ready: `document.querySelectorAll('#row-trending .card').length > 0`,
@@ -72,57 +82,51 @@ export const PAGE_READY = {
   },
 };
 
-/** `/title` and `/watch` need a live id and a play ref, so they are built after one browse. */
-function buildDynamicPages(liveId, trailerId) {
-  return {
+/** `/title` and `/watch` need the live id, and `/watch` needs a title that carries a trailer. */
+function dynamicPages(liveId, trailerId) {
+  const pages = {
     [`/title?id=${liveId}`]: {
       ready: `!!document.querySelector('#detail-title')?.textContent?.trim()`,
       what: 'detail title populated from the API',
     },
-    ...(trailerId
-      ? {
-          '/watch': {
-            ready: `!!document.querySelector('.player__title')?.textContent?.trim()`,
-            what: 'player title populated from /api/play',
-            playRef: { kind: 'movie', id: trailerId },
-          },
-        }
-      : {}),
   };
+
+  if (trailerId) {
+    pages['/watch'] = {
+      ready: `!!document.querySelector('.player__title')?.textContent?.trim()`,
+      what: 'player title populated from /api/play',
+      playRef: { kind: 'movie', id: trailerId },
+    };
+  }
+
+  return pages;
 }
 
 /**
- * @param {{runs?: number}} options `runs` defaults to 5: each sample is a full browser
- * navigation, so five is the smallest count that gives a median, and the brief's floor.
+ * @param {{runs?: number}} options `runs` defaults to 5. Each sample is a full browser
+ * navigation, so more samples cost real wall clock and 5 is the smallest count with a median.
  */
 export async function measurePages({ runs = 5 } = {}) {
-  const server = await bootServer();
-  const auth = await signIn(server.baseUrl);
-  const headers = {
-    authorization: `Bearer ${auth.token}`,
-    'x-cflix-profile': auth.profile.id,
-  };
-  const catalog = await fetch(
-    `${server.baseUrl}/api/catalog/browse?kind=movie`,
-    { headers },
-  ).then((r) => r.json());
-  const liveId = catalog.items?.[0]?.id;
+  const client = await timingClient();
+  const { baseUrl, headers, liveId } = client;
+
+  const catalog = await fetch(`${baseUrl}/api/catalog/browse?kind=movie`, {
+    headers,
+  }).then((r) => r.json());
   const trailerId = catalog.items?.find((i) => i.trailerYtId)?.id;
 
-  // Pages hit the same cache the API measurement warms, so a page number is page cost and
-  // not a second copy of the upstream round trip.
-  await fetch(
-    `${server.baseUrl}/api/catalog/get?id=${encodeURIComponent(liveId)}`,
-    { headers },
-  );
-  await fetch(`${server.baseUrl}/api/catalog/browse?kind=series`, { headers });
-  await fetch(
-    `${server.baseUrl}/api/catalog/related?id=${encodeURIComponent(liveId)}`,
-    { headers },
-  );
+  // Every provider read these pages depend on is taken once, untimed. A page row should
+  // report page cost; without this the first row would also report a second copy of the
+  // upstream round trip the API table already measures.
+  for (const path of [
+    `/api/catalog/get?id=${encodeURIComponent(liveId)}`,
+    '/api/catalog/browse?kind=series',
+    `/api/catalog/related?id=${encodeURIComponent(liveId)}`,
+  ]) {
+    await fetch(`${baseUrl}${path}`, { headers });
+  }
 
-  const pages = { ...PAGE_READY, ...buildDynamicPages(liveId, trailerId) };
-
+  const pages = { ...STATIC_PAGE_READY, ...dynamicPages(liveId, trailerId) };
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({
     viewport: { width: 1440, height: 900 },
@@ -131,21 +135,29 @@ export async function measurePages({ runs = 5 } = {}) {
   const results = [];
   try {
     for (const [path, spec] of Object.entries(pages)) {
-      const warmup = await visitOnce(context, server.baseUrl, path, spec, auth);
-      const samples = [];
-      let failures = 0;
-      const landedOn = new Set();
+      const before = await visitOnce(
+        context,
+        baseUrl,
+        path,
+        spec,
+        headers,
+        spec.playRef,
+      );
 
+      const samples = [];
+      const landedOn = new Set();
+      const errors = [];
       for (let i = 0; i < runs; i++) {
         const visit = await visitOnce(
           context,
-          server.baseUrl,
+          baseUrl,
           path,
           spec,
-          auth,
+          headers,
+          spec.playRef,
         );
         landedOn.add(visit.landedOn);
-        if (visit.readyAt === null) failures++;
+        if (visit.readyAt === null) errors.push(visit.error);
         else samples.push(visit.readyAt);
       }
 
@@ -154,19 +166,22 @@ export async function measurePages({ runs = 5 } = {}) {
         path,
         what: spec.what,
         ...s,
-        failures,
+        failures: runs - samples.length,
         samples,
-        warmupMs:
-          warmup.readyAt === null ? null : Number(warmup.readyAt.toFixed(1)),
+        // Published, not discarded: the first navigation pays for script compilation and a
+        // cold JIT, and a reader needs to see that cost separated from the steady state.
+        firstRunMs: before.readyAt,
         landedOn: [...landedOn],
+        errors,
       });
+
       process.stdout.write(
-        `  ${path}\n    ${spec.what}: median ${s.median} ms, range ${s.min}-${s.max} ms (n=${s.n}, ${failures} never ready, warmup ${warmup.readyAt === null ? 'failed' : `${Math.round(warmup.readyAt)} ms`})\n`,
+        `  ${path}\n    ${spec.what}: median ${s.median} ms, range ${s.min}-${s.max} ms (n=${s.n}, first run ${before.readyAt === null ? 'failed' : `${Math.round(before.readyAt)} ms`}, ${runs - samples.length} never ready)\n`,
       );
     }
   } finally {
     await browser.close();
-    await server.stop();
+    client.stop();
   }
 
   return { liveId, trailerId, results };

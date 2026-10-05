@@ -3,32 +3,31 @@ import { cpus, loadavg } from 'node:os';
 
 const round = (n, places = 1) => Number(n.toFixed(places));
 
-/** Median. An even sample count averages the two middle values. */
-export function median(values) {
-  if (!values.length) return null;
+function medianOf(values) {
   const sorted = [...values].sort((a, b) => a - b);
   const mid = sorted.length >> 1;
   return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 }
 
 /**
- * Everything a reader needs to judge whether two runs differ: the count, the
- * median, and the observed spread. A gap smaller than the spread is no difference.
+ * Count, median, and the observed min and max.
+ *
+ * That range is the spread these five samples happened to produce, not a confidence interval.
+ * A reader comparing two runs should treat a gap smaller than the wider of the two ranges as
+ * unproven, and should not read a small gap as a regression.
  */
 export function summarize(values) {
   if (!values.length) return { n: 0, median: null, min: null, max: null };
   return {
     n: values.length,
-    median: round(median(values)),
+    median: round(medianOf(values)),
     min: round(Math.min(...values)),
     max: round(Math.max(...values)),
   };
 }
 
-/** One-minute load average. A sample taken on a busy machine is not a number. */
+/** A number recorded next to a busy-machine reading means something different from one recorded on an idle box. */
 export const load1 = () => round(loadavg()[0], 2);
-
-export const cores = () => cpus().length;
 
 export const machine = () => ({
   cores: cpus().length,
