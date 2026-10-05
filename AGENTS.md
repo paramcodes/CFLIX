@@ -13,7 +13,7 @@
   npm key, but `npm test` chains only a few, so check which before assuming a gate covered
   your change.
 - `docs/revamp/` — before/after media.
-- `design.md` — domain model and types, but stale for the catalog: it still types `posterUrl` as a non-null `string` and predates the provider adapters entirely. `server/src/providers/contract.js` is the source of truth for catalog items, where every optional field is `string | null`, never a partial object, and `maturity` is always derived server-side.
+- `design.md` — domain model and types, but stale for the catalog: it still types `posterUrl` as a non-null `string` and predates the provider adapters entirely. `server/src/providers/contract.js` is the source of truth for catalog items, where every optional field is `string | null` or `number | null`, never a partial object, and `maturity` is always derived server-side.
 - `.opencode/skills/verify-cflix/` — project-local verification skill (`SKILL.md` plus `features/`) that drives the 7 HTML pages and the JSON API. It resolves only when the session's working directory is inside the repo; started from `~` the skill stays invisible to discovery until the session moves to the repo root.
 
 ## Run tests
@@ -110,8 +110,9 @@ the no-line-number rule or one-writer-per-tree. Treat those as advice, not gates
   evidence. The local-only `0f6fc07`, a sibling of `a26f380`, committed 97 worktree gitlink
   entries, `git merge-base --is-ancestor 0f6fc07 origin/main` exits 1, and
   `git log --raw origin/main | grep -c 160000` returns 0, so nothing on trunk ever carried a
-  gitlink and `a26f380` (PR #32) only gitignored the worktrees directory and `children.tsv`
-  (measured 2026-10-06).
+  gitlink, and `a26f380` (PR #32) is the commit that added the worktrees directory and
+  `children.tsv` to `.gitignore` (its `.gitignore` change is exactly those two added lines with no
+  deletions; the commit as a whole changed 7 files with 212 insertions, measured 2026-10-06).
 - Decide "landed?" with the forge, never with ancestry: `gh pr view <n> --json state,mergedAt`.
   Work lands as squash merges, so `git merge-base --is-ancestor <head> origin/main` reports `NO`
   for a commit that already shipped, and a branch that reads merged can still hold content trunk
@@ -131,9 +132,9 @@ the no-line-number rule or one-writer-per-tree. Treat those as advice, not gates
 - Never cite a path that a fresh clone will not have. The worktrees directory is gitignored, so
   anything under it is scratch that dies with the machine, and a rule leaning on it is a rule
   resting on evidence nobody else can open. `scripts/agents-paths-check.mjs` is the enforcer.
-- Verify a subagent wrote the file it claimed, rather than trusting a completed status. Five
-  parallel designer spawns once finished with no file anywhere and no response, on long and short
-  prompts and with relative and absolute paths alike. The enforcer is a bare
+- Verify a subagent wrote the file it claimed, rather than trusting a completed status. 3 of 5
+  parallel designer spawns once completed with no file written anywhere and no text response, on
+  both long and short prompts and with relative and absolute output paths. The enforcer is a bare
   `test -f <path>` before you read the file, not the subagent's own word.
 
 ### Probing the API
@@ -188,9 +189,9 @@ the no-line-number rule or one-writer-per-tree. Treat those as advice, not gates
   `scripts/integration-check.mjs` browse with no `kind`, so they do not cover it
   (read-from-code).
 - `server/src/providers/contract.js` is the source of truth for catalog items: every optional
-  field is `string | null`, never a partial object, and `maturity` is always derived server-side.
-  `design.md` is stale for the catalog, still typing `posterUrl` as a non-null `string` in three
-  `CatalogItem` shapes.
+  field is `string | null` or `number | null`, never a partial object, and `maturity` is always
+  derived server-side. `design.md` is stale for the catalog: its `CatalogItem` union holds two
+  shapes (`Movie | SeriesListing`), both typing `posterUrl` as a non-null `string`.
 - Search ships twice on purpose. `home.html` renders matches inline in `#row-results-wrap` as a
   rail with tail-loading, and the browse page renders a URL-driven grid; both call the same
   endpoint, and home is the only page carrying a `#search-form`. Change one and check the other
