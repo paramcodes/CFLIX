@@ -25,7 +25,7 @@
  * @property {string[]} cast              Actor names, in billing order. May be empty.
  * @property {number|null} rating         0-10 scale, normalized across providers.
  * @property {string|null} trailerYtId     YouTube id. The only legal video source we have.
- * @property {string} provider            'cinemeta' | 'tvmaze' | 'kitsu'. For attribution.
+ * @property {string} provider            'cinemeta' | 'tvmaze' | 'kitsu' | 'seed'. For attribution.
  *
  * @typedef {CatalogItemBase & {
  *   kind: 'movie',

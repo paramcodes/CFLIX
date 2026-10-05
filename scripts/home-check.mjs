@@ -50,7 +50,7 @@ const signIn = async (page, seed = false) => {
       await fetch('/api/progress', {
         method: 'POST',
         headers: { ...bearer, 'x-cflix-profile': profile.id },
-        body: JSON.stringify({ itemId: 'm1', seconds: 3600 }),
+        body: JSON.stringify({ itemId: 'seed:m1', seconds: 3600 }),
       });
     }
     sessionStorage.setItem('cflix_token', token);

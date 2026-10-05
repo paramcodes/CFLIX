@@ -87,26 +87,26 @@ check(
 r = await req(
   'POST',
   '/api/play',
-  { ref: { kind: 'series', id: 's1' } },
+  { ref: { kind: 'series', id: 'seed:s1' } },
   token,
   adultId,
 );
-check('series play resolves to episode', r.data.item?.id === 's1e1');
+check('series play resolves to episode', r.data.item?.id === 'seed:s1:1:1');
 await req(
   'POST',
   '/api/progress',
-  { itemId: 's1e1', seconds: 120 },
+  { itemId: 'seed:s1:1:1', seconds: 120 },
   token,
   adultId,
 );
 r = await req(
   'POST',
   '/api/play',
-  { ref: { kind: 'series', id: 's1' } },
+  { ref: { kind: 'series', id: 'seed:s1' } },
   token,
   adultId,
 );
-check('second play picks next episode', r.data.item?.id === 's1e2');
+check('second play picks next episode', r.data.item?.id === 'seed:s1:1:2');
 r = await req('GET', '/api/history', null, token, adultId);
 check(
   'history has the recorded item',
@@ -116,7 +116,7 @@ check(
 r = await req(
   'POST',
   '/api/play',
-  { ref: { kind: 'movie', id: 'm4' } },
+  { ref: { kind: 'movie', id: 'seed:m4' } },
   token,
   kidId,
 );

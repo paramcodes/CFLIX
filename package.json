@@ -6,8 +6,9 @@
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
-    "test": "node scripts/agents-paths-check.mjs && node scripts/agents-symbols-check.mjs && node scripts/test-runner.mjs && node scripts/provider-routing-check.mjs && node scripts/episode-maturity-check.mjs",
+    "test": "node scripts/agents-paths-check.mjs && node scripts/agents-symbols-check.mjs && node scripts/test-runner.mjs && node scripts/provider-routing-check.mjs && node scripts/episode-maturity-check.mjs && node scripts/fixture-conformance-check.mjs",
     "test:smoke": "node scripts/smoke.mjs",
+    "test:fixture": "node scripts/fixture-conformance-check.mjs",
     "test:maturity": "node scripts/episode-maturity-check.mjs",
     "test:paths": "node scripts/agents-paths-check.mjs",
     "test:symbols": "node scripts/agents-symbols-check.mjs",

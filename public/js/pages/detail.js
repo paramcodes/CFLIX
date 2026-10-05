@@ -25,18 +25,8 @@ const runtime = (seconds) => {
   return h ? `${h}h ${mins % 60}m` : `${mins}m`;
 };
 
-/**
- * Two real series shapes reach this page. A provider item carries a flat `episodes[]`; the
- * offline fixture carries `seasons[].episodes[]`. Both flatten to one Episode[] here so no
- * renderer has to ask which kind of item it holds.
- */
-const episodeList = (item) => {
-  if (Array.isArray(item.episodes) && item.episodes.length)
-    return item.episodes;
-  if (Array.isArray(item.seasons))
-    return item.seasons.flatMap((s) => s.episodes || []);
-  return [];
-};
+const episodeList = (item) =>
+  Array.isArray(item.episodes) ? item.episodes : [];
 
 const seasonsOf = (episodes) => {
   const groups = new Map();
