@@ -4,22 +4,22 @@
 
 - `server/index.js` — Node static server and JSON API entrypoint.
 - `server/src/` — server-side modules (`store.js`, `services.js`, `catalog-data.js`, `types.js`, plus `auth.js`, `catalog.js`, `errors.js`, `profiles.js`) and `server/src/providers/` (the Cinemeta, TVMaze, and Kitsu adapters alongside `cache.js`, `maturity.js`, `contract.js`).
-- `public/` — static assets. Pages live at the root (`index.html`, `profiles.html`, `home.html`, `title.html`, `watch.html`) plus `public/(auth)/signin.html`, served through clean URLs via `PAGE_MAP` in `server/index.js` (`/`, `/signin`, `/profiles`, `/home`, `/title`, `/watch`).
-- `public/wire.js` — page loader: it maps `document.body.dataset.page` to exactly one module under `public/js/pages/` (`signin.js`, `profiles.js`, `home.js`, `detail.js`, `player.js`). Shared helpers live in `public/js/core.js`, shared tokens in `public/tokens.css`, shared component classes in `public/base.css`.
+- `public/` — static assets. Pages live at the root (`index.html`, `profiles.html`, `home.html`, `title.html`, `watch.html`, `browse.html`) plus `public/(auth)/signin.html`, served through clean URLs via `PAGE_MAP` in `server/index.js` (`/`, `/signin`, `/profiles`, `/home`, `/title`, `/watch`, `/browse`).
+- `public/wire.js` — page loader: it maps `document.body.dataset.page` to exactly one module under `public/js/pages/` (`signin.js`, `profiles.js`, `home.js`, `detail.js`, `player.js`, `browse.js`). Shared helpers live in `public/js/core.js`, shared tokens in `public/tokens.css`, shared component classes in `public/base.css`.
 - `scripts/smoke.mjs` — smoke test against a running server.
 - `scripts/capture.mjs` — Playwright capture of screenshots and a tour video.
 - `scripts/*-check.mjs` — one check per adapter and per subsystem. Run the matching one when you touch
   that adapter. `git ls-files 'scripts/*-check.mjs'` lists them all and every one has a matching
-  `check:` npm key, but `npm test` chains only a few, so check which before assuming a gate covered
+  npm key, but `npm test` chains only a few, so check which before assuming a gate covered
   your change.
 - `docs/revamp/` — before/after media.
 - `design.md` — domain model and types, but stale for the catalog: it still types `posterUrl` as a non-null `string` and predates the provider adapters entirely. `server/src/providers/contract.js` is the source of truth for catalog items, where every optional field is `string | null`, never a partial object, and `maturity` is always derived server-side.
-- `.opencode/skills/verify-cflix/` — project-local verification skill (`SKILL.md` plus `features/`) that drives the 16 screens and the JSON API. It resolves only when the session's working directory is inside the repo; started from `~` the skill stays invisible to discovery until the session moves to the repo root.
+- `.opencode/skills/verify-cflix/` — project-local verification skill (`SKILL.md` plus `features/`) that drives the 7 HTML pages and the JSON API. It resolves only when the session's working directory is inside the repo; started from `~` the skill stays invisible to discovery until the session moves to the repo root.
 
 ## Run tests
 
 ```sh
-npm test                # Hermetic: AGENTS.md citation checks, then smoke, routing, and maturity. `npm test | grep -c PASS` gives the total.
+npm test                # Hermetic: AGENTS.md citation checks, then smoke, routing, and maturity. `npm test | grep -c '^PASS'` gives the total.
 npm run test:paths      # AGENTS.md path citations only, no server
 npm run test:symbols    # AGENTS.md symbol citations only, no server
 npm run check:player    # One subsystem check on its own; every check script has a matching key
@@ -82,7 +82,7 @@ you can grep for. Only the first two are machine-enforced: `npm run test:paths` 
 `npm run test:symbols` read this file, and nothing here reads the rules they cannot check, such as
 the no-line-number rule or one-writer-per-tree. Treat those as advice, not gates.
 
-### Every rule here has a gate
+### What the gates enforce and what is advice
 
 - Two checks read this file, and both run first in `npm test` before a server boots.
   `scripts/agents-paths-check.mjs` (`npm run test:paths`) fails when a cited path resolves to no
@@ -97,18 +97,20 @@ the no-line-number rule or one-writer-per-tree. Treat those as advice, not gates
   line number is wrong the moment anything above it changes. Name the symbol, and let
   `scripts/agents-symbols-check.mjs` catch the rename. This rule is not machine-enforced: adding
   `public/base.css:667` to any bullet passes both checks (measured 2026-10-05).
-- PRs #55, #56 and #57 each existed only to correct a citation in this file, and #48, #49, #51 and
-  #52 restated facts about it. That is the defect class these two checks close, and it is why the
-  next change to a rule should arrive with the check that enforces it (measured 2026-10-05:
-  `git log --oneline origin/main -- AGENTS.md` lists the commits behind them).
+- PRs #55, #56 and #57 each existed only to correct a citation in this file, and #48, #51, #52 and
+  #54 restated facts about it. That is the defect class these two checks close, and it is why the
+  next change to a rule should arrive with the check that enforces it (measured 2026-10-06,
+  `git log --oneline origin/main -- AGENTS.md` lists them).
 
 ### Trunk is the authority, never the local checkout
 
 - Ask trunk, not the working tree: `git show origin/main:<path>`. A local `main` can lag or lead
   after a `git reset --hard`, so a claim about "what the repo has" read from the checkout is not
-  evidence (measured 2026-10-05: a `git reset --hard` moved the root checkout to `f28e281` while
-  trunk was at `e28cb4f`, and the local-only commit `0f6fc07` will never become an ancestor of
-  trunk because it committed 97 gitlink entries that `a26f380` removed).
+  evidence. The local-only `0f6fc07`, a sibling of `a26f380`, committed 97 worktree gitlink
+  entries, `git merge-base --is-ancestor 0f6fc07 origin/main` exits 1, and
+  `git log --raw origin/main | grep -c 160000` returns 0, so nothing on trunk ever carried a
+  gitlink and `a26f380` (PR #32) only gitignored the worktrees directory and `children.tsv`
+  (measured 2026-10-06).
 - Decide "landed?" with the forge, never with ancestry: `gh pr view <n> --json state,mergedAt`.
   Work lands as squash merges, so `git merge-base --is-ancestor <head> origin/main` reports `NO`
   for a commit that already shipped, and a branch that reads merged can still hold content trunk
@@ -141,9 +143,10 @@ the no-line-number rule or one-writer-per-tree. Treat those as advice, not gates
 - Browse is `GET /api/catalog/browse?kind=&genre=` and returns `{items}` with no cursor, so browse
   rails cannot page. Only `POST /api/catalog/search` returns `nextCursor`, and it is a decimal
   offset string rather than an opaque token (read-from-code).
-- `GET /api/catalog/get` returns a populated `episodes[]` only on the Cinemeta path; TVMaze and
-  Kitsu both return `episodes: []` from `get()`, so a Kitsu series page has no episode list and
-  must handle the empty case explicitly (measured against the running app).
+- `GET /api/catalog/get` fills `episodes[]` for a Cinemeta or TVMaze series but returns
+  `episodes: []` for a Kitsu series, so a Kitsu series page has no episode list and must handle the
+  empty case explicitly (measured 2026-10-06, five series ids each: Cinemeta 8/8/20/16/145,
+  TVMaze 26/19/46/5/12, Kitsu 0/0/0/0/0).
 - Each adapter declares the episode-ref shape it mints, and `episodeOwnerId` in
   `server/src/catalog.js` asks the adapters rather than holding one alternation.
   `server/src/providers/cinemeta.js` matches `:\d+:\d+$` (`tt1844624:1:3`) and
@@ -205,9 +208,7 @@ the no-line-number rule or one-writer-per-tree. Treat those as advice, not gates
   before believing a player failure is new.
 - `.player` in `public/base.css` carries `overflow: hidden` then `overflow: clip` on the lines
   below it, and `clip` is not a scroll container, so focusing the seek input cannot move the box.
-  The seek bar sits at the bottom of the frame via `top: auto; bottom: 0`. Reading a player
-  geometry failure as broken layout is a known misread, because the scroll-into-view moves the
-  stage rather than the player.
+  The seek bar sits at the bottom of the frame via `top: auto; bottom: 0`.
 - Every media control is disabled until the YouTube `onReady` callback fires, so a probe that runs
   before readiness reads as broken controls. Sound-on autoplay is not blocked in this environment;
   the embed object is simply absent for the first several seconds, and sampling inside that window
