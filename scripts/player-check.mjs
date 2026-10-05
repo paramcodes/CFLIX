@@ -1,8 +1,8 @@
 import { chromium } from 'playwright';
 import { mkdirSync, writeFileSync } from 'node:fs';
+import { startServerForRun } from './verify/harness.mjs';
 
-const B =
-  process.env.BASE_URL || `http://localhost:${process.env.PORT || 3217}`;
+const B = await startServerForRun();
 const OUT_DIR = 'artifacts/verify-cflix';
 const stamp = new Date().toISOString().replace(/[:.]/g, '-');
 const EMAIL = `player-${Date.now()}@test.dev`;
@@ -338,23 +338,35 @@ const seekTrace = await page.evaluate(() => ({
   afterPress: window.__seekEvents.splice(0),
   value: document.querySelector('#seek').value,
 }));
-const seekEnd = await until(
-  async () => (await ytInfo())?.current > (reported.duration || 0) - 4,
-  8000,
-);
+// player.js sets state.current optimistically in seek(), then the 250ms tick overwrites it
+// from the embed's still-stale getCurrentTime(), and render() writes that number into
+// #seek.value. So currentTime and the scrub value converge at different moments and reading
+// one after waiting on the other decides on which landed first. Poll both together.
+const atEnd = (seconds) => async () => {
+  const info = await ytInfo();
+  return (
+    info?.current > seconds - 4 &&
+    Math.abs(Number(await value('#seek')) - seconds) <= 2
+  );
+};
+const seekEnd = await until(atEnd(reported.duration || 0), 8000);
 const seekTraceAfterWait = await page.evaluate(() =>
   window.__seekEvents.splice(0),
 );
 check(
   'keyboard End on the scrub bar seeks to the end',
-  !!seekEnd && Math.abs(Number(await value('#seek')) - reported.duration) <= 2,
+  !!seekEnd,
   `value=${await value('#seek')} current=${(await ytInfo())?.current} duration=${reported.duration} events=${JSON.stringify(seekTrace.afterPress)} valueAtPress=${seekTrace.value} eventsAfterWait=${JSON.stringify(seekTraceAfterWait)}`,
 );
 await page.keyboard.press('Home');
-const seekHome = await until(async () => (await ytInfo())?.current < 4, 8000);
+const atStart = async () => {
+  const info = await ytInfo();
+  return info?.current < 4 && Number(await value('#seek')) < 4;
+};
+const seekHome = await until(atStart, 8000);
 check(
   'keyboard Home on the scrub bar seeks to the start',
-  !!seekHome && Number(await value('#seek')) < 4,
+  !!seekHome,
   `value=${await value('#seek')} current=${(await ytInfo())?.current} before=${seekBefore}`,
 );
 
@@ -465,12 +477,20 @@ for (let i = 0; i < 40; i++) {
     operations.vol = Number(await value('#vol')) > before;
   }
   if (info.id === 'btn-toggle' && !operations.toggle) {
+    // The label only flips once the embed answers playVideo/pauseVideo, so a fixed sleep
+    // here decides on buffering speed. Poll both directions: leaving the player paused
+    // because the second press had not landed yet fails the idle test further down.
     const before = await attr('#btn-toggle', 'aria-label');
     await page.keyboard.press('Enter');
-    await sleep(400);
-    operations.toggle = (await attr('#btn-toggle', 'aria-label')) !== before;
+    operations.toggle = !!(await until(
+      async () => (await attr('#btn-toggle', 'aria-label')) !== before,
+      5000,
+    ));
     await page.keyboard.press('Enter');
-    await sleep(300);
+    await until(
+      async () => (await attr('#btn-toggle', 'aria-label')) === before,
+      5000,
+    );
   }
   const expected = [
     'btn-back',
@@ -595,12 +615,19 @@ const spaceButtonFlipped = await until(
   async () => (await attr('#btn-toggle', 'aria-label')) !== spaceButtonBefore,
   5000,
 );
-await sleep(600);
-const spaceButtonAfter = await attr('#btn-toggle', 'aria-label');
+// "Exactly once" means it does not come back, so sample across the window instead of
+// reading once after a sleep: a single read at the end cannot tell a held flip from a
+// second activation, and the label only moves when the embed answers the toggle.
+let held = true;
+for (let i = 0; i < 6; i++) {
+  await sleep(100);
+  if ((await attr('#btn-toggle', 'aria-label')) === spaceButtonBefore)
+    held = false;
+}
 check(
   'Space on a focused button activates it exactly once',
-  !!spaceButtonFlipped && spaceButtonAfter !== spaceButtonBefore,
-  `${spaceButtonBefore} -> ${spaceButtonAfter}`,
+  !!spaceButtonFlipped && held,
+  `${spaceButtonBefore} -> ${await attr('#btn-toggle', 'aria-label')}, held=${held}`,
 );
 await page.keyboard.press('Space');
 const spaceButtonBack = await until(

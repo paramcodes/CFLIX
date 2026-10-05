@@ -1,9 +1,8 @@
 import { chromium } from 'playwright';
 import { mkdirSync } from 'node:fs';
+import { startServerForRun } from './verify/harness.mjs';
 
-const B = process.env.PORT
-  ? `http://localhost:${process.env.PORT}`
-  : 'http://localhost:3000';
+const B = await startServerForRun();
 const OUT = process.argv[2] || 'artifacts/verify-cflix/browse';
 mkdirSync(OUT, { recursive: true });
 

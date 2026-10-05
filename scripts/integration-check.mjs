@@ -6,16 +6,13 @@
  * artwork, that both id namespaces resolve, and that a child profile never sees an adult title.
  *
  * `node scripts/integration-check.mjs` starts its own servers, so it needs no running instance.
- * Pass PORT to reuse one for the live cases; the offline case always starts its own.
+ * Pass BASE or PORT to reuse one for the live cases; the offline case always starts its own.
  */
-import { spawn } from 'node:child_process';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { startServer, startServerForRun } from './verify/harness.mjs';
 
-const ROOT = new URL('..', import.meta.url).pathname;
-const LIVE_PORT = process.env.PORT || 3241;
-const OFFLINE_PORT = Number(LIVE_PORT) + 1;
 const stamp = `${Date.now()}`;
 const EMAIL = `integration-${stamp}@test.dev`;
 const PASSWORD = 'pw123';
@@ -61,35 +58,6 @@ function client(base) {
   };
 }
 
-async function waitFor(base) {
-  for (let attempt = 0; attempt < 60; attempt++) {
-    try {
-      const res = await fetch(base + '/');
-      if (res.status < 500) return true;
-    } catch {
-      /* not listening yet */
-    }
-    await new Promise((r) => setTimeout(r, 250));
-  }
-  throw new Error(`no server on ${base}`);
-}
-
-async function startServer(port, env) {
-  const cacheDir = mkdtempSync(join(tmpdir(), 'cflix-offline-'));
-  const child = spawn(process.execPath, ['server/index.js'], {
-    cwd: ROOT,
-    env: {
-      ...process.env,
-      PORT: String(port),
-      CFLIX_CACHE_DIR: cacheDir,
-      ...env,
-    },
-    stdio: 'ignore',
-  });
-  await waitFor(`http://localhost:${port}`);
-  return child;
-}
-
 async function signUp(base) {
   const api = client(base);
   const res = await api.post('/api/auth/signup', {
@@ -110,8 +78,7 @@ async function signUp(base) {
   return { api, token, ...profiles };
 }
 
-async function liveChecks() {
-  const base = `http://localhost:${LIVE_PORT}`;
+async function liveChecks(base) {
   const { api, token, adult, child } = await signUp(base);
 
   console.log('\n== browse movies (provider, adult profile)');
@@ -513,9 +480,13 @@ async function liveChecks() {
 
 async function offlineCheck() {
   console.log('\n== offline fallback (PROVIDER=off)');
-  const server = await startServer(OFFLINE_PORT, { PROVIDER: 'off' });
+  const cacheDir = mkdtempSync(join(tmpdir(), 'cflix-offline-'));
+  const server = await startServer({
+    PROVIDER: 'off',
+    CFLIX_CACHE_DIR: cacheDir,
+  });
   try {
-    const base = `http://localhost:${OFFLINE_PORT}`;
+    const base = server.baseUrl;
     const { api, token, adult } = await signUp(base);
     const res = await api.get('/api/catalog/browse', token, adult);
     check(
@@ -549,22 +520,14 @@ async function offlineCheck() {
       `        titles     ${JSON.stringify(res.data.items.map((i) => i.title))}`,
     );
   } finally {
-    server.kill();
+    server.stop();
   }
 }
 
-console.log(
-  `integration-check  live=http://localhost:${LIVE_PORT}  offline=http://localhost:${OFFLINE_PORT}  account=${EMAIL}`,
-);
-
-let server = null;
-if (!process.env.PORT) server = await startServer(LIVE_PORT);
-try {
-  await liveChecks();
-  await offlineCheck();
-} finally {
-  if (server) server.kill();
-}
+const liveBase = await startServerForRun();
+console.log(`integration-check  account=${EMAIL}`);
+await liveChecks(liveBase);
+await offlineCheck();
 
 console.log(`\n${checks - failures} PASS, ${failures} FAIL, ${checks} checks`);
 process.exit(failures ? 1 : 0);

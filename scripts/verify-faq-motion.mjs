@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 // Proves the home FAQ open/close animation runs instead of snapping.
-// Usage: BASE=http://localhost:3000 NODE_PATH=/tmp/opencode/node_modules node scripts/verify-faq-motion.mjs [outdir]
+// Usage: node scripts/verify-faq-motion.mjs [outdir]
 import { chromium } from 'playwright';
 import { mkdirSync } from 'node:fs';
+import { startServerForRun } from './verify/harness.mjs';
 
-const base = process.env.BASE || 'http://localhost:3000';
+const base = await startServerForRun();
 const out = process.argv[2] || 'artifacts/verify-cflix/faq-motion';
 mkdirSync(out, { recursive: true });
 
