@@ -377,6 +377,17 @@ export async function episodes(item, { season } = {}) {
 }
 
 /**
+ * `normalizeEpisode` mints a bare episode number, which is the same shape as a show id and names
+ * no series, so a TVmaze episode ref cannot be split and `/api/play` has to take the series.
+ *
+ * @param {string} _id Unused: no TVmaze id distinguishes an episode from a show.
+ * @returns {null}
+ */
+export function episodeOwnerId(_id) {
+  return null;
+}
+
+/**
  * The bridge from a `tt...` id (Cinemeta, or any IMDb-keyed source) to a TVmaze show.
  * `lookup/shows?imdb=` answers with a 301 to `/shows/:id`; `fetch` follows it, so the body
  * arriving here is already the full show and needs no second show fetch. Output is the same

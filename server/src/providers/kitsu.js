@@ -1,4 +1,5 @@
-const BASE = 'https://kitsu.io/api/edge';
+/** `scripts/provider-routing-check.mjs` redirects this to a stub so its gate needs no internet. */
+const BASE = process.env.KITSU_BASE || 'https://kitsu.io/api/edge';
 
 import { maturityOf } from './maturity.js';
 
@@ -317,4 +318,15 @@ function numericId(id) {
   if (typeof id !== 'string') return null;
   const match = /^(?:kitsu:)?(\d+)$/.exec(id.trim());
   return match ? match[1] : null;
+}
+
+/** `toEpisode` mints `kitsu:<animeId>:e<episodeId>`, so that is the shape split back apart here. */
+const EPISODE_REF = /^(?<owner>(?:kitsu:)?\d+):e\d+$/;
+
+/**
+ * @param {string} id
+ * @returns {string|null} The series owning `id`, or null when it is not a Kitsu episode id.
+ */
+export function episodeOwnerId(id) {
+  return EPISODE_REF.exec(String(id ?? '').trim())?.groups?.owner ?? null;
 }

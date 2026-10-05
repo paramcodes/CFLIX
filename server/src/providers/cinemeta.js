@@ -316,7 +316,25 @@ async function episodes(item, { season } = {}) {
   return wanted === null ? all : all.filter((e) => e.seasonNumber === wanted);
 }
 
+/** `toEpisodes` mints `<seriesId>:<season>:<number>`, so that is the shape split back apart here. */
+const EPISODE_REF = /^(?<owner>.+):\d+:\d+$/;
+
+/**
+ * @param {string} id
+ * @returns {string|null} The series owning `id`, or null when it is not a Cinemeta episode id.
+ */
+export function episodeOwnerId(id) {
+  return EPISODE_REF.exec(plainText(id))?.groups?.owner ?? null;
+}
+
 /** @type {import('./contract.js').ProviderAdapter} */
-export const cinemeta = { name: NAME, browse, get, search, episodes };
+export const cinemeta = {
+  name: NAME,
+  browse,
+  get,
+  search,
+  episodes,
+  episodeOwnerId,
+};
 
 export default cinemeta;

@@ -26,13 +26,42 @@ const ID_PROVIDER = { 'kitsu:': 'kitsu' };
 
 const BROWSE_LIMIT = 24;
 const RELATED_LIMIT = 12;
-const EPISODE_ID = /:e\d+$|:\d+:\d+$/;
+
+/**
+ * The one place an episode ref is split into its owning series id. Each adapter declares the shape
+ * of the ids it mints, so this asks them rather than holding an alternation that has to learn each
+ * new provider format by hand. PR #39 shipped a bug that way: its regex carried only the `:e123`
+ * form Kitsu emits, so a Cinemeta episode id was never reduced to its series, the lookup resolved
+ * the raw episode, and the maturity gate blocked every profile with `MATURITY_BLOCKED`. Seed
+ * episode ids carry no provider and are matched by identity in `findSeed` before this is reached.
+ *
+ * Precedence is `ADAPTERS` insertion order. A shape has to be specific enough not to claim another
+ * adapter's ids, because the first adapter to answer ends the walk.
+ */
+function episodeOwnerId(id) {
+  const wanted = String(id ?? '');
+  for (const adapter of Object.values(ADAPTERS)) {
+    const owner = adapter.episodeOwnerId(wanted);
+    if (owner) return owner;
+  }
+  return null;
+}
 
 /** `PROVIDER=off` forces the seed catalog. It is not in ADAPTER_ORDER, so no real name collides. */
 const providerName = () =>
   process.env.PROVIDER === 'off' ? null : activeProvider();
 
 const adapterFor = (name) => ADAPTERS[name] ?? null;
+
+/**
+ * The one place a kind becomes a provider, so a second list path cannot route around the table.
+ * `PROVIDER=off` outranks the kind table for the same reason it outranks an id namespace, so it
+ * forces the fixture even for a kind whose only source is an adapter.
+ */
+const providerForKind = (kind) =>
+  process.env.PROVIDER === 'off'
+    ? null
+    : (KIND_PROVIDER[kind] ?? providerName());
 
 /** `PROVIDER=off` wins over an id namespace, so the fixture can be forced with either. */
 const providerForId = (id) => {
@@ -161,11 +190,8 @@ async function providerCall(name, op, keyParts, call, fallback) {
 }
 
 async function providerBrowseItems(kind, genre) {
-  // `anime` names Kitsu the same way search does; routing only inside search left
-  // browse?kind=anime answering with Cinemeta movies and series.
-  const name = KIND_PROVIDER[kind] ?? providerName();
   const items = await providerCall(
-    name,
+    providerForKind(kind),
     'browse',
     [kind ?? 'all', genre ?? '-'],
     (adapter) => adapter.browse({ kind, genre, limit: BROWSE_LIMIT }),
@@ -189,9 +215,8 @@ const providerGetItem = (id) =>
   );
 
 async function providerSearchItems(text, kind, limit) {
-  const name = KIND_PROVIDER[kind] ?? providerName();
   const items = await providerCall(
-    name,
+    providerForKind(kind),
     'search',
     [kind ?? 'all', lower(text)],
     (adapter) => adapter.search(text, { kind, limit }),
@@ -227,8 +252,9 @@ async function resolveItem(id) {
   const seeded = findSeed(wanted);
   if (seeded) return { item: withInheritedMaturity(seeded), source: 'seed' };
 
-  if (EPISODE_ID.test(wanted)) {
-    const owner = await resolveItem(wanted.replace(EPISODE_ID, ''));
+  const ownerId = episodeOwnerId(wanted);
+  if (ownerId) {
+    const owner = await resolveItem(ownerId);
     if (!owner) return null;
     const episode = (await episodesOf(owner.item)).find((e) => e.id === wanted);
     return episode ? { item: episode, source: owner.source } : null;
@@ -314,8 +340,10 @@ async function playProvider(profile, profileId, ref) {
 
   // An episode ref has to name its series, because progress and the maturity gate hang off the
   // series rather than the episode.
+  // An unsplittable ref falls through as its own id and resolves as a title or not at all, which
+  // is the TVmaze case: its episode ids name no series, so only the series ref can be played.
   const owner = await resolveItem(
-    ref.kind === 'episode' ? id.replace(EPISODE_ID, '') : id,
+    ref.kind === 'episode' ? (episodeOwnerId(id) ?? id) : id,
   );
   if (!owner) throw notFound('no such series');
   assertCanWatch(profile, owner.item);

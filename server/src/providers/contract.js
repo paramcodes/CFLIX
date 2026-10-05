@@ -70,6 +70,11 @@
  * @property {(id: string) => Promise<CatalogItem|null>} get
  * @property {(text: string, opts?: {kind?: 'movie'|'series'|'anime', limit?: number}) => Promise<CatalogItem[]>} search
  * @property {(item: CatalogItem, opts?: {season?: number}) => Promise<Episode[]>} episodes
+ * @property {(id: string) => string|null} episodeOwnerId
+ *   The series id owning `id`, given one of this adapter's own episode ids, else null. Declared
+ *   per adapter rather than in a shared table because an adapter is the only thing that knows the
+ *   shape of the ids it mints. `scripts/provider-routing-check.mjs` fails if an adapter listed in
+ *   `ADAPTER_ORDER` omits it, so this is enforced rather than merely documented.
  */
 
 /** @type {ProviderAdapter[]} */
