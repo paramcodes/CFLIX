@@ -20,6 +20,7 @@
 ```sh
 npm test                # Hermetic: checks AGENTS.md citations, finds a free port, boots the server, runs smoke and routing checks, tears down. `npm test | grep -c PASS` gives the total.
 npm run test:paths      # AGENTS.md path citations only, no server
+npm run test:symbols    # AGENTS.md symbol citations only, no server
 npm run verify          # Full automated Playwright browser verification across all features
 npm run verify:<feature> # Targeted browser verification (auth, profiles, browse, playback)
 npm run lint            # ESLint static analysis (catches missing imports, undeclared variables, async bugs)
@@ -74,17 +75,22 @@ enforcer is a rule that has already failed, so this section does not carry one.
 
 ### Every rule here has a gate
 
-- `scripts/agents-paths-check.mjs` runs first in `npm test` and in `npm run test:paths`. It fails
-  when `AGENTS.md` cites a path that resolves to no tracked file, and it resolves against
-  `git ls-files`, never the working tree, so the verdict is identical in a fresh clone and in a
-  sibling worktree. A citation swallowed by an ignore rule reports as `gitignored`, which is the
-  more serious failure: a typo is a wrong sentence, but a gitignored probe is a conclusion whose
-  only evidence no longer exists. On 2026-10-05 it reported 19 failures, 9 of them the
-  gitignored design probes under the worktrees directory, which is why this section no longer cites
-  them.
-  Every rule that follows survives only while this check is green.
+- Two checks read this file, and both run first in `npm test` before a server boots.
+  `scripts/agents-paths-check.mjs` (`npm run test:paths`) fails when a cited path resolves to no
+  tracked file, resolving against `git ls-files` rather than the working tree so the verdict is
+  identical in a fresh clone and in a sibling worktree. A citation swallowed by an ignore rule
+  reports as `gitignored`, which is the more serious failure: a typo is a wrong sentence, but a
+  gitignored probe is a conclusion whose only evidence no longer exists. On 2026-10-05 it reported
+  19 failures, 9 of them the gitignored design probes under the worktrees directory.
+  `scripts/agents-symbols-check.mjs` (`npm run test:symbols`) fails when a bullet names a source
+  file and a symbol that file no longer contains, which is the drift a path check cannot see.
+- **Cite a symbol or a command, never a line number.** A path resolves until it is deleted, but a
+  line number is wrong the moment anything above it changes, and this file has already burned eight
+  PRs on staleness. PR #58 rewrote `server/src/catalog.js` and invalidated four line numbers here in
+  a single merge while every path stayed valid. Name the symbol, and let
+  `scripts/agents-symbols-check.mjs` catch the rename.
 - Eight of the 47 PRs merged through 2026-10-05 existed only to maintain this file, and each one
-  was a restatement of a fact no gate read. That is the defect class this check closes, and the
+  was a restatement of a fact no gate read. That is the defect class these two checks close, and the
   count is why the next change to a rule should arrive with the check that enforces it.
 
 ### Trunk is the authority, never the local checkout
@@ -113,23 +119,32 @@ enforcer is a rule that has already failed, so this section does not carry one.
 - Never cite a path that a fresh clone will not have. The worktrees directory is gitignored, so
   anything under it is scratch that dies with the machine, and a rule leaning on it is a rule
   resting on evidence nobody else can open. `scripts/agents-paths-check.mjs` is the enforcer.
+- Verify a subagent wrote the file it claimed, rather than trusting a completed status. Five
+  parallel designer spawns once finished with no file anywhere and no response, on long and short
+  prompts and with relative and absolute paths alike. The enforcer is a bare
+  `test -f <path>` before you read the file, not the subagent's own word.
 
 ### Probing the API
 
 - `profileId` travels in the `x-cflix-profile` header, never as `?profileId=`; the query param
   yields `{"error":{"code":"NOT_FOUND","message":"no such profile"}}` (read-from-code:
-  `server/index.js:121` reads the header and nothing else).
+  `server/index.js` reads that header and no query parameter).
 - Browse is `GET /api/catalog/browse?kind=&genre=` and returns `{items}` with no cursor, so browse
   rails cannot page. Only `POST /api/catalog/search` returns `nextCursor`, and it is a decimal
   offset string rather than an opaque token (read-from-code).
 - `GET /api/catalog/get` returns a populated `episodes[]` only on the Cinemeta path; TVMaze and
   Kitsu both return `episodes: []` from `get()`, so a Kitsu series page has no episode list and
   must handle the empty case explicitly (measured against the running app).
-- `EPISODE_ID = /:e\d+$|:\d+:\d+$/` at `server/src/catalog.js:29` serves three id shapes. The
-  `:e\d+$` branch matches the Kitsu form (`kitsu:9001:e55501`) and `:\d+:\d+$` matches Cinemeta
-  (`tt1844624:1:3`). Seed ids like `s1e1` match neither branch and resolve by identity through
-  `findSeed` at line 227 before this grammar is consulted, so a claim that `s1e1` rides the
-  `:e\d+$` branch is wrong (measured 2026-10-05 with a node one-liner over both patterns).
+- Each adapter declares the episode-ref shape it mints, and `episodeOwnerId` in
+  `server/src/catalog.js` asks the adapters rather than holding one alternation.
+  `server/src/providers/cinemeta.js` matches `:\d+:\d+$` (`tt1844624:1:3`) and
+  `server/src/providers/kitsu.js` matches `:e\d+$` (`kitsu:9001:e55501`), while
+  `server/src/providers/tvmaze.js` claims none because no TVmaze id separates an episode from a
+  show. Seed ids like `s1e1` carry no provider prefix and resolve by identity through `findSeed`
+  before any grammar is consulted, which is why `s1e1` needs no branch at all
+  (read-from-code, `server/src/catalog.js`). A claim that `s1e1` rides the Kitsu branch is wrong;
+  PR #39 shipped that bug, when one alternation in `catalog.js` carried only the Kitsu form and
+  every Cinemeta episode resolved to itself and hit `MATURITY_BLOCKED`.
 - Copy `scripts/player-check.mjs` for authenticated probing: `POST /api/auth/signup` yields
   `data.session.token`, `POST /api/profiles` under `authorization: Bearer <token>` creates a
   profile, and every later call sends both that header and `x-cflix-profile`. In a browser context
@@ -144,14 +159,20 @@ enforcer is a rule that has already failed, so this section does not carry one.
   commands that answer it; `.gitignore` must never list `artifacts/`, while `.ignore` and
   `.prettierignore` may (measured 2026-10-05: `git ls-files artifacts` returns 192 tracked files
   and `grep -c '^artifacts' .gitignore` returns 0).
-- `KIND_PROVIDER` at `server/src/catalog.js:18` is consulted on both the browse and the search
-  path, at lines 166 and 192 (read-from-code). Until PR #47 only search consulted it, so
-  `browse?kind=anime` answered with Cinemeta items while the search box returned Kitsu. If anime
-  stops returning anime, that expression is the first place to look.
+- `providerForKind` in `server/src/catalog.js` is the one place a kind becomes a provider, so both
+  the browse and the search path route through it and a second list path cannot route around the
+  table. `KIND_PROVIDER` is the table it reads (read-from-code). Until PR #47 only search consulted
+  that table, so `browse?kind=anime` answered with Cinemeta items while the search box returned
+  Kitsu. If anime ever stops returning anime, `providerForKind` is the single place to look.
+  `providerForKind` returns `null` under `PROVIDER=off`, which now forces the fixture even for
+  `kind=anime`; it did not before PR #58, because the old table lookup ran ahead of the flag
+  (read-from-code). `scripts/integration-check.mjs` is the only in-repo consumer of `PROVIDER=off`,
+  and its offline browse assertions pass no `kind`, so nothing in the suite covers that
+  combination (read-from-code).
 - `server/src/providers/contract.js` is the source of truth for catalog items: every optional
   field is `string | null`, never a partial object, and `maturity` is always derived server-side.
-  `design.md` is stale for the catalog, still typing `posterUrl` as a non-null `string` at lines
-  70, 83, and 95.
+  `design.md` is stale for the catalog, still typing `posterUrl` as a non-null `string` in three
+  `CatalogItem` shapes.
 - Search ships twice on purpose. `home.html` renders matches inline in `#row-results-wrap` as a
   rail with tail-loading, and the browse page renders a URL-driven grid; both call the same
   endpoint, and home is the only page carrying a `#search-form`. Change one and check the other
