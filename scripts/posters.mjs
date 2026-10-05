@@ -10,6 +10,8 @@ const SRC = resolve(ROOT, process.argv[2] ?? 'public/poster.png');
 const OUT_DIR = join(ROOT, 'public/posters');
 const COLS = 12;
 const ROWS = 15;
+// Keyed by poster file name rather than by id, because fixture ids carry a `seed:` namespace
+// that must not leak into a file path.
 const TILES = {
   m1: [7, 5],
   m2: [0, 5],
@@ -81,28 +83,35 @@ if (rows.length !== ROWS)
   fail(`expected ${ROWS} rows in ${SRC}, detected ${rows.length}`);
 
 const catalog = [...movies, ...series];
-const ids = new Set(catalog.map((item) => item.id));
-for (const id of Object.keys(TILES)) {
-  if (!ids.has(id))
-    fail(`tile table lists "${id}", which is not in the catalog`);
+const posterKeys = catalog.map((item) => {
+  const match = /^\/posters\/(.+)\.jpg$/.exec(item.posterUrl ?? '');
+  if (!match)
+    fail(
+      `"${item.id}" has posterUrl ${item.posterUrl}, expected /posters/<tile>.jpg`,
+    );
+  return match[1];
+});
+for (const key of Object.keys(TILES)) {
+  if (!posterKeys.includes(key))
+    fail(`tile table lists "${key}", which no fixture item points at`);
 }
-for (const item of catalog) {
-  if (!TILES[item.id]) fail(`catalog item "${item.id}" has no tile entry`);
-  const want = `/posters/${item.id}.jpg`;
-  if (item.posterUrl !== want)
-    fail(`"${item.id}" has posterUrl ${item.posterUrl}, expected ${want}`);
+for (const [i, item] of catalog.entries()) {
+  if (!TILES[posterKeys[i]])
+    fail(
+      `"${item.id}" points at poster tile "${posterKeys[i]}", which has no entry`,
+    );
 }
 
 mkdirSync(OUT_DIR, { recursive: true });
-for (const [id, [row, col]] of Object.entries(TILES)) {
+for (const [key, [row, col]] of Object.entries(TILES)) {
   if (row < 0 || row >= rows.length || col < 0 || col >= cols.length) {
     fail(
-      `tile "${id}" index [${row}, ${col}] is outside the ${cols.length}x${rows.length} grid`,
+      `tile "${key}" index [${row}, ${col}] is outside the ${cols.length}x${rows.length} grid`,
     );
   }
   const [x0, x1] = cols[col];
   const [y0, y1] = rows[row];
-  const out = join(OUT_DIR, `${id}.jpg`);
+  const out = join(OUT_DIR, `${key}.jpg`);
   run(MAGICK, [
     SRC,
     '-crop',
@@ -112,11 +121,11 @@ for (const [id, [row, col]] of Object.entries(TILES)) {
     '85',
     out,
   ]);
-  if (!existsSync(out)) fail(`"${id}" produced no file at ${out}`);
+  if (!existsSync(out)) fail(`"${key}" produced no file at ${out}`);
   const size = statSync(out).size;
-  if (size === 0) fail(`"${id}" produced a 0-byte file at ${out}`);
+  if (size === 0) fail(`"${key}" produced a 0-byte file at ${out}`);
   const dims = run(MAGICK, ['identify', '-format', '%wx%h', out])
     .toString()
     .trim();
-  console.log(`${id}.jpg ${dims} ${size} bytes`);
+  console.log(`${key}.jpg ${dims} ${size} bytes`);
 }

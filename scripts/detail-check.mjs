@@ -497,7 +497,7 @@ if (brokenLogo) {
 }
 
 /* ------------------------------------------------ no backdrop, fixture source */
-await page.goto(`${B}/title?id=m1`);
+await page.goto(`${B}/title?id=seed:m1`);
 await titleReady();
 const fixtureBackdrop = await page.evaluate(
   () =>
@@ -542,16 +542,16 @@ check(
 await shot('09-watch-after-play');
 
 /* ------------------------------------------------ an episode row routes to /watch */
-await page.goto(`${B}/title?id=s1`);
+await page.goto(`${B}/title?id=seed:s1`);
 await page.waitForFunction(
   () => document.querySelectorAll('#episodes .episode-link').length > 0,
 );
 check(
-  'the fixture series derives its seasons from seasons[].episodes[]',
+  'the fixture series groups its flat episodes into seasons',
   (await count('#detail-seasons button')) === 2,
   `count=${await count('#detail-seasons button')}`,
 );
-await page.click('#episodes .episode-link[data-ep="s1e2"]');
+await page.click('#episodes .episode-link[data-ep="seed:s1:1:2"]');
 await page.waitForURL('**/watch');
 await page.waitForFunction(
   () => sessionStorage.getItem('cflix_play_ref') === null,
@@ -559,7 +559,7 @@ await page.waitForFunction(
 check(
   'an episode row routes to /watch with that episode',
   (await text('.player__title')) === 'Lies',
-  `player=${JSON.stringify(await text('.player__title'))} for data-ep=s1e2, which the fixture titles "Lies"`,
+  `player=${JSON.stringify(await text('.player__title'))} for data-ep=seed:s1:1:2, which the fixture titles "Lies"`,
 );
 
 const providerRef = await api('/api/play', {
