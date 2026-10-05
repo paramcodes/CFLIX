@@ -63,40 +63,70 @@ const bullets = doc.split('\n').reduce(
 );
 
 const findings = [];
-const pairsChecked = new Set();
+let checked = 0;
 
 /**
- * A bullet naming several files has symbols belonging to different ones, so a symbol passes when it
- * lives in at least one file the bullet names. Requiring it in all of them would cross-pair
- * `findSeed` against the adapter that merely shares the sentence.
+ * Cited files are read from the working tree, not from `git show HEAD:`, because `npm test` runs
+ * against the working tree. Reading HEAD would let an author rename a symbol without committing and
+ * still get a green gate, and would fail an author who cites a symbol they just added but have not
+ * committed yet. In CI the checkout is clean, so both agree and the behaviour is identical there.
+ * A tracked file that cannot be read from disk is reported as a finding rather than thrown, since a
+ * deleted-but-tracked file is exactly the drift this check exists to catch.
+ *
+ * Each bullet is checked independently. A symbol cited in two bullets, once correctly and once
+ * against a file that lacks it, must flag the wrong one, so there is deliberately no dedupe across
+ * bullets: `new Set` above already removes repeats within a bullet.
  */
 for (const bullet of bullets) {
   const files = [...new Set(bullet.spans.map(citedPaths).filter(Boolean))];
   const symbols = [...new Set(bullet.spans.filter(looksLikeSymbol))];
   if (files.length === 0 || symbols.length === 0) continue;
 
-  const contents = files.map((file) => [file, git(['show', `HEAD:${file}`])]);
+  const contents = files.map((file) => {
+    try {
+      return [file, readFileSync(path.join(ROOT, file), 'utf8')];
+    } catch {
+      findings.push({ line: bullet.start, unreadable: file });
+      return null;
+    }
+  });
+  const readable = contents.filter(Boolean);
+  if (readable.length === 0) continue;
 
   for (const symbol of symbols) {
-    if (pairsChecked.has(symbol)) continue;
-    pairsChecked.add(symbol);
+    checked++;
     const pattern = new RegExp(`\\b${symbol.replace(/\$/g, '\\$')}\\b`);
-    if (!contents.some(([, text]) => pattern.test(text))) {
-      findings.push({ line: bullet.start, symbol, files: files.join(', ') });
+    if (!readable.some(([, text]) => pattern.test(text))) {
+      findings.push({
+        line: bullet.start,
+        symbol,
+        files: readable.map(([file]) => file).join(', '),
+      });
     }
   }
 }
 
 console.log(
-  `agents-symbols-check: ${pairsChecked.size} symbol citations in bullets that name a source file, ${findings.length} name a symbol no named file contains`,
+  `agents-symbols-check: ${checked} symbol citations checked against the working tree, ${findings.length} name a symbol no cited file contains`,
 );
 
 if (findings.length === 0) {
-  console.log('PASS  every cited symbol exists in a file its bullet names');
+  console.log(
+    'PASS  every cited symbol exists in a cited file its bullet names',
+  );
   process.exit(0);
 }
 
 for (const finding of findings) {
+  if (finding.unreadable) {
+    console.log(
+      `FAIL  AGENTS.md:${finding.line} cites ${finding.unreadable}, which is tracked but unreadable in the working tree`,
+    );
+    console.log(
+      `      A file deleted but not staged is the same drift as a deleted symbol. Restore it, or unstage the deletion.`,
+    );
+    continue;
+  }
   console.log(
     `FAIL  AGENTS.md:${finding.line} cites \`${finding.symbol}\`, which is in none of ${finding.files}`,
   );
