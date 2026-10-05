@@ -19,11 +19,12 @@
 ## Run tests
 
 ```sh
-npm test                # Hermetic: AGENTS.md citation checks, then smoke, routing, and maturity. `npm test | grep -c '^PASS'` gives the total.
+npm test                # Hermetic: AGENTS.md citation checks, then smoke, routing, maturity, and fixture conformance. `npm test | grep -c '^PASS'` counts only lines that begin `PASS`, which excludes the fixture stage's `fixture-conformance  PASS, …` line and the per-stage summaries.
 npm run test:paths      # AGENTS.md path citations only, no server
 npm run test:symbols    # AGENTS.md symbol citations only, no server
 npm run check:player    # One subsystem check on its own; every check script has a matching key
 npm run test:maturity   # Episode maturity guard on its own
+npm run test:fixture    # Offline fixture against contract.js: every declared key, every id namespaced `seed:`, no duplicate id
 npm run verify          # Full automated Playwright browser verification across all features
 npm run verify:<feature> # Targeted browser verification (auth, profiles, browse, playback)
 npm run timing          # Gate, API, and page-load timings; writes artifacts/timings/
@@ -152,11 +153,13 @@ the no-line-number rule or one-writer-per-tree. Treat those as advice, not gates
   `server/src/providers/cinemeta.js` matches `:\d+:\d+$` (`tt1844624:1:3`) and
   `server/src/providers/kitsu.js` matches `:e\d+$` (`kitsu:9001:e55501`), while
   `server/src/providers/tvmaze.js` claims none because no TVmaze id separates an episode from a
-  show. Seed ids like `s1e1` carry no provider prefix and resolve by identity through `findSeed`
-  before any grammar is consulted, which is why `s1e1` needs no branch at all
-  (read-from-code, `server/src/catalog.js`). A claim that `s1e1` rides the Kitsu branch is wrong;
-  PR #39 shipped that bug, when one alternation in `catalog.js` carried only the Kitsu form and
-  every Cinemeta episode resolved to itself and hit `MATURITY_BLOCKED`.
+  show. Fixture episode ids carry the `seed:` namespace and derive from their own coordinates,
+  `seed:s1:1:1` being series `seed:s1` season 1 episode 1, and both `resolveItem` and `play` in
+  `server/src/catalog.js` match them by identity through `findSeed` before consulting any
+  grammar, so a fixture seed id never reaches an adapter's episode grammar (read-from-code). A claim that a seed
+  episode rides the Kitsu branch is wrong; PR #39 shipped that bug, when one alternation in
+  `catalog.js` carried only the Kitsu form and every Cinemeta episode resolved to itself and hit
+  `MATURITY_BLOCKED`.
 - Copy `scripts/player-check.mjs` for authenticated probing: `POST /api/auth/signup` yields
   `data.session.token`, `POST /api/profiles` under `authorization: Bearer <token>` creates a
   profile, and every later call sends both that header and `x-cflix-profile`. In a browser context
