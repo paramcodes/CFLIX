@@ -6,6 +6,7 @@
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
+    "start:next": "FRONTEND=next node server/index.js",
     "dev:next": "next dev",
     "build:next": "next build --webpack",
     "test": "node scripts/agents-paths-check.mjs && node scripts/agents-symbols-check.mjs && node scripts/test-runner.mjs && node scripts/provider-routing-check.mjs && node scripts/episode-maturity-check.mjs && node scripts/fixture-conformance-check.mjs",

@@ -197,8 +197,44 @@ export async function handleRequest(req, res) {
     res.end('not found');
   }
 }
+let nextHandler = null;
 
-export const server = createServer(handleRequest);
+export async function initNextApp(options = {}) {
+  if (nextHandler) return nextHandler;
+  const nextModule = await import('next');
+  const nextFn = nextModule.default || nextModule;
+  const app = nextFn({
+    dev:
+      options.dev ??
+      (process.env.NODE_ENV !== 'production' && !process.env.PROD),
+    dir: process.cwd(),
+  });
+  await app.prepare();
+  nextHandler = app.getRequestHandler();
+  return nextHandler;
+}
+
+export const server = createServer(async (req, res) => {
+  const host = req.headers?.host || 'localhost';
+  const url = new URL(req.url, `http://${host}`);
+  const key = `${req.method} ${url.pathname}`;
+
+  // 1. API routes are always handled by backend services & Boundary
+  if (routes[key]) {
+    return handleRequest(req, res);
+  }
+
+  // 2. Next.js App Router handles pages when FRONTEND=next or USE_NEXT=true
+  if (
+    nextHandler &&
+    (process.env.FRONTEND === 'next' || process.env.USE_NEXT === 'true')
+  ) {
+    return nextHandler(req, res);
+  }
+
+  // 3. Fallback to static prototype
+  return handleRequest(req, res);
+});
 
 const isDirectRun =
   process.argv[1] &&
@@ -206,7 +242,22 @@ const isDirectRun =
     process.argv[1].endsWith('server/index'));
 
 if (isDirectRun || process.env.LISTEN === 'true') {
-  server.listen(PORT, () => console.log(`cflix on http://localhost:${PORT}`));
+  if (process.env.FRONTEND === 'next' || process.env.USE_NEXT === 'true') {
+    initNextApp()
+      .then(() => {
+        server.listen(PORT, () =>
+          console.log(`cflix (Next.js App Router) on http://localhost:${PORT}`),
+        );
+      })
+      .catch((err) => {
+        console.error('Failed to initialize Next.js server:', err);
+        server.listen(PORT, () =>
+          console.log(`cflix (fallback) on http://localhost:${PORT}`),
+        );
+      });
+  } else {
+    server.listen(PORT, () => console.log(`cflix on http://localhost:${PORT}`));
+  }
 }
 
 export { routes, requireAccount, bearer, json };
