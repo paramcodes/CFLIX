@@ -134,3 +134,16 @@ The playback architecture uses the Strategy Pattern:
 - `npm test` — Full hermetic gate suite (paths, symbols, smoke, routing, maturity, fixture).
 - `npm run check:player` — Playwright browser suite verifying player controls and playback.
 - `npm run verify` — Automated browser verification across all features.
+
+## Enterprise Streaming Enhancements (Stage 7 — delivered)
+
+- **Spatial Navigation**: `src/lib/spatial-nav.ts` (`SpatialNavigationEngine`) implements 2D geometric focus movement via Euclidean distance + angular cone filtering (`SpatialNavigationPort`). Enables 10-foot Smart TV D-Pad navigation.
+- **Subtitle / Audio Tracks**: `SubtitleTrack` and `AudioTrack` interfaces in `server/src/domain/ports.ts`; contracts in `server/src/providers/contract.js` for multi-language subtitles and audio description.
+- **Rate Limiting**: `SlidingWindowRateLimiter` in `server/src/resilience/rate-limiter.ts`; sliding-window quota guard (`RateLimiterPort`) for auth/search abuse protection.
+- **Client Type Safety**: `src/lib/api.ts`, `src/lib/query-client.ts`, `src/lib/utils.ts` fully typed with zero inline-cast access; `fetchApi<T>()` generic with `in` narrowing.
+
+## Testing (current)
+
+- `npm run test:fast` (Vitest): 6 files, 31 tests, ~4s.
+- `npm test` (full hermetic gate): 63 path citations (0 broken), 11 symbol citations (0 broken), smoke 15 PASS/0 FAIL, fixture PASS.
+- `npm run typecheck`: `tsc --noEmit` clean (0 diagnostics).
