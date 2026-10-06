@@ -88,6 +88,24 @@ export interface IdentityProviderPort {
     idToken: string,
   ): Promise<{ email: string; providerUserId?: string }>;
 }
+
+// ------------------------------------------------------------------ Information Retrieval Ports
+
+export interface SearchIndexPort {
+  search(
+    query: string,
+    items: CatalogItemEntity[],
+    options?: { kind?: string | null; limit?: number },
+  ): Promise<CatalogItemEntity[]>;
+}
+
+export interface RecommendationEnginePort {
+  recommendRelated(
+    anchor: CatalogItemEntity,
+    pool: CatalogItemEntity[],
+    options?: { limit?: number },
+  ): Promise<CatalogItemEntity[]>;
+}
 // ------------------------------------------------------------------ Repository Ports
 
 export interface AccountRepositoryPort {
