@@ -160,12 +160,19 @@
   opacity: 0;
 }
 
+/* Chromium (and any engine that rejects the other vendor's pseudo) discards an
+   entire rule when one selector in the list fails to parse, so the two engines
+   must not share a block: the mixed list below silently dropped this rule and
+   the thumb never appeared on hover. */
 .player__seek:hover::-webkit-slider-thumb,
 .player__seek:focus-visible::-webkit-slider-thumb,
 .player__seek:active::-webkit-slider-thumb,
 .player__volrange:hover::-webkit-slider-thumb,
 .player__volrange:focus-visible::-webkit-slider-thumb,
-.player__volrange:active::-webkit-slider-thumb,
+.player__volrange:active::-webkit-slider-thumb {
+  opacity: 1;
+}
+
 .player__seek:hover::-moz-range-thumb,
 .player__seek:focus-visible::-moz-range-thumb,
 .player__seek:active::-moz-range-thumb,
@@ -277,12 +284,53 @@
   stroke: none;
 }
 
+/* The rail sits collapsed until the viewer reaches for volume, so the transport
+   reads as one row of buttons at rest. `opacity` (not `visibility`) keeps the
+   input in the tab order while it is hidden. */
 .player__voltrack {
+  --vol-w: 74px;
   position: relative;
+  width: 0;
+  opacity: 0;
+  transition:
+    width 150ms linear,
+    opacity 150ms linear;
+}
+
+.player__vol:hover .player__voltrack,
+.player__vol:focus-within .player__voltrack {
+  width: var(--vol-w);
+  opacity: 1;
+}
+
+/* A negative z-index child drops under the positioned parent's own background,
+   so the pill reads behind the rail without a second markup element. */
+.player__voltrack::before {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  z-index: -1;
+  border: 1px solid var(--tw-35);
+  background: var(--tb-90);
+  border-radius: 999px;
 }
 
 .player__voltrack i {
   width: 100%;
+}
+
+.player__vol:hover .player__volrange::-webkit-slider-thumb,
+.player__vol:focus-within .player__volrange::-webkit-slider-thumb {
+  opacity: 1;
+  background: var(--primary-white);
+  box-shadow: 0 0 0 1px var(--tb-60);
+}
+
+.player__vol:hover .player__volrange::-moz-range-thumb,
+.player__vol:focus-within .player__volrange::-moz-range-thumb {
+  opacity: 1;
+  background: var(--primary-white);
+  box-shadow: 0 0 0 1px var(--tb-60);
 }
 
 .player__time {
@@ -327,7 +375,7 @@
   }
 
   .player__voltrack {
-    width: 64px;
+    --vol-w: 64px;
   }
 
   .player__grow {

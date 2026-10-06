@@ -29,6 +29,11 @@ const HIDE_AFTER_MS = 3000;
 const RUNNING = new Set(['playing', 'buffering']);
 
 const $ = (selector) => document.querySelector(selector);
+// `hidden` reflects as a property only on HTMLElement. The transport icons are
+// <svg>, where `el.hidden = true` is a silent expando: only the content
+// attribute reaches CSS, and `.player [hidden]` is what hides them.
+const setHidden = (el, hidden) =>
+  hidden ? el.setAttribute('hidden', '') : el.removeAttribute('hidden');
 const clock = (seconds) => fmt(Math.max(0, Math.floor(seconds)));
 
 function loadYouTubeApi() {
@@ -162,13 +167,13 @@ export default async function player() {
 
     els.toggle.disabled = !live;
     els.toggle.setAttribute('aria-label', running ? 'Pause' : 'Play');
-    els.iconPlay.hidden = running;
-    els.iconPause.hidden = !running;
-    els.big.hidden = !live || running;
+    setHidden(els.iconPlay, running);
+    setHidden(els.iconPause, !running);
+    setHidden(els.big, !live || running);
 
     els.mute.setAttribute('aria-pressed', String(state.muted));
-    els.iconSound.hidden = state.muted;
-    els.iconMute.hidden = !state.muted;
+    setHidden(els.iconSound, state.muted);
+    setHidden(els.iconMute, !state.muted);
     els.vol.value = String(state.volume);
     els.vol.setAttribute('aria-valuetext', `${state.volume}%`);
     els.volFill.style.width = state.muted ? '0%' : `${state.volume}%`;
