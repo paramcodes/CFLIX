@@ -133,8 +133,9 @@ function requireAccount(token) {
   return AuthService.accountForToken(token);
 }
 
-const server = createServer(async (req, res) => {
-  const url = new URL(req.url, `http://${req.headers.host}`);
+export async function handleRequest(req, res) {
+  const host = req.headers?.host || 'localhost';
+  const url = new URL(req.url, `http://${host}`);
   const key = `${req.method} ${url.pathname}`;
 
   if (routes[key]) {
@@ -189,6 +190,17 @@ const server = createServer(async (req, res) => {
     res.writeHead(404);
     res.end('not found');
   }
-});
+}
 
-server.listen(PORT, () => console.log(`cflix on http://localhost:${PORT}`));
+export const server = createServer(handleRequest);
+
+const isDirectRun =
+  process.argv[1] &&
+  (process.argv[1].endsWith('server/index.js') ||
+    process.argv[1].endsWith('server/index'));
+
+if (isDirectRun || process.env.LISTEN === 'true') {
+  server.listen(PORT, () => console.log(`cflix on http://localhost:${PORT}`));
+}
+
+export { routes, requireAccount, bearer, json };
