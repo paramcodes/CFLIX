@@ -1,14 +1,9 @@
-import test from 'node:test';
+import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
 import { Readable } from 'node:stream';
 import { handleRequest } from '../server/index.js';
 
-/**
- * In-memory HTTP request dispatcher.
- * Simulates Node's IncomingMessage and ServerResponse streams in memory
- * to achieve sub-millisecond execution without binding OS network sockets.
- */
 function createDispatcher(handler) {
   return async function dispatch({
     method = 'GET',
@@ -51,7 +46,7 @@ function createDispatcher(handler) {
       try {
         json = JSON.parse(responseBody);
       } catch {
-        // Body is not JSON (HTML/CSS)
+        // Non-JSON response
       }
       resolve({
         status: statusCode,
@@ -73,13 +68,13 @@ function createDispatcher(handler) {
 
 const api = createDispatcher(handleRequest);
 
-test('Fast In-Memory Test Suite (node:test)', async (t) => {
+describe('Fast In-Memory Test Suite (Vitest)', () => {
   const testEmail = `test_${Date.now()}_${Math.random().toString(36).slice(2, 6)}@test.dev`;
   let token = null;
   let kidProfileId = null;
   let adultProfileId = null;
 
-  await t.test('Static assets and security barriers', async () => {
+  it('Static assets and security barriers', async () => {
     const home = await api({ path: '/' });
     assert.equal(home.status, 200);
     assert.ok(home.headers.etag, 'carries ETag');
@@ -91,7 +86,7 @@ test('Fast In-Memory Test Suite (node:test)', async (t) => {
     assert.equal(oldRoute.status, 404);
   });
 
-  await t.test('ACL / Parse Boundary: input validation guards', async () => {
+  it('ACL / Parse Boundary: input validation guards', async () => {
     // Malformed email
     const badEmail = await api({
       method: 'POST',
@@ -110,18 +105,17 @@ test('Fast In-Memory Test Suite (node:test)', async (t) => {
     assert.equal(noPassword.status, 400);
     assert.equal(noPassword.json?.error?.code, 'VALIDATION');
 
-    // Invalid maturity level
+    // Bogus token
     const badMaturity = await api({
       method: 'POST',
       path: '/api/profiles',
       headers: { authorization: 'Bearer bogus' },
       body: { name: 'Test', maturity: 'super-adult' },
     });
-    // Bogus token should fail 401 before profile creation
     assert.equal(badMaturity.status, 401);
   });
 
-  await t.test('Auth lifecycle: signup and signin', async () => {
+  it('Auth lifecycle: signup and signin', async () => {
     const signup = await api({
       method: 'POST',
       path: '/api/auth/signup',
@@ -157,7 +151,7 @@ test('Fast In-Memory Test Suite (node:test)', async (t) => {
     assert.equal(badPw.status, 400);
   });
 
-  await t.test('Profile management & maturity levels', async () => {
+  it('Profile management & maturity levels', async () => {
     const kid = await api({
       method: 'POST',
       path: '/api/profiles',
@@ -185,7 +179,7 @@ test('Fast In-Memory Test Suite (node:test)', async (t) => {
     assert.equal(list.json.items.length, 2);
   });
 
-  await t.test('Profile without maturity defaults to adult', async () => {
+  it('Profile without maturity defaults to adult', async () => {
     const res = await api({
       method: 'POST',
       path: '/api/profiles',
@@ -196,8 +190,7 @@ test('Fast In-Memory Test Suite (node:test)', async (t) => {
     assert.equal(res.json.maturity, 'adult');
   });
 
-  await t.test('Catalog maturity invariant enforcement', async () => {
-    // Child profile must never see adult content
+  it('Catalog maturity invariant enforcement', async () => {
     const childSearch = await api({
       method: 'POST',
       path: '/api/catalog/search',
@@ -213,7 +206,6 @@ test('Fast In-Memory Test Suite (node:test)', async (t) => {
       'Child profile received adult item',
     );
 
-    // Adult profile sees adult content
     const adultSearch = await api({
       method: 'POST',
       path: '/api/catalog/search',
@@ -230,8 +222,7 @@ test('Fast In-Memory Test Suite (node:test)', async (t) => {
     );
   });
 
-  await t.test('Playback resolution, progress, and history', async () => {
-    // Play series ref resolves next episode
+  it('Playback resolution, progress, and history', async () => {
     const play = await api({
       method: 'POST',
       path: '/api/play',
@@ -244,7 +235,6 @@ test('Fast In-Memory Test Suite (node:test)', async (t) => {
     assert.equal(play.status, 200);
     assert.equal(play.json?.item?.id, 'seed:s1:1:1');
 
-    // Record progress
     const progress = await api({
       method: 'POST',
       path: '/api/progress',
@@ -256,7 +246,6 @@ test('Fast In-Memory Test Suite (node:test)', async (t) => {
     });
     assert.equal(progress.status, 200);
 
-    // History reflects progress
     const history = await api({
       method: 'GET',
       path: '/api/history',
@@ -269,7 +258,6 @@ test('Fast In-Memory Test Suite (node:test)', async (t) => {
     assert.equal(history.json.items.length, 1);
     assert.equal(history.json.items[0].seconds, 150);
 
-    // Next play resolves second episode
     const nextPlay = await api({
       method: 'POST',
       path: '/api/play',

@@ -8,3 +8,4 @@ todo.md
 data/
 *.db*
 .next/
+*.tsbuildinfo

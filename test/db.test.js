@@ -1,4 +1,4 @@
-import test from 'node:test';
+import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 import { createDatabaseConnection } from '../server/src/db/index.js';
 import {
@@ -8,14 +8,14 @@ import {
   DrizzleProgressRepository,
 } from '../server/src/db/repositories.js';
 
-test('Database & Drizzle Repository Ports (In-Memory SQLite)', async (t) => {
+describe('Database & Drizzle Repository Ports (In-Memory SQLite)', () => {
   const { orm } = createDatabaseConnection(':memory:');
   const accountRepo = new DrizzleAccountRepository(orm);
   const sessionRepo = new DrizzleSessionRepository(orm);
   const profileRepo = new DrizzleProfileRepository(orm);
   const progressRepo = new DrizzleProgressRepository(orm);
 
-  await t.test('Account Repository operations', () => {
+  it('Account Repository operations', () => {
     assert.equal(accountRepo.findByEmail('alice@test.dev'), null);
 
     const account = {
@@ -38,7 +38,7 @@ test('Database & Drizzle Repository Ports (In-Memory SQLite)', async (t) => {
     assert.equal(updated?.passwordHash, 'hash456');
   });
 
-  await t.test('Session Repository operations', () => {
+  it('Session Repository operations', () => {
     assert.equal(sessionRepo.findByToken('token_1'), null);
 
     const session = {
@@ -53,7 +53,7 @@ test('Database & Drizzle Repository Ports (In-Memory SQLite)', async (t) => {
     assert.equal(sessionRepo.findByToken('token_1'), null);
   });
 
-  await t.test('Profile Repository operations', () => {
+  it('Profile Repository operations', () => {
     assert.deepEqual(profileRepo.listByAccountId('u_1'), []);
 
     const profile1 = {
@@ -81,7 +81,7 @@ test('Database & Drizzle Repository Ports (In-Memory SQLite)', async (t) => {
     assert.equal(profileRepo.listByAccountId('u_1').length, 1);
   });
 
-  await t.test('Progress Repository operations', () => {
+  it('Progress Repository operations', () => {
     assert.deepEqual(progressRepo.listByProfileId('p_2'), []);
 
     const entry = {
