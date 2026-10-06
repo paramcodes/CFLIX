@@ -24,11 +24,17 @@ export default [
     },
   },
   {
-    // Frontend browser modules
-    files: ['public/js/**/*.js', 'public/wire.js'],
+    // Frontend browser & React modules
+    files: ['public/js/**/*.js', 'public/wire.js', 'src/**/*.{js,jsx}'],
     languageOptions: {
       globals: {
         ...globals.browser,
+        ...globals.node,
+      },
+      parserOptions: {
+        ecmaFeatures: {
+          jsx: true,
+        },
       },
     },
   },
@@ -57,6 +63,8 @@ export default [
   {
     ignores: [
       'node_modules/',
+      '.next/',
+      'data/',
       '.worktrees/',
       '.opencode/',
       'artifacts/',

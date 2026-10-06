@@ -6,6 +6,8 @@
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
+    "dev:next": "next dev",
+    "build:next": "next build --webpack",
     "test": "node scripts/agents-paths-check.mjs && node scripts/agents-symbols-check.mjs && node scripts/test-runner.mjs && node scripts/provider-routing-check.mjs && node scripts/episode-maturity-check.mjs && node scripts/fixture-conformance-check.mjs",
     "test:fast": "node --test test/api.test.js",
     "test:smoke": "node scripts/smoke.mjs",
@@ -42,14 +44,24 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@tailwindcss/postcss": "^4.3.3",
     "eslint": "^10.12.0",
     "globals": "^17.13.0",
     "playwright": "^1.58.2",
+    "postcss": "^8.5.29",
     "prettier": "^3.9.9"
   },
   "license": "MIT",
   "dependencies": {
+    "@tanstack/react-query": "^5.104.1",
     "better-sqlite3": "^13.0.3",
-    "drizzle-orm": "^0.45.3"
+    "clsx": "^2.1.1",
+    "drizzle-orm": "^0.45.3",
+    "lucide-react": "^1.52.0",
+    "next": "^16.3.8",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "tailwind-merge": "^3.7.0",
+    "tailwindcss": "^4.3.3"
   }
 }

@@ -7,3 +7,4 @@ children.tsv
 todo.md
 data/
 *.db*
+.next/
