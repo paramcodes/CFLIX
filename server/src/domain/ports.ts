@@ -106,6 +106,56 @@ export interface RecommendationEnginePort {
     options?: { limit?: number },
   ): Promise<CatalogItemEntity[]>;
 }
+
+// ------------------------------------------------------------------ Enterprise Media & Gateway Ports
+
+export interface SubtitleTrack {
+  id: string;
+  language: string; // ISO 639-1 ('en', 'es', 'ja')
+  label: string;
+  kind: 'subtitles' | 'captions' | 'forced-narrative';
+  src: string;
+}
+
+export interface AudioTrack {
+  id: string;
+  language: string;
+  label: string;
+  channels: 'stereo' | '5.1' | 'spatial';
+  isAudioDescription: boolean;
+}
+
+export type SpatialDirection = 'up' | 'down' | 'left' | 'right';
+
+export interface SpatialBox {
+  id: string;
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+}
+
+export interface SpatialNavigationPort {
+  findNextFocus(
+    currentId: string,
+    direction: SpatialDirection,
+    candidates: SpatialBox[],
+  ): string | null;
+}
+
+export interface RateLimitResult {
+  allowed: boolean;
+  remaining: number;
+  resetAt: number;
+}
+
+export interface RateLimiterPort {
+  checkLimit(
+    key: string,
+    limit: number,
+    windowSeconds: number,
+  ): RateLimitResult;
+}
 // ------------------------------------------------------------------ Repository Ports
 
 export interface AccountRepositoryPort {
