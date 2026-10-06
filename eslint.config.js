@@ -37,6 +37,15 @@ export default [
         },
       },
     },
+    rules: {
+      'no-unused-vars': [
+        'warn',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^(_|React$)',
+        },
+      ],
+    },
   },
   {
     // Backend server code

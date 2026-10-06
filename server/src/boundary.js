@@ -1,15 +1,17 @@
+import { z } from 'zod';
 import { DomainError } from './errors.js';
 
 /**
  * Anti-Corruption Layer (ACL) and Parse Boundary for CFLIX.
  *
- * Validates untrusted external inputs (request bodies, query params, headers)
- * at the system perimeter before they can reach domain services or catalog routers.
+ * Implemented with Zod schema validation. Validates untrusted external inputs
+ * (request bodies, query params, headers) at the system perimeter before they
+ * reach internal domain services or catalog routers.
  *
  * Enforces:
- *   1. Shape & type validation on all inbound wire envelopes.
+ *   1. Declarative shape & type validation via Zod schemas.
  *   2. Rejection of malformed data with DomainError('VALIDATION', ...).
- *   3. Domain ID branding (AccountId, ProfileId, MovieId, SeriesId, EpisodeId).
+ *   3. Domain ID branding (AccountId, ProfileId, MediaId).
  */
 
 /**
@@ -19,40 +21,19 @@ import { DomainError } from './errors.js';
  * @typedef {'child' | 'teen' | 'adult'} Maturity
  */
 
-const VALID_MATURITIES = new Set(['child', 'teen', 'adult']);
-const VALID_KINDS = new Set(['movie', 'series', 'anime']);
-
 function validationError(message) {
   return new DomainError('VALIDATION', message);
 }
 
-function assertObject(value, name = 'body') {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    throw validationError(`${name} must be a non-null object`);
+function parseWithZod(schema, raw, customErrorMessage) {
+  const result = schema.safeParse(raw);
+  if (!result.success) {
+    const firstIssue = result.error.issues[0];
+    const message =
+      customErrorMessage || firstIssue?.message || 'Validation failed';
+    throw validationError(message);
   }
-  return value;
-}
-
-function assertString(value, name, { min = 1, max = 1000 } = {}) {
-  if (typeof value !== 'string') {
-    throw validationError(`${name} must be a string`);
-  }
-  const trimmed = value.trim();
-  if (trimmed.length < min) {
-    throw validationError(`${name} must not be empty`);
-  }
-  if (trimmed.length > max) {
-    throw validationError(`${name} exceeds maximum length of ${max}`);
-  }
-  return trimmed;
-}
-
-function assertEmail(value, name = 'email') {
-  const str = assertString(value, name);
-  if (!str.includes('@') || str.startsWith('@') || str.endsWith('@')) {
-    throw validationError(`${name} must be a valid email address`);
-  }
-  return str.toLowerCase();
+  return result.data;
 }
 
 /**
@@ -66,48 +47,109 @@ export function brandId(value, _brand) {
   return /** @type {any} */ (String(value));
 }
 
+// ------------------------------------------------------------------ Zod Schemas
+
+export const SignUpSchema = z.object({
+  email: z
+    .string()
+    .min(3, 'email must be a valid email address')
+    .refine((s) => s.includes('@') && !s.startsWith('@') && !s.endsWith('@'), {
+      message: 'email must be a valid email address',
+    })
+    .transform((s) => s.toLowerCase()),
+  password: z.string().min(1, 'password must not be empty'),
+});
+
+export const SignInSchema = z.object({
+  email: z.string().min(1, 'email must not be empty'),
+  password: z.string().min(1, 'password must not be empty'),
+});
+
+export const GoogleAuthSchema = z.object({
+  idToken: z.string().min(1, 'idToken must not be empty'),
+});
+
+export const CreateProfileSchema = z.object({
+  name: z
+    .string()
+    .min(1, 'name must not be empty')
+    .max(50, 'name exceeds maximum length of 50')
+    .transform((s) => s.trim()),
+  maturity: z.enum(['child', 'teen', 'adult']).optional(),
+});
+
+export const SearchBodySchema = z.object({
+  text: z
+    .string()
+    .default('')
+    .transform((s) => s.trim()),
+  kind: z.enum(['movie', 'series', 'anime']).nullable().optional(),
+  cursor: z.string().nullable().optional(),
+  limit: z.number().int().positive().default(20),
+});
+
+export const PlayBodySchema = z.object({
+  ref: z.object(
+    {
+      id: z
+        .string()
+        .min(1, 'unknown media kind')
+        .transform((s) => s.trim()),
+      kind: z.string().optional(),
+    },
+    {
+      required_error: 'unknown media kind',
+      invalid_type_error: 'unknown media kind',
+    },
+  ),
+});
+
+export const ProgressBodySchema = z.object({
+  itemId: z.string().min(1, 'itemId must not be empty'),
+  seconds: z.number().min(0).default(0),
+});
+
+// ------------------------------------------------------------------ Boundary Facade
+
 export const Boundary = {
   /**
    * Parse and validate POST /api/auth/signup payload.
    */
   parseSignUp(raw) {
-    const body = assertObject(raw);
-    const email = assertEmail(body.email);
-    const password = assertString(body.password, 'password', { min: 1 });
-    return { email, password };
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+      throw validationError('body must be a non-null object');
+    }
+    return parseWithZod(SignUpSchema, raw);
   },
 
   /**
    * Parse and validate POST /api/auth/signin payload.
    */
   parseSignIn(raw) {
-    const body = assertObject(raw);
-    const email = assertString(body.email, 'email');
-    const password = assertString(body.password, 'password');
-    return { email, password };
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+      throw validationError('body must be a non-null object');
+    }
+    return parseWithZod(SignInSchema, raw);
   },
 
   /**
    * Parse and validate POST /api/auth/google payload.
    */
   parseGoogleAuth(raw) {
-    const body = assertObject(raw);
-    const idToken = assertString(body.idToken, 'idToken');
-    return { idToken };
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+      throw validationError('body must be a non-null object');
+    }
+    return parseWithZod(GoogleAuthSchema, raw);
   },
 
   /**
    * Parse and validate POST /api/profiles payload.
    */
   parseCreateProfile(raw) {
-    const body = assertObject(raw);
-    const name = assertString(body.name, 'name', { min: 1, max: 50 });
-    if (body.maturity == null) return { name, maturity: undefined };
-    const maturity = String(body.maturity).toLowerCase();
-    if (!VALID_MATURITIES.has(maturity)) {
-      throw validationError(`invalid maturity level: ${body.maturity}`);
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+      throw validationError('body must be a non-null object');
     }
-    return { name, maturity: /** @type {Maturity} */ (maturity) };
+    return parseWithZod(CreateProfileSchema, raw);
   },
 
   /**
@@ -117,6 +159,7 @@ export const Boundary = {
     const rawKind = url.searchParams.get('kind');
     const rawGenre = url.searchParams.get('genre');
     const kind = rawKind ? rawKind.toLowerCase().trim() : null;
+    const VALID_KINDS = new Set(['movie', 'series', 'anime']);
     if (kind && !VALID_KINDS.has(kind)) {
       throw validationError(`unknown kind: ${rawKind}`);
     }
@@ -144,6 +187,7 @@ export const Boundary = {
     const body = raw && typeof raw === 'object' ? raw : {};
     const text = typeof body.text === 'string' ? body.text.trim() : '';
     const rawKind = body.kind ? String(body.kind).toLowerCase().trim() : null;
+    const VALID_KINDS = new Set(['movie', 'series', 'anime']);
     if (rawKind && !VALID_KINDS.has(rawKind)) {
       throw validationError(`unknown search kind: ${body.kind}`);
     }
@@ -157,19 +201,15 @@ export const Boundary = {
    * Parse and validate POST /api/play body.
    */
   parsePlayBody(raw) {
-    const body = assertObject(raw);
-    if (!body.ref || typeof body.ref !== 'object') {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
       throw validationError('unknown media kind');
     }
-    const id = body.ref.id;
-    if (!id || typeof id !== 'string' || !id.trim()) {
-      throw validationError('unknown media kind');
-    }
+    const data = parseWithZod(PlayBodySchema, raw, 'unknown media kind');
     return {
       ref: {
-        id: brandId(id.trim(), 'MediaId'),
-        kind: body.ref.kind
-          ? String(body.ref.kind).toLowerCase().trim()
+        id: brandId(data.ref.id, 'MediaId'),
+        kind: data.ref.kind
+          ? String(data.ref.kind).toLowerCase().trim()
           : undefined,
       },
     };
@@ -179,10 +219,14 @@ export const Boundary = {
    * Parse and validate POST /api/progress body.
    */
   parseProgressBody(raw) {
-    const body = assertObject(raw);
-    const itemId = assertString(body.itemId, 'itemId');
-    const seconds = Math.max(0, Number(body.seconds) || 0);
-    return { itemId: brandId(itemId, 'MediaId'), seconds };
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+      throw validationError('body must be a non-null object');
+    }
+    const data = parseWithZod(ProgressBodySchema, raw);
+    return {
+      itemId: brandId(data.itemId, 'MediaId'),
+      seconds: data.seconds,
+    };
   },
 
   /**
