@@ -100,9 +100,10 @@ Measured comparisons before and after architectural modernization:
 
 ## Quick Start
 
-### 1. Run the Backend API & Prototype Server
+### 1. Run the Backend API (Node.js or Bun Runtime)
 ```sh
-npm start
+npm start           # Run via Node.js
+bun server/index.js # Run via native Bun runtime (using built-in bun:sqlite)
 ```
 Runs the server on `http://localhost:3000`. `PORT` overrides the port.
 
@@ -145,8 +146,22 @@ A complete automated walkthrough demonstrating authentication, profile managemen
 
 ---
 
-## Screenshots
+## Screenshots (Live Application)
 
-![Index](https://raw.githubusercontent.com/paramcodes/CFLIX/main/docs/revamp/index-after.png)
+### 🏠 Landing Page
+![Landing Page](docs/revamp/index.png)
 
-![Home](https://raw.githubusercontent.com/paramcodes/CFLIX/main/docs/revamp/home-after.png)
+### 🎬 Browse & Catalog Home
+![Browse & Catalog Home](docs/revamp/home.png)
+
+### 🍿 Title Detail & Episodes
+![Title Detail](docs/revamp/detail.png)
+
+### 📺 Video Player
+![Video Player](docs/revamp/player.png)
+
+### 🔐 Sign In & Authentication
+![Sign In](docs/revamp/signin.png)
+
+### 👤 Multi-Profile Switcher
+![Profiles](docs/revamp/profiles.png)

@@ -1,5 +1,13 @@
-import Database from 'better-sqlite3';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
+const isBun = Boolean(process.versions.bun);
+const { Database, drizzle } = isBun
+  ? {
+      Database: (await import('bun:sqlite')).Database,
+      drizzle: (await import('drizzle-orm/bun-sqlite')).drizzle,
+    }
+  : {
+      Database: (await import('better-sqlite3')).default,
+      drizzle: (await import('drizzle-orm/better-sqlite3')).drizzle,
+    };
 import { mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import * as schema from './schema.js';
@@ -27,7 +35,13 @@ export function createDatabaseConnection(customPath) {
 
   // Enable WAL (Write-Ahead Logging) mode for concurrent read/write throughput
   if (dbPath !== ':memory:') {
-    sqlite.pragma('journal_mode = WAL');
+    if (typeof sqlite.pragma === 'function') {
+      sqlite.pragma('journal_mode = WAL');
+    } else if (typeof sqlite.run === 'function') {
+      sqlite.run('PRAGMA journal_mode = WAL;');
+    } else if (typeof sqlite.exec === 'function') {
+      sqlite.exec('PRAGMA journal_mode = WAL;');
+    }
   }
 
   // Idempotently create tables matching schema.js

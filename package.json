@@ -6,6 +6,7 @@
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
+    "start:bun": "bun server/index.js",
     "start:next": "FRONTEND=next node server/index.js",
     "dev:next": "next dev",
     "build:next": "next build --webpack",
