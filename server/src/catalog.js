@@ -7,7 +7,7 @@ import { cache } from './providers/cache.js';
 import { cinemeta } from './providers/cinemeta.js';
 import * as tvmaze from './providers/tvmaze.js';
 import * as kitsu from './providers/kitsu.js';
-
+import { getCircuitBreaker } from './resilience/circuit-breaker.js';
 /**
  * Each adapter module exports `name`, `browse`, `get`, `search` and `episodes` by name, so a
  * module namespace already satisfies the ProviderAdapter shape and needs no wrapper.
@@ -175,18 +175,25 @@ async function throughCache(key, loader) {
   return value;
 }
 
-/** Every provider read goes through here. A provider failure is `fallback`, never a throw. */
+/**
+ * Every provider read goes through here, protected by an upstream Circuit Breaker.
+ * Catches timeouts and upstream failures, tripping OPEN after repeated outages
+ * so subsequent requests fast-fail to fallback without exhausting connection pools.
+ */
 async function providerCall(name, op, keyParts, call, fallback) {
   const adapter = adapterFor(name);
   if (!adapter) return fallback;
-  try {
+  const breaker = getCircuitBreaker(name, {
+    failureThreshold: 5,
+    resetTimeoutMs: 10000,
+    callTimeoutMs: 5000,
+  });
+  return breaker.execute(async () => {
     const value = await throughCache(cacheKey(name, op, ...keyParts), () =>
       call(adapter),
     );
     return value == null ? fallback : value;
-  } catch {
-    return fallback;
-  }
+  }, fallback);
 }
 
 async function providerBrowseItems(kind, genre) {
