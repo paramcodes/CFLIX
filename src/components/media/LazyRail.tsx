@@ -2,9 +2,18 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ContentRail } from './ContentRail.jsx';
-import { Skeleton } from '../ui/Skeleton.jsx';
+import { ContentRail, type ContentRailItem } from './ContentRail';
+import { Skeleton } from '../ui/Skeleton';
 import { fetchApi } from '../../lib/api.js';
+
+export interface LazyRailProps {
+  title: string;
+  endpoint: string;
+  shape?: 'portrait' | 'landscape';
+  queryKey?: string;
+  rootMargin?: string;
+  className?: string;
+}
 
 export function LazyRail({
   title,
@@ -13,9 +22,9 @@ export function LazyRail({
   queryKey,
   rootMargin = '400px 0px',
   className,
-}) {
+}: LazyRailProps) {
   const [shouldFetch, setShouldFetch] = useState(false);
-  const sentinelRef = useRef(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (shouldFetch) return;
@@ -37,7 +46,7 @@ export function LazyRail({
     return () => observer.disconnect();
   }, [shouldFetch, rootMargin]);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading } = useQuery<ContentRailItem[]>({
     queryKey: [queryKey || endpoint],
     queryFn: async () => {
       const res = await fetchApi(endpoint);

@@ -13,10 +13,13 @@ import {
   ArrowLeft,
   CheckCircle,
 } from 'lucide-react';
-import { createPlayerEngine } from '../../../public/js/player/index.js';
+import {
+  createPlayerEngine,
+  type VideoPlayerEngine,
+} from '../../../public/js/player/index.js';
 import { fetchApi } from '../../lib/api.js';
 
-function formatClock(seconds) {
+function formatClock(seconds: number): string {
   const total = Math.max(0, Math.floor(seconds || 0));
   const h = Math.floor(total / 3600);
   const m = Math.floor((total % 3600) / 60);
@@ -24,10 +27,27 @@ function formatClock(seconds) {
   return `${h > 0 ? `${h}:` : ''}${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
-export function VideoPlayer({ item, trailerYtId, resumeSeconds = 0 }) {
+export interface VideoPlayerItem {
+  id: string;
+  title: string;
+  seasonNumber?: number | null;
+  episodeNumber?: number | null;
+}
+
+export interface VideoPlayerProps {
+  item?: VideoPlayerItem | null;
+  trailerYtId?: string | null;
+  resumeSeconds?: number;
+}
+
+export function VideoPlayer({
+  item,
+  trailerYtId,
+  resumeSeconds = 0,
+}: VideoPlayerProps) {
   const router = useRouter();
-  const playerRef = useRef(null);
-  const containerRef = useRef(null);
+  const playerRef = useRef<VideoPlayerEngine | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -49,7 +69,11 @@ export function VideoPlayer({ item, trailerYtId, resumeSeconds = 0 }) {
     playerRef.current = engine;
 
     engine.setEvents({
-      onReady: (ready) => {
+      onReady: (ready: {
+        duration: number;
+        volume: number;
+        muted: boolean;
+      }) => {
         setIsReady(true);
         setDuration(ready.duration);
         setVolume(ready.volume);
@@ -58,7 +82,7 @@ export function VideoPlayer({ item, trailerYtId, resumeSeconds = 0 }) {
           engine.seekTo(resumeSeconds);
         }
       },
-      onStateChange: (stateName) => {
+      onStateChange: (stateName: string) => {
         setIsPlaying(stateName === 'playing');
       },
       onError: () => {
@@ -94,7 +118,7 @@ export function VideoPlayer({ item, trailerYtId, resumeSeconds = 0 }) {
 
   // Idle timer for hiding controls
   useEffect(() => {
-    let timer;
+    let timer: NodeJS.Timeout | number | undefined;
     const poke = () => {
       setIsIdle(false);
       clearTimeout(timer);
@@ -125,7 +149,7 @@ export function VideoPlayer({ item, trailerYtId, resumeSeconds = 0 }) {
     setIsMuted(!isMuted);
   };
 
-  const handleSeek = (newTime) => {
+  const handleSeek = (newTime: number) => {
     if (!playerRef.current) return;
     playerRef.current.seekTo(newTime);
     setCurrentTime(newTime);

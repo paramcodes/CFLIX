@@ -12,7 +12,7 @@ export default function SignInPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
@@ -29,7 +29,9 @@ export default function SignInPage() {
         router.push('/profiles');
       }
     } catch (err) {
-      setError(err.message || 'Authentication failed');
+      const message =
+        err instanceof Error ? err.message : 'Authentication failed';
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -49,7 +51,9 @@ export default function SignInPage() {
         router.push('/profiles');
       }
     } catch (err) {
-      setError(err.message || 'Google sign-in failed');
+      const message =
+        err instanceof Error ? err.message : 'Google sign-in failed';
+      setError(message);
     } finally {
       setLoading(false);
     }

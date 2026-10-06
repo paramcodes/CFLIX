@@ -4,11 +4,14 @@ import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { chromium } from 'playwright';
 
-const ARTIFACTS_DIR = 'artifacts/verify-cflix';
+const ARTIFACTS_DIR = process.env.CFLIX_SHOT_DIR || 'artifacts/verify-cflix';
 mkdirSync(ARTIFACTS_DIR, { recursive: true });
 
 let failures = 0;
 let passes = 0;
+// The page the running suite is driving, so a failure can capture its own evidence.
+let activePage = null;
+let failureCaptured = false;
 
 export function check(name, cond, detail = '') {
   if (cond) {
@@ -17,14 +20,33 @@ export function check(name, cond, detail = '') {
   } else {
     failures++;
     console.error(`FAIL  ${name}${detail ? `  ${detail}` : ''}`);
+    void captureFailure(name);
   }
+}
+
+/** One screenshot per suite, on the first failure. A green run writes nothing. */
+async function captureFailure(name) {
+  if (failureCaptured || !activePage) return;
+  failureCaptured = true;
+  await saveScreenshot(activePage, `FAIL-${name.replace(/\W+/g, '-')}`, {
+    always: true,
+  }).catch((err) =>
+    console.error(`[screenshot] failed to capture ${name}: ${err.message}`),
+  );
 }
 
 export function getStats() {
   return { passes, failures };
 }
 
-export async function saveScreenshot(page, name) {
+/**
+ * Screenshots are evidence, not assertions: they cost a full-page PNG encode per call and the
+ * tall pages here run 2-3s each, so a green run writes none. Set SAVE_SHOTS=1 to capture every
+ * checkpoint (needed for a PR, since artifacts/ is tracked), or CFLIX_SHOT_DIR to keep the
+ * captures out of the repo. A failure always captures, once per suite, whatever SAVE_SHOTS says.
+ */
+export async function saveScreenshot(page, name, { always = false } = {}) {
+  if (!always && !process.env.SAVE_SHOTS) return null;
   const file = `${name}-${Date.now()}.png`;
   const target = join(ARTIFACTS_DIR, file);
   await page.screenshot({ path: target, fullPage: true });
@@ -143,10 +165,12 @@ export async function runWithServerAndBrowser(fn) {
       viewport: { width: 1440, height: 900 },
     });
     const page = await context.newPage();
+    activePage = page;
 
     try {
       await fn({ baseUrl, page, context, browser });
     } finally {
+      activePage = null;
       await browser.close().catch(() => {});
     }
   });

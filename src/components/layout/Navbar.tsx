@@ -7,16 +7,20 @@ import { Search, User, LogOut } from 'lucide-react';
 import { getActiveProfile } from '../../lib/api.js';
 import { cn } from '../../lib/utils.js';
 
+interface NavbarProfile {
+  name: string;
+}
+
 export function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const [scrolled, setScrolled] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [profile, setProfile] = useState(null);
+  const [profile, setProfile] = useState<NavbarProfile | null>(null);
 
   useEffect(() => {
-    setProfile(getActiveProfile());
+    setProfile(getActiveProfile() as NavbarProfile | null);
 
     const handleScroll = () => {
       setScrolled(window.scrollY > 20);
@@ -26,7 +30,7 @@ export function Navbar() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const handleSearchSubmit = (e) => {
+  const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
       router.push(`/browse?q=${encodeURIComponent(searchQuery.trim())}`);

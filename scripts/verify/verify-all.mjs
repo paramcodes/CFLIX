@@ -36,6 +36,47 @@ async function waitForServer(port, timeoutMs = 6000) {
   );
 }
 
+/**
+ * Prefixes every line a suite writes with its name. The suites run concurrently, so untagged
+ * output interleaves and a FAIL cannot be attributed to the suite that produced it.
+ */
+function tagOutput(stream, label, write) {
+  let buffered = '';
+  stream.on('data', (chunk) => {
+    buffered += chunk.toString();
+    const lines = buffered.split('\n');
+    buffered = lines.pop() ?? '';
+    for (const line of lines) write(`${label} | ${line}`);
+  });
+  stream.on('end', () => {
+    if (buffered) write(`${label} | ${buffered}`);
+  });
+}
+
+function runSuite(suite, port) {
+  const started = Date.now();
+  const label = suite.name.padEnd(16);
+  console.log(`>>> Starting Suite: ${suite.name} (${suite.script})`);
+
+  const child = spawn(process.execPath, [suite.script], {
+    env: {
+      ...process.env,
+      PORT: String(port),
+      BASE: `http://localhost:${port}`,
+    },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+
+  tagOutput(child.stdout, label, (line) => console.log(line));
+  tagOutput(child.stderr, label, (line) => console.error(line));
+
+  return new Promise((resolve) => {
+    child.on('exit', (code) =>
+      resolve({ suite, code: code ?? 1, ms: Date.now() - started }),
+    );
+  });
+}
+
 async function main() {
   const port = process.env.PORT
     ? parseInt(process.env.PORT, 10)
@@ -74,21 +115,20 @@ async function main() {
   try {
     await waitForServer(port);
 
-    for (const suite of suites) {
-      console.log(`\n>>> Running Suite: ${suite.name} (${suite.script})`);
-      const child = spawn(process.execPath, [suite.script], {
-        env: {
-          ...process.env,
-          PORT: String(port),
-          BASE: `http://localhost:${port}`,
-        },
-        stdio: 'inherit',
-      });
+    // Concurrent, because the suites are independent: each signs up its own account under a
+    // distinct email prefix and writes only its own state, and they already shared this one
+    // server. Serial cost was the sum of four independent bodies; concurrent cost is the
+    // slowest one. Durations are reported because a suite's own output cannot say what it cost.
+    const results = await Promise.all(
+      suites.map((suite) => runSuite(suite, port)),
+    );
 
-      const code = await new Promise((resolve) => {
-        child.on('exit', (c) => resolve(c ?? 1));
-      });
+    console.log(`\n=== Suite durations ===`);
+    for (const { suite, code, ms } of results.sort((a, b) => b.ms - a.ms)) {
+      console.log(`  ${(ms / 1000).toFixed(1)}s  ${suite.name}  exit=${code}`);
+    }
 
+    for (const { suite, code } of results) {
       if (code !== 0) {
         totalFailures++;
         console.error(

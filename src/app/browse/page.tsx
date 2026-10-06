@@ -3,8 +3,11 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { MediaCard } from '../../components/media/MediaCard.jsx';
-import { Skeleton } from '../../components/ui/Skeleton.jsx';
+import {
+  MediaCard,
+  type MediaCardProps,
+} from '../../components/media/MediaCard';
+import { Skeleton } from '../../components/ui/Skeleton';
 import { fetchApi } from '../../lib/api.js';
 
 const KINDS = [
@@ -41,7 +44,7 @@ function BrowseContent() {
     setSelectedGenre(genre);
   }, [kind, genre]);
 
-  const updateFilters = (newKind, newGenre) => {
+  const updateFilters = (newKind: string, newGenre: string) => {
     const params = new URLSearchParams();
     if (q) params.set('q', q);
     if (newKind) params.set('kind', newKind);
@@ -49,7 +52,7 @@ function BrowseContent() {
     router.push(`/browse?${params.toString()}`);
   };
 
-  const { data: items, isLoading } = useQuery({
+  const { data: items, isLoading } = useQuery<MediaCardProps['item'][]>({
     queryKey: ['browse-grid', q, selectedKind, selectedGenre],
     queryFn: async () => {
       if (q) {
@@ -61,14 +64,14 @@ function BrowseContent() {
             limit: 30,
           },
         });
-        return res.items || [];
+        return (res.items || []) as MediaCardProps['item'][];
       }
 
       const params = new URLSearchParams();
       if (selectedKind) params.set('kind', selectedKind);
       if (selectedGenre) params.set('genre', selectedGenre);
       const res = await fetchApi(`/api/catalog/browse?${params.toString()}`);
-      return res.items || [];
+      return (res.items || []) as MediaCardProps['item'][];
     },
   });
 
@@ -131,7 +134,7 @@ function BrowseContent() {
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
           {items.map((item) => (
             <MediaCard
-              key={item.id}
+              key={item?.id}
               item={item}
               shape="portrait"
               className="w-full"

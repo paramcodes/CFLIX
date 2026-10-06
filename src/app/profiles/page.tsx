@@ -5,6 +5,13 @@ import { useRouter } from 'next/navigation';
 import { Plus, Check, ShieldAlert } from 'lucide-react';
 import { fetchApi, getActiveToken } from '../../lib/api.js';
 
+export interface ProfileData {
+  id: string;
+  accountId?: string;
+  name: string;
+  maturity: string;
+}
+
 const AVATAR_COLORS = [
   'bg-red-600',
   'bg-blue-600',
@@ -16,7 +23,7 @@ const AVATAR_COLORS = [
 
 export default function ProfilesPage() {
   const router = useRouter();
-  const [profiles, setProfiles] = useState([]);
+  const [profiles, setProfiles] = useState<ProfileData[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newProfileName, setNewProfileName] = useState('');
@@ -31,7 +38,7 @@ export default function ProfilesPage() {
     }
 
     fetchApi('/api/profiles')
-      .then((res) => {
+      .then((res: { items?: ProfileData[] }) => {
         setProfiles(res.items || []);
       })
       .catch(() => {
@@ -40,12 +47,12 @@ export default function ProfilesPage() {
       .finally(() => setLoading(false));
   }, [router]);
 
-  const selectProfile = (profile) => {
+  const selectProfile = (profile: ProfileData) => {
     sessionStorage.setItem('cflix_profile', JSON.stringify(profile));
     router.push('/');
   };
 
-  const handleCreateProfile = async (e) => {
+  const handleCreateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newProfileName.trim()) return;
     setError('');
@@ -59,12 +66,14 @@ export default function ProfilesPage() {
         },
       });
 
-      setProfiles([...profiles, created]);
+      setProfiles((prev) => [...prev, created as ProfileData]);
       setIsDialogOpen(false);
       setNewProfileName('');
       setNewProfileMaturity('adult');
     } catch (err) {
-      setError(err.message || 'Failed to create profile');
+      const message =
+        err instanceof Error ? err.message : 'Failed to create profile';
+      setError(message);
     }
   };
 

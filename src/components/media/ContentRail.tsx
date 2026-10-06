@@ -2,8 +2,26 @@
 
 import React, { useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { MediaCard } from './MediaCard.jsx';
+import { MediaCard, type MediaCardProps } from './MediaCard';
 import { cn } from '../../lib/utils.js';
+
+export interface ContentRailItem {
+  item?: MediaCardProps['item'];
+  id?: string;
+  title?: string;
+  posterUrl?: string | null;
+  backdropUrl?: string | null;
+  pct?: number | null;
+  [key: string]: unknown;
+}
+
+export interface ContentRailProps {
+  title: string;
+  items?: ContentRailItem[];
+  shape?: 'portrait' | 'landscape';
+  ranked?: boolean;
+  className?: string;
+}
 
 export function ContentRail({
   title,
@@ -11,8 +29,8 @@ export function ContentRail({
   shape = 'portrait',
   ranked = false,
   className,
-}) {
-  const containerRef = useRef(null);
+}: ContentRailProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
 
@@ -25,7 +43,7 @@ export function ContentRail({
     setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 10);
   };
 
-  const scroll = (direction) => {
+  const scroll = (direction: 'left' | 'right') => {
     if (!containerRef.current) return;
     const { clientWidth } = containerRef.current;
     const scrollAmount = clientWidth * 0.75;
@@ -61,8 +79,26 @@ export function ContentRail({
           className="flex gap-2 sm:gap-3 px-4 sm:px-12 overflow-x-auto no-scrollbar scroll-smooth py-2"
         >
           {items.map((entry, index) => {
-            const item = entry.item || entry;
-            const progressPct = entry.pct ?? null;
+            const rawItem = entry.item || entry;
+            const item: MediaCardProps['item'] = {
+              id: String(rawItem.id || index),
+              title: String(rawItem.title || 'Untitled'),
+              posterUrl:
+                typeof rawItem.posterUrl === 'string'
+                  ? rawItem.posterUrl
+                  : null,
+              backdropUrl:
+                typeof rawItem.backdropUrl === 'string'
+                  ? rawItem.backdropUrl
+                  : null,
+              year: typeof rawItem.year === 'number' ? rawItem.year : null,
+              maturity:
+                typeof rawItem.maturity === 'string' ? rawItem.maturity : null,
+              rating:
+                typeof rawItem.rating === 'number' ? rawItem.rating : null,
+            };
+            const progressPct =
+              typeof entry.pct === 'number' ? entry.pct : null;
             return (
               <MediaCard
                 key={item.id}

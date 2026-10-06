@@ -4,17 +4,33 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { Play } from 'lucide-react';
 
-export function EpisodeList({ _seriesId, episodes = [] }) {
+export interface EpisodeItem {
+  id: string;
+  title: string;
+  episodeNumber?: number;
+  seasonNumber?: number;
+  durationSeconds?: number | null;
+  synopsis?: string | null;
+  stillUrl?: string | null;
+}
+
+export interface EpisodeListProps {
+  seriesId?: string;
+  _seriesId?: string;
+  episodes?: EpisodeItem[];
+}
+
+export function EpisodeList({ _seriesId, episodes = [] }: EpisodeListProps) {
   const [selectedSeason, setSelectedSeason] = useState(1);
 
   if (!episodes || episodes.length === 0) return null;
 
   // Group episodes by season
-  const seasonsMap = new Map();
+  const seasonsMap = new Map<number, EpisodeItem[]>();
   for (const ep of episodes) {
     const s = ep.seasonNumber || 1;
     if (!seasonsMap.has(s)) seasonsMap.set(s, []);
-    seasonsMap.get(s).push(ep);
+    seasonsMap.get(s)!.push(ep);
   }
 
   const seasonNumbers = [...seasonsMap.keys()].sort((a, b) => a - b);

@@ -5,7 +5,24 @@ import Link from 'next/link';
 import { Play, Info } from 'lucide-react';
 import { cn } from '../../lib/utils.js';
 
-export function HeroBanner({ item, className }) {
+export interface HeroItem {
+  id: string;
+  title: string;
+  synopsis?: string;
+  kind?: string;
+  maturity?: string;
+  rating?: number | null;
+  backdropUrl?: string | null;
+  posterUrl?: string | null;
+  logoUrl?: string | null;
+}
+
+export interface HeroBannerProps {
+  item?: HeroItem | null;
+  className?: string;
+}
+
+export function HeroBanner({ item, className }: HeroBannerProps) {
   if (!item) return null;
 
   const backdrop = item.backdropUrl || item.posterUrl;

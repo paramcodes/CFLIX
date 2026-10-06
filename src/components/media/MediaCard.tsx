@@ -15,12 +15,29 @@ const GRADIENTS = [
   'from-teal-900 to-black',
 ];
 
-function gradientFor(id) {
+function gradientFor(id: string | number) {
   const seed = [...String(id || '0')].reduce(
     (sum, ch) => sum + ch.charCodeAt(0),
     0,
   );
   return GRADIENTS[seed % GRADIENTS.length];
+}
+
+export interface MediaCardProps {
+  item: {
+    id: string;
+    title: string;
+    posterUrl?: string | null;
+    backdropUrl?: string | null;
+    stillUrl?: string | null;
+    year?: number | null;
+    maturity?: string | null;
+    rating?: number | null;
+  } | null;
+  shape?: 'portrait' | 'landscape';
+  rank?: number | null;
+  progressPct?: number | null;
+  className?: string;
 }
 
 export function MediaCard({
@@ -29,7 +46,7 @@ export function MediaCard({
   rank = null,
   progressPct = null,
   className,
-}) {
+}: MediaCardProps) {
   if (!item) return null;
 
   const isPortrait = shape === 'portrait';
@@ -62,7 +79,6 @@ export function MediaCard({
             loading="lazy"
             className="w-full h-full object-cover transition-opacity duration-300 group-hover:opacity-90"
             onError={(e) => {
-              // Hide image on 404 to reveal the fallback gradient
               e.currentTarget.style.display = 'none';
             }}
           />

@@ -3,14 +3,32 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { HeroBanner } from '../components/media/HeroBanner.jsx';
-import { ContentRail } from '../components/media/ContentRail.jsx';
-import { LazyRail } from '../components/media/LazyRail.jsx';
+import { HeroBanner, type HeroItem } from '../components/media/HeroBanner';
+import {
+  ContentRail,
+  type ContentRailItem,
+} from '../components/media/ContentRail';
+import { LazyRail } from '../components/media/LazyRail';
 import { fetchApi, getActiveProfile, getActiveToken } from '../lib/api.js';
+
+interface UserProfile {
+  name: string;
+}
+
+interface HistoryEntry {
+  seconds?: number;
+  item?: {
+    id: string;
+    title: string;
+    durationSeconds?: number | null;
+    posterUrl?: string | null;
+    backdropUrl?: string | null;
+  };
+}
 
 export default function HomePage() {
   const router = useRouter();
-  const [profile, setProfile] = useState(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
 
   useEffect(() => {
     const token = getActiveToken();
@@ -24,24 +42,24 @@ export default function HomePage() {
       router.push('/profiles');
       return;
     }
-    setProfile(activeProf);
+    setProfile(activeProf as UserProfile);
   }, [router]);
 
   // Above-the-fold queries: Only fetch trending and history initially!
-  const { data: mixedData } = useQuery({
+  const { data: mixedData } = useQuery<HeroItem[]>({
     queryKey: ['browse-trending'],
     queryFn: async () => {
       const res = await fetchApi('/api/catalog/browse');
-      return res.items || [];
+      return (res.items || []) as HeroItem[];
     },
     staleTime: 5 * 60 * 1000,
   });
 
-  const { data: historyData } = useQuery({
+  const { data: historyData } = useQuery<HistoryEntry[]>({
     queryKey: ['history'],
     queryFn: async () => {
       const res = await fetchApi('/api/history').catch(() => ({ items: [] }));
-      return res.items || [];
+      return (res.items || []) as HistoryEntry[];
     },
     staleTime: 60 * 1000,
   });
@@ -58,7 +76,7 @@ export default function HomePage() {
       {trendingItems.length > 0 ? (
         <ContentRail
           title="Top 10 in CFLIX Today"
-          items={trendingItems.slice(0, 10)}
+          items={trendingItems.slice(0, 10) as unknown as ContentRailItem[]}
           shape="portrait"
           ranked
           className="-mt-16 sm:-mt-24 z-20 relative"
@@ -69,13 +87,15 @@ export default function HomePage() {
       {historyData && historyData.length > 0 ? (
         <ContentRail
           title={`Continue Watching for ${profile?.name || 'You'}`}
-          items={historyData.map((h) => ({
-            item: h.item || h,
-            pct:
-              h.seconds && h.item?.durationSeconds
-                ? (h.seconds / h.item.durationSeconds) * 100
-                : null,
-          }))}
+          items={
+            historyData.map((h) => ({
+              item: h.item,
+              pct:
+                h.seconds && h.item?.durationSeconds
+                  ? (h.seconds / h.item.durationSeconds) * 100
+                  : null,
+            })) as unknown as ContentRailItem[]
+          }
           shape="landscape"
         />
       ) : null}

@@ -58,7 +58,10 @@ node scripts/capture.mjs <outdir> [baseUrl]
 
 ## Conventions
 
-- Visual changes require screenshots, a video, and a "What changed" section in the PR.
+- Visual changes require screenshots, a video, and a "What changed" section in the PR. `npm run verify`
+  writes none on a green run, so ask for them with `SAVE_SHOTS=1 npm run verify` or `npm run capture`;
+  add `CFLIX_SHOT_DIR=<dir>` to keep the captures out of the tracked `artifacts/`. A failing check
+  always captures one screenshot on its own, so `npm run verify` still leaves evidence of a break.
 - One small issue per change.
 - The smoke test must pass (`npm test`).
 - Keep `main` in sync with `origin/main`.

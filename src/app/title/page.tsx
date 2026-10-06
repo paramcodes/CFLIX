@@ -5,8 +5,8 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { Play } from 'lucide-react';
-import { EpisodeList } from '../../components/media/EpisodeList.jsx';
-import { ContentRail } from '../../components/media/ContentRail.jsx';
+import { EpisodeList } from '../../components/media/EpisodeList';
+import { ContentRail } from '../../components/media/ContentRail';
 import { fetchApi } from '../../lib/api.js';
 
 function TitleDetailContent() {

@@ -3,7 +3,7 @@
 import React, { Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { VideoPlayer } from '../../components/player/VideoPlayer.jsx';
+import { VideoPlayer } from '../../components/player/VideoPlayer';
 import { fetchApi } from '../../lib/api.js';
 
 function WatchContent() {
