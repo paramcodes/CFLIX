@@ -1,65 +1,65 @@
 ---
 name: verify-cflix
-description: "Verify CFLIX (the streaming prototype in this repo) by driving its real surfaces — Playwright browser for the 7 screens and static pages, plain HTTP for the JSON API. Use before claiming a UI/API change works."
+description: "Verify CFLIX (the streaming platform) by driving its real surfaces — Next.js 16 App Router & static prototype in Playwright, fast in-memory integration runner, and plain HTTP for the JSON API."
 ---
 
 # Verify CFLIX
 
-CFLIX is a Node static server plus JSON API serving 7 HTML pages through clean URLs (`/`, `/signin`, `/profiles`, `/home`, `/title`, `/watch`, `/browse`) with an in-memory store. There is no build step and no database; state resets on restart.
+CFLIX features a modern **Next.js 16 (React 19) App Router** client with Tailwind CSS and TanStack Query, backed by a Node.js API server with **Drizzle ORM + SQLite persistence** (`data/cflix.db`), **Anti-Corruption Layer (Boundary)**, and **Circuit Breakers**.
 
 ## Launch
 
 ```sh
-PORT=3100 node server/index.js   # from the repo root; any free port works
+# Option 1: Backend API & Prototype Server
+PORT=3100 node server/index.js   # from repo root; any free port works
+
+# Option 2: Modern Next.js App Router (Dev Server)
+npm run dev:next
+
+# Option 3: Production Next.js Build
+npm run build:next
 ```
 
-Ready when the log prints `cflix on http://localhost:3100` and `curl -s localhost:3100/` returns HTML. Teardown: kill the PID you started (`kill $PID`); never kill by process name.
+Ready when the log prints `cflix on http://localhost:3100` and `curl -s localhost:3100/` returns HTTP 200. Teardown: kill the PID you started (`kill $PID`).
 
 ## Doctor
 
 Read-only check that the instance is worth driving. All must pass:
 
+- `npm run test:fast` returns PASS in < 450ms (in-memory verification of routes & boundary).
 - `curl -s -o /dev/null -w '%{http_code}' localhost:3100/` returns `200`.
 - `curl -s -o /dev/null -w '%{http_code}' localhost:3100/signin` returns `200`.
 - `curl -s -o /dev/null -w '%{http_code}' localhost:3100/api/profiles` returns `401` (API alive, auth enforced).
 
-A fresh instance accepts any new email for signup. If signup returns `EMAIL_TAKEN`, the store is dirty — restart the server.
-
 ## Drive
 
-Two surfaces; use both, mock neither without noting it.
+### 1. Fast In-Memory Verification (< 450ms)
+```sh
+npm run test:fast
+```
+Exercises all route endpoints, boundary validation, maturity enforcement, and watch progress directly in memory without port allocation.
 
-**Browser (Playwright).** Playwright is installed under `/tmp/opencode/node_modules`; run scripts with `NODE_PATH=/tmp/opencode/node_modules`. The same pattern as `scripts/capture.mjs`: launch chromium, `page.goto(base + '/signin')`, drive by the selectors below. Every screen's behavior is wired by `public/wire.js` keyed on `document.body.dataset.page`; session state lives in `sessionStorage` keys `cflix_token`, `cflix_profile`, `cflix_play_ref`.
+### 2. Browser Verification (Playwright)
+```sh
+npm run verify
+npm run check:player
+```
+Drives authentication, profile switching, lazy rails, and video playback on a real browser.
 
 Stable handles:
+- **Sign in**: `#in-email`, `#in-password`, `#btn-signin`, `#btn-signup`, `#btn-google`.
+- **Profiles**: `#profile-list .avatar-tile[data-id]`, `#add-profile` opens dialog `#dlg-add`.
+- **Home**: `#hero`, `#row-trending`, `#row-movies`, `#row-series`, `#row-anime`, `#row-continue`.
+- **Detail**: `#detail-title`, `#episodes .episode-link`, `#btn-play`.
+- **Player**: `.player__title`, `#btn-toggle`, `#seek`, `#vol`, `#btn-mute`, `#btn-full`.
+- **Browse**: `#browse-grid`, `#browse-tabs`, `#browse-genre`.
 
-- Sign in: `#in-email`, `#in-password`, `#btn-signin`, `#btn-signup`, `#btn-google`, error text in `#in-error`. Submit redirects to `/profiles`.
-- Profiles: `#profile-list .avatar-tile[data-id]` (click selects, stores `cflix_profile`, goes to `/home`), `#add-profile` opens dialog `#dlg-add` (`#dlg-name`, `#dlg-maturity button[data-m]`, `#dlg-create`, `#dlg-cancel`).
-- Home (`data-page="home"`): `#who` ("Watching as <name>"), `#row-movies`, `#row-series`, `#row-continue`, `#btn-switch`, `#search-form` + `#search-input`; results land in `#row-results` and `#row-results-wrap` becomes visible.
-- Detail (`data-page="detail"`, needs `?id=`): `#detail-title` holds the title — assert `textContent`, not visibility, because a loaded `#detail-logo` clips it to 1x1 px. `#episodes .episode-link[data-ep]` rows carry `.ep__num` (a bare number) and `.ep__name`, grouped under `.detail__ephead` ("Season N"). `#btn-play` starts playback.
-- Player (`data-page="player"`): `.player__title` ships empty — wait for `cflix_play_ref` to clear before asserting it. `#epnum` reads `S1:E1`. `#media-badge` reads `TRAILER`, `NO PREVIEW`, or `UNAVAILABLE`. `#btn-back` keeps progress and returns to `/title`; `#btn-finish` zeroes it and returns to `/home`. Progress posts only while a trailer is actually playing.
-- Browse (`data-page="browse"`): `#browse-count`, `#browse-grid .browse__card`, `#browse-tabs` with `#browse-tab-all|movie|series|anime`, `#browse-genre`, `#browse-empty`, `#browse-more`. State lives in `?q=`, `?kind=`, and `?genre=`.
-
-**API (plain HTTP).** `POST /api/auth/signup|signin|google`, `GET|POST /api/profiles`, `GET /api/catalog/browse|get`, `POST /api/catalog/search`, `POST /api/play`, `POST /api/progress`, `GET /api/history`. Auth via `Authorization: Bearer <token>`; profile scope via `x-cflix-profile: <id>` header. `scripts/smoke.mjs` exercises this surface end to end — it is an API probe, not UI proof.
-
-## Evidence
-
-- Browser proof: a Playwright screenshot of the resulting screen plus a one-line note of what action produced it. Save under `artifacts/verify-cflix/<feature>-<timestamp>.png` (create the dir).
-- API proof: the request line, response status, and the relevant JSON fields (token, item id, maturity filter), saved to the same dir.
-- Proof standard: exercise the user path through the UI (click `#btn-signin`, not `fetch('/api/auth/signin')`) and capture the resulting state — redirect target, row contents, `#who` text, history item — not just a final screenshot. A passing `scripts/smoke.mjs` is not live UI proof; say so when you relied on it.
-
-## Cleanup
-
-- Kill only the server PID you started.
-- `artifacts/verify-cflix/` survives teardown; it is the record of the run.
-- Restart the server to reset the in-memory store before a fresh proof.
+### 3. API (plain HTTP)
+`POST /api/auth/signup|signin|google`, `GET|POST /api/profiles`, `GET /api/catalog/browse|get`, `POST /api/catalog/search`, `POST /api/play`, `POST /api/progress`, `GET /api/history`.
 
 ## Helpers
 
-- `NODE_PATH=/tmp/opencode/node_modules node scripts/capture.mjs <outdir> [baseUrl]` — screenshots + tour video of the real screens.
-- `PORT=3100 node scripts/smoke.mjs` — API-level probe; complements, never replaces, browser proof.
-- The feature map in `features/` is the maintained source of user-facing flows: `features/README.md` indexes them.
-
-## Isolation
-
-Two instances can run side by side only on different `PORT`s. Session state is per-tab (`sessionStorage`), so two browser contexts on one port are safe; the store is shared, so prefer a fresh server per run.
+- `npm run test:fast` — Fast in-memory API test suite.
+- `npm run check:player` — Full Playwright test suite for video player controls and playback.
+- `npm run capture <outdir> [baseUrl]` — Video and screenshot capture.
+- `features/README.md` — Detailed feature maps and recipes.
