@@ -64,3 +64,49 @@ describe('Application Services & Dependency Inversion', () => {
     assert.equal(list[0].id, profile.id);
   });
 });
+
+describe('Google sign-in against an existing account', () => {
+  const MERGE_EMAIL = 'merge_by_email@test.dev';
+
+  function authServiceForVerifiedIdentity(email) {
+    const { orm } = createDatabaseConnection(':memory:');
+    const accountRepo = new DrizzleAccountRepository(orm);
+    return {
+      accountRepo,
+      // MockIdentityProviderAdapter stands in for an identity verified upstream.
+      authService: createAuthService({
+        accountRepo,
+        sessionRepo: new DrizzleSessionRepository(orm),
+        identityProvider: new MockIdentityProviderAdapter({ email }),
+      }),
+    };
+  }
+
+  it('resolves two verified sign-ins with the same email to one account', async () => {
+    const { authService, accountRepo } =
+      authServiceForVerifiedIdentity(MERGE_EMAIL);
+    const owner = authService.signUp({
+      email: MERGE_EMAIL,
+      password: 'password123',
+    });
+
+    const first = await authService.signInWithGoogle({
+      idToken: 'verified-token-1',
+    });
+    const second = await authService.signInWithGoogle({
+      idToken: 'verified-token-2',
+    });
+
+    assert.equal(first.user.id, owner.user.id);
+    assert.equal(second.user.id, owner.user.id);
+
+    const rows = accountRepo.listAll().filter((a) => a.email === MERGE_EMAIL);
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0].provider, 'email');
+    assert.equal(
+      authService.signIn({ email: MERGE_EMAIL, password: 'password123' }).user
+        .id,
+      owner.user.id,
+    );
+  });
+});
