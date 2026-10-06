@@ -13,7 +13,7 @@
   npm key, but `npm test` chains only a few, so check which before assuming a gate covered
   your change.
 - `docs/revamp/` — before/after media.
-- `design.md` — domain model and types, but stale for the catalog: it still types `posterUrl` as a non-null `string` and predates the provider adapters entirely. `server/src/providers/contract.js` is the source of truth for catalog items, where every optional field is `string | null` or `number | null`, never a partial object, and `maturity` is always derived server-side.
+- `design.md` — domain model, API envelopes, and client architecture as they ship. `server/src/providers/contract.js` remains the source of truth for catalog items, where every optional field is `string | null` or `number | null`, never a partial object, and `maturity` is always derived server-side.
 - `.opencode/skills/verify-cflix/` — project-local verification skill (`SKILL.md` plus `features/`) that drives the 7 HTML pages and the JSON API. It resolves only when the session's working directory is inside the repo; started from `~` the skill stays invisible to discovery until the session moves to the repo root.
 
 ## Run tests
@@ -190,8 +190,7 @@ the no-line-number rule or one-writer-per-tree. Treat those as advice, not gates
   (read-from-code).
 - `server/src/providers/contract.js` is the source of truth for catalog items: every optional
   field is `string | null` or `number | null`, never a partial object, and `maturity` is always
-  derived server-side. `design.md` is stale for the catalog: its `CatalogItem` union holds two
-  shapes (`Movie | SeriesListing`), both typing `posterUrl` as a non-null `string`.
+  derived server-side. `design.md` documents the catalog against that contract.
 - Search ships twice on purpose. `home.html` renders matches inline in `#row-results-wrap` as a
   rail with tail-loading, and the browse page renders a URL-driven grid; both call the same
   endpoint, and home is the only page carrying a `#search-form`. Change one and check the other

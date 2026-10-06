@@ -1,342 +1,251 @@
-# CFLIX — design sketch (types and signatures)
+# CFLIX Design
 
-Stack for the sketch: TypeScript. One client library (`@cflix/client`) for web/mobile callers,
-and a server behind it exposing three services. Wire DTOs never appear on the public surface.
+CFLIX is a streaming-service prototype: a Node HTTP server that serves static pages and a JSON
+API, three catalog adapters behind one contract, and a browser client built from plain ES modules
+with no build step.
 
-## Usage (caller's view)
+This file documents the system as it ships. `server/src/providers/contract.js` is the source of
+truth for catalog shapes; every status code and envelope below was captured against a running
+server on 2026-10-06.
 
-```ts
-import { createCFlix } from '@cflix/client';
+## Stack
 
-const cflix = createCFlix({ apiUrl: 'https://api.cflix.example' });
+- **Server**: Node with no framework. `server/index.js` is the entrypoint: a static file server
+  plus one route table.
+- **State**: in-memory `Map`s in `server/src/store.js`. Nothing persists them; a restart clears
+  accounts, profiles, sessions, and progress. The provider cache is a separate concern:
+  `server/src/providers/cache.js` writes JSON files under `/tmp/opencode/cflix-cache`
+  (`CFLIX_CACHE_DIR` overrides, `CFLIX_CACHE_TTL_MS` the TTL).
+- **Client**: vanilla ES modules. `public/wire.js` loads one module per page. Shared helpers in
+  `public/js/core.js`. No bundler, no transpiler.
+- **Tests**: Node scripts for API and subsystem checks, Playwright for browser verification.
 
-// Sign up with email+password, or Google.
-const account = await cflix.signUp({ email, password });
-const account2 = await cflix.signInWithGoogle(googleIdToken);
+## Domain model
 
-// Pick who is watching. Everything after this is scoped to that profile.
-const profiles = await account.listProfiles();
-const session = await account.selectProfile(profiles[0].id);
+### Catalog item
 
-// Search, then play.
-const page = await session.search('dark', { kind: 'series' });
-const playback = await session.play(page.items[0]);
-player.load(playback.manifestUrl, { startAtSeconds: playback.resumeFromSeconds });
-setInterval(() => playback.reportPosition(player.positionSeconds), 10_000);
-```
+`server/src/providers/contract.js` defines one `CatalogItem` shape that every adapter must
+return. Optional upstream data is `null`, never a partial object.
 
-```ts
-// App launch: restore whatever the server remembers.
-const restored = await cflix.resumeSession();
-if (restored?.kind === 'viewing') showHome(restored);
-else if (restored) showProfilePicker(restored);
-else showSignIn();
-```
+| Field             | Type                        | Notes                                  |
+| ----------------- | --------------------------- | -------------------------------------- |
+| `kind`            | `'movie' \| 'series'`       |                                        |
+| `id`              | `string`                    | Provider-native and stable             |
+| `title`           | `string`                    |                                        |
+| `synopsis`        | `string`                    | Plain text, HTML stripped              |
+| `posterUrl`       | `string \| null`            | Portrait 2:3                           |
+| `backdropUrl`     | `string \| null`            | Landscape 16:9                         |
+| `logoUrl`         | `string \| null`            | Title treatment; falls back to text    |
+| `year`            | `number \| null`            |                                        |
+| `durationSeconds` | `number \| null`            | Movies and episodes, not a series      |
+| `maturity`        | `'child' \| 'teen' \| 'adult'` | Derived server-side, never raw upstream |
+| `genres`          | `string[]`                  |                                        |
+| `cast`            | `string[]`                  | Billing order, may be empty            |
+| `rating`          | `number \| null`            | Normalized 0–10                        |
+| `trailerYtId`     | `string \| null`            | The only legal video source            |
+| `provider`        | `string`                    | `cinemeta`, `tvmaze`, `kitsu`, `seed`  |
 
-Errors reject promises with a `CFlixError` union; callers narrow on `err.kind`.
+Series add `seasonCount` and `episodes[]`. The catalog service adds one field on the way out:
+`source`, either `provider` or `seed`, which says whether the item came from a live adapter or the
+offline fixture. `provider` names the adapter itself.
 
-## Types
+Episodes follow a separate `Episode` typedef: `id`, `seriesId`, `seasonNumber`, `episodeNumber`,
+`title`, `durationSeconds`, `synopsis`, `stillUrl`. An episode carries no maturity of its own and
+inherits the series rating.
 
-```ts
-// Branded ids. Only the parse layer can construct them.
-type Brand<Base, B> = Base & { readonly __brand: B };
-export type AccountId = Brand<string, 'AccountId'>;
-export type ProfileId = Brand<string, 'ProfileId'>;
-export type MovieId   = Brand<string, 'MovieId'>;
-export type SeriesId  = Brand<string, 'SeriesId'>;
-export type EpisodeId = Brand<string, 'EpisodeId'>;
+### Profile and session
 
-export type Maturity = 'child' | 'teen' | 'adult';
+A profile is `{ id, accountId, name, maturity }`, where `maturity` is one of `child`, `teen`,
+`adult` and defaults to `adult`. An account holds at most five profiles.
 
-export interface AccountInfo {
-  id: AccountId;
-  email: string;
-  provider: 'email' | 'google';
-}
+A session is a token with an expiry. The browser keeps both session and active profile in
+`sessionStorage` under `cflix_token` and `cflix_profile`.
 
-export interface Profile {
-  id: ProfileId;
-  accountId: AccountId; // ownership on the type
-  name: string;         // non-empty by constructor
-  maturity: Maturity;
-}
+### Progress
 
-// A movie is complete in every context.
-export interface Movie {
-  kind: 'movie';
-  id: MovieId;
-  title: string;
-  synopsis: string;
-  posterUrl: string;
-  year: number;
-  durationSeconds: number;
-  maturity: Maturity;
-}
+`{ profileId, itemId, seconds, updatedAt }`, keyed by `profileId:itemId`. It feeds the
+continue-watching row and the resume point handed back by `play`.
 
-// Card-level series. No `seasons` field, so a listing is never
-// mistaken for a hydrated series.
-export interface SeriesListing {
-  kind: 'series';
-  id: SeriesId;
-  title: string;
-  synopsis: string;
-  posterUrl: string;
-  year: number;
-  seasonCount: number;
-  maturity: Maturity;
-}
+## Server
 
-// Detail-level series. Only from session.series(id).
-export interface Series {
-  kind: 'series';
-  id: SeriesId;
-  title: string;
-  synopsis: string;
-  posterUrl: string;
-  year: number;
-  seasons: Season[]; // >= 1 by constructor
-  maturity: Maturity;
-}
+### Routes
 
-export interface Season {
-  seasonNumber: number;
-  episodes: Episode[];
-}
+`server/index.js` matches on the exact string `` `${method} ${pathname}` ``. There is no prefix
+matching and no path-parameter routing, so `/api/profiles/:id` does not exist.
 
-export interface Episode {
-  id: EpisodeId;
-  seriesId: SeriesId;
-  seasonNumber: number;
-  episodeNumber: number;
-  title: string;
-  durationSeconds: number;
-}
+| Method | Path                    | Notes                                    |
+| ------ | ----------------------- | ---------------------------------------- |
+| POST   | `/api/auth/signup`      | Returns `{ user, session }`              |
+| POST   | `/api/auth/signin`      | Returns `{ user, session }`              |
+| POST   | `/api/auth/google`      | Verifies a Google credential             |
+| POST   | `/api/auth/signout`     | Returns `{ ok: true }`                   |
+| GET    | `/api/profiles`         | Returns `{ items: [...] }`               |
+| POST   | `/api/profiles`         | Returns the created profile              |
+| GET    | `/api/catalog/browse`   | `?kind=&genre=`, returns `{ items }`     |
+| GET    | `/api/catalog/get`      | `?id=`                                   |
+| GET    | `/api/catalog/related`  | `?id=`, returns `{ items }`              |
+| POST   | `/api/catalog/search`   | Returns `{ items, nextCursor }`          |
+| POST   | `/api/play`             | Body `{ ref: { kind, id } }`             |
+| POST   | `/api/progress`         | Upserts one progress row                 |
+| GET    | `/api/history`          | Returns `{ items }`, newest first        |
 
-export type CatalogItem = Movie | SeriesListing;
+Any other path falls through to the static server: a mapped page, a file under `public/`, or a
+404. There is no `/api/health`, no `/api/genres`, and no `GET /api/progress/:id`.
 
-// Anything play() accepts. Every content type structurally satisfies a variant.
-export type MediaRef =
-  | { kind: 'movie'; id: MovieId }
-  | { kind: 'series'; id: SeriesId }
-  | { kind: 'episode'; id: EpisodeId };
+`PAGE_MAP` turns seven clean URLs into files: `/`, `/signin`, `/profiles`, `/home`, `/title`,
+`/watch`, `/browse`.
 
-export interface Page<T> {
-  items: T[];
-  nextCursor: string | null;
-}
+### Envelopes
 
-export interface WatchPosition {
-  profileId: ProfileId;
-  itemId: MovieId | SeriesId | EpisodeId;
-  seconds: number;
-  updatedAt: Date;
-}
+Success payloads are bare objects. Errors are always `{ "error": { "code", "message" } }`.
 
-export type CFlixError =
-  | { kind: 'invalid-credentials' }
-  | { kind: 'email-already-registered' }
-  | { kind: 'profile-limit-reached' }
-  | { kind: 'not-found' }
-  | { kind: 'maturity-blocked' }
-  | { kind: 'session-expired' }
-  | { kind: 'network-unavailable' };
-```
+Status codes come from one three-way branch in `server/index.js`: `UNAUTHORIZED` and
+`SESSION_EXPIRED` map to 401, `NOT_FOUND` maps to 404, and every other code maps to 400. Nothing
+in the API answers 409.
 
-## Client signatures (app-facing)
+Measured, with the request that produces it:
 
-```ts
-export interface CFlix {
-  signUp(input: { email: string; password: string }): Promise<AccountSession>;
-  signInWithPassword(input: { email: string; password: string }): Promise<AccountSession>;
-  signInWithGoogle(idToken: string): Promise<AccountSession>;
-  resumeSession(): Promise<AccountSession | ViewingSession | null>;
-}
-export function createCFlix(config: { apiUrl: string; tokenStore?: TokenStore }): CFlix;
+| Condition                                     | Status | `error.code`          |
+| --------------------------------------------- | ------ | --------------------- |
+| Missing `authorization` header                | 401    | `UNAUTHORIZED`        |
+| Signed-out or unknown token                   | 401    | `SESSION_EXPIRED`     |
+| Missing `x-cflix-profile` header              | 404    | `NOT_FOUND`           |
+| `?profileId=` instead of the header           | 404    | `NOT_FOUND`           |
+| Signup with a registered email                | 400    | `EMAIL_TAKEN`         |
+| Signin with a wrong password                  | 400    | `INVALID_CREDENTIALS` |
+| Bad Google credential                         | 400    | `INVALID_GOOGLE_TOKEN`|
+| Sixth profile on an account                   | 400    | `PROFILE_LIMIT`       |
+| `get` for a title above the profile ceiling   | 404    | `NOT_FOUND`           |
+| `play` for a title above the profile ceiling  | 400    | `MATURITY_BLOCKED`    |
+| `play` with a ref the service cannot classify | 400    | `VALIDATION`          |
 
-// After auth, before profile selection. No catalog calls exist on this type.
-export interface AccountSession {
-  kind: 'account';
-  account: AccountInfo;
-  listProfiles(): Promise<Profile[]>;
-  createProfile(input: { name: string; maturity: Maturity }): Promise<Profile>;
-  selectProfile(profileId: ProfileId): Promise<ViewingSession>;
-  signOut(): Promise<void>; // idempotent
-}
+A gated title answers `get` with 404 rather than `MATURITY_BLOCKED` so the endpoint does not
+confirm that an adult title exists. `play` names the reason instead, because the client already
+holds the title.
 
-// All browse, search, and playback calls. Scoped to one profile.
-export interface ViewingSession {
-  kind: 'viewing';
-  account: AccountInfo;
-  profile: Profile;
+The profile ceiling is checked against `MATURITY_RANK` in `server/src/types.js`
+(`child: 0, teen: 1, adult: 2`). An unrecognized rank compares as `undefined`, so a profile whose
+`maturity` is not one of the three words sees nothing at all.
 
-  browseMovies(cursor?: string): Promise<Page<Movie>>;
-  browseSeries(cursor?: string): Promise<Page<SeriesListing>>;
-  search(query: string, opts?: { kind?: 'movie' | 'series'; cursor?: string }): Promise<Page<CatalogItem>>;
-  movie(id: MovieId): Promise<Movie>;
-  series(id: SeriesId): Promise<Series>;
+### Request and response shapes worth naming
 
-  // Movie/episode ref: plays it. Series ref: server picks the profile's
-  // next unwatched episode and plays that.
-  play(item: MediaRef): Promise<Playback>;
+- **Signup** returns `{"user": {...}, "session": {"token", "expiresAt"}}`. There is no `data`
+  wrapper.
+- **Search** takes `{ text, kind, cursor, limit }`. `nextCursor` is a decimal offset string, and
+  `null` when the result set is exhausted. Browse has no cursor at all, so browse rails cannot
+  page.
+- **Play** takes `{ ref: { kind, id } }` and returns `{ item, manifestUrl, resumeFromSeconds }`.
+  `manifestUrl` is `/stream/<id>.m3u8`, and no route serves it: `GET /stream/...` is a 404. The
+  browser ignores it and embeds YouTube.
+- **History** returns `{ items }` where each row is a progress entry plus `item`, or `item: null`
+  when the id resolves from neither the fixture nor the provider cache.
 
-  history(opts?: { limit?: number }): Promise<WatchPosition[]>;
-  recordProgress(entry: { itemId: MovieId | SeriesId | EpisodeId; seconds: number }): Promise<void>;
-
-  switchProfile(profileId: ProfileId): Promise<ViewingSession>;
-  signOut(): Promise<void>;
-}
-
-export interface Playback {
-  readonly item: Movie | Episode; // resolved item, for "S2 E4" display
-  readonly manifestUrl: string;   // HLS/DASH
-  readonly resumeFromSeconds: number;
-  reportPosition(seconds: number): Promise<void>; // absolute, retry-safe
-  finish(): Promise<void>; // idempotent
-}
-```
-
-## Server signatures (behind the client)
-
-```ts
-export interface AuthService {
-  signUp(input: { email: string; password: string }): Promise<{ user: AccountInfo; session: Session }>;
-  signIn(input: { email: string; password: string }): Promise<{ user: AccountInfo; session: Session }>;
-  signInWithGoogle(input: { idToken: string }): Promise<{ user: AccountInfo; session: Session }>;
-  refresh(refreshToken: string): Promise<Session>;
-  signOut(refreshToken: string): Promise<void>;
-}
-
-export interface ProfileService {
-  list(user: AccountId): Promise<Profile[]>;
-  create(user: AccountId, input: { name: string; maturity: Maturity }): Promise<Profile>;
-  update(user: AccountId, id: ProfileId, input: { name?: string; maturity?: Maturity }): Promise<Profile>;
-  remove(user: AccountId, id: ProfileId): Promise<void>;
-}
-
-export interface CatalogService {
-  home(profile: ProfileId): Promise<{ rows: { key: string; title: string; items: CatalogItem[] }[] }>;
-  get(id: MovieId | SeriesId): Promise<Movie | Series>;
-  search(profile: ProfileId, q: { text: string; kind?: 'movie' | 'series'; cursor?: string }): Promise<Page<CatalogItem>>;
-  play(user: AccountId, profile: ProfileId, ref: MediaRef): Promise<{ item: Movie | Episode; manifestUrl: string; resumeFromSeconds: number }>;
-  recordProgress(profile: ProfileId, entry: { itemId: MovieId | SeriesId | EpisodeId; seconds: number }): Promise<void>;
-  history(profile: ProfileId, opts?: { limit?: number }): Promise<WatchPosition[]>;
-}
-```
-
-## Module map
+### Headers
 
 ```
-src/
-  index.ts          public re-exports only
-  client.ts         CFlix, createCFlix, TokenStore
-  session.ts        AccountSession, ViewingSession
-  playback.ts       Playback
-  types.ts          domain types, branded ids, Page, CFlixError
-  internal/
-    api.ts          HTTP transport, token attach, 401 -> session-expired
-    parse.ts        wire JSON -> domain types; only validation layer
-server/
-  domain/           types + DomainError; no imports
-  services/         AuthService, ProfileService, CatalogService
-  http/             thin adapter: body validation, wire DTOs, error mapping
-  adapters/         Postgres repos, Google JWKS verify, search index, stream signer
+authorization: Bearer <token>     # required by every catalog, play, and progress route
+x-cflix-profile: <profile id>     # required; a query parameter does not substitute for it
 ```
 
-Dependency direction: `http` -> `services` -> `domain`; `adapters` implement service ports.
-The client's session methods and the server's services share the `types.ts` shape; wire
-parsing lives only in `internal/parse.ts` and `server/http`.
+### Catalog providers
 
-## Rationale
+`server/src/providers/` holds one adapter each for Cinemeta, TVMaze, and Kitsu, plus `cache.js`
+(a TTL cache every adapter read passes through) and `maturity.js`.
 
-### Problem
+Three lookups in `server/src/catalog.js` decide which adapter answers:
 
-CFLIX needs auth (email+password, Google), multiple profiles per account, movies/series,
-search, and playback. The non-obvious part is the profile gate: every content call is scoped
-to one active profile, but profile selection happens after auth and can change mid-session.
-A design exposing auth and profile plumbing gives every screen a chance to call the catalog
-with no profile or the wrong one. Maturity filtering (child profiles must not see adult
-titles) is a cross-cutting policy that should live in one place.
+- `providerForKind` — turns a browse or search `kind` into an adapter. `KIND_PROVIDER` maps
+  `anime` to Kitsu; everything else uses the active provider. This is the one table, so a second
+  list path cannot route around it.
+- `providerForId` — an id namespace (`kitsu:`) wins over the active provider.
+- `PROVIDER=off` outranks both and forces the offline seed fixture for every kind and every id.
 
-### Usage (caller's view)
+Every provider read goes through `providerCall`, which catches failures and returns a fallback.
+A provider outage therefore degrades to the seed fixture instead of an error response.
 
-The quickstart above is the spec. Two sessions (`AccountSession`, `ViewingSession`) exist
-because the two real states of the app (signed in, viewing) are two types, so calling
-`search` before profile selection does not compile (per type-system-discipline). `play`
-takes a `MediaRef` union because a caller holding a `SeriesListing` can pass it directly;
-the sketch was reconciled to that call site.
+Search answers from the fixture first when the query matches a seed title, because that path is
+deterministic and a repo gate pins its results; every other query goes to the provider.
 
-### Shape
+### Maturity model
 
-`AccountSession` owns profiles and nothing else. `selectProfile` hands off to
-`ViewingSession`, a flat facade with browse, search, detail, play, history, switch, signOut.
-No sub-facets: `session.catalog.movies()` would hold the same token and profile the session
-already holds, adding a layer without hiding complexity (per minimize-reader-load).
+`maturity.js` derives an item's `child`/`teen`/`adult` tier server-side. Each catalog route
+filters through `visibleTo` before returning, and `get` and `play` gate the single named title.
+A child profile browsing an adult catalog sees only the child titles (measured: 3 of 24).
 
-`Movie` is full-formed everywhere; `SeriesListing` (cards/search) and `Series` (detail)
-are two types instead of one optional `seasons?` field, so the half-hydrated series state is
-unrepresentable (per foundational-thinking, tracing the card grid vs detail access patterns).
+## Client
 
-`play` hides policy: for a series ref, the server picks the profile's next unwatched episode
-and the resolved `Playback.item` tells the UI what was chosen. Progress reports are absolute
-positions, idempotent upserts keyed by `(profileId, itemId)`; two devices merge
-latest-timestamp-wins at the read boundary, so per-profile state never needs a lock (per
-separate-before-serializing-shared-state, make-operations-idempotent).
+### Page modules
 
-All wire validation happens at one boundary per side: `internal/parse.ts` on the client,
-`server/http` on the server (per boundary-discipline). Branded ids are constructible only at
-those boundaries, so an unvalidated id cannot enter the domain.
+`public/wire.js` reads `document.body.dataset.page` and imports exactly one module:
 
-Server services hide credentials, Google token verification, search indexing, and stream
-signing behind 15 methods total. Payments, recommendations, and admin CMS attach later at
-`CatalogService.play`, the search adapter, and a new admin router respectively, with no
-change to the client surface.
+| `data-page`  | Module                      | Page          |
+| ------------ | --------------------------- | ------------- |
+| `sign-in`    | `public/js/pages/signin.js`  | `/signin`    |
+| `profiles`   | `public/js/pages/profiles.js`| `/profiles`  |
+| `home`       | `public/js/pages/home.js`    | `/home`      |
+| `detail`     | `public/js/pages/detail.js`  | `/title`     |
+| `player`     | `public/js/pages/player.js`  | `/watch`     |
+| `browse`     | `public/js/pages/browse.js`  | `/browse`    |
 
-### Synthesis decision
+`public/index.html` carries no `data-page` and runs an inline script with no external file. Two
+pages, `/watch` and `/browse`, ship exactly one `<script src="/wire.js">`. The other four —
+`/home`, `/title`, `/profiles`, `/signin` — ship `/js/pages/nav.js` first, then `wire.js`. Only
+`wire.js` consults `data-page`; `nav.js` loads unconditionally alongside it.
 
-Base: candidate 3 (session/facade client). It has the smallest public surface and makes the
-profile gate a type error.
+### Shared core
 
-Grafted from candidate 1: `Profile.accountId` and `maturity` on every profile,
-`WatchPosition` keyed by `(profileId, itemId)`, and mixed movie/series history. Candidate 1's
-flat `watch.*` verbs collapse into `ViewingSession.history`/`recordProgress`.
+`public/js/core.js` exports five things:
 
-Grafted from candidate 2: the three server services (`AuthService`, `ProfileService`,
-`CatalogService`) as the seam the client sits on, and the HTTP conventions (cursor pages,
-ISO 8601, stable error codes). Candidate 2's `Profile { kids: boolean }` was replaced by
-`maturity` to cover teen as a third state.
+- `ses` — getters and setters for the token and the whole profile object in `sessionStorage`.
+- `api(path, { method, body, auth })` — attaches both headers, parses the envelope, and throws an
+  error carrying `code` on any non-2xx.
+- `fillRow(id, items, short)` — renders a rail of cards into a container and wires each card to
+  `/title?id=`.
+- `startPlay(ref)` — stashes the ref in `sessionStorage` as `cflix_play_ref` and navigates to
+  `/watch`. It does not call the API; the player does.
+- `fmt(s)` — seconds to `h:mm:ss`.
 
-Rejected: candidate 1's free-floating `catalog`/`watch` objects called with raw ids (callers
-can hit the catalog with no profile or wrong profile); candidate 2's per-call `profile`
-parameter threading (the facade carries it once); candidate 3's `kids` flag reduced to a
-boolean (maturity is the better domain shape); candidate 2's full `Title`/`TitleSummary`
-split (collapsed into `Movie`/`SeriesListing`/`Series` for series only, since movies have no
-children to hydrate).
+### Per-page behavior
 
-### Tradeoffs accepted
+- **signin** — signup, signin, and Google sign-in; each stores the session token, clears the
+  active profile, and redirects to `/profiles`.
+- **profiles** — lists profiles, creates one, and stores the chosen profile object in `ses`.
+- **home** — loads browse rows and `/api/history` in parallel, renders a continue-watching row
+  from progress, and renders search matches inline in `#row-results-wrap` with cursor
+  tail-loading. Home is the only page with a `#search-form`.
+- **detail** — awaits `/api/catalog/get` first, then loads `/api/history` and
+  `/api/catalog/related` together. It groups `episodes[]` into seasons behind a season picker, and
+  prints an inline empty message when a series returns no episode list. The related rail is a
+  separate block: it hides itself when no other title shares a genre.
+- **browse** — a URL-driven grid. Its cursor appends to the same query; home's search does not
+  share that code path, though both call `POST /api/catalog/search`.
+- **player** — reads `cflix_play_ref`, POSTs `/api/play` with `{ ref }`, and drives a
+  `youtube-nocookie.com` iframe through the IFrame API. Controls stay disabled until `onReady`
+  fires. Progress posts once playback passes one second, then every ten seconds of played time,
+  again when the viewer backs out, and as a reset to `0` when they hit finish. One `document`
+  keydown listener handles `F`, `Space`, and `M`.
 
-- Two session types and a union at `resumeSession`, in exchange for making unprofiled content calls a compile error.
-- `play(series)` hides episode selection as server policy, in exchange for one-call playback. Explicit choice stays available via `session.series(id)`.
-- Last-writer-wins on cross-device progress, in exchange for zero client coordination.
-- `maturity` on every content type, in exchange for filtering without a second lookup.
-- `recordProgress` idempotent upsert, losing "most-progressed-wins" merging.
+## Testing
 
-### Alternatives considered
+- `scripts/smoke.mjs` — HTTP smoke test of auth, profiles, catalog, and progress.
+- `scripts/*-check.mjs` — one focused check per adapter and per subsystem.
+- `scripts/verify/verify-*.mjs` — Playwright suites: auth, profiles, browse, playback.
+- `scripts/agents-paths-check.mjs`, `scripts/agents-symbols-check.mjs` — citation guards that read
+  `AGENTS.md`.
+- `scripts/capture.mjs` — screenshot and tour-video capture for PRs.
 
-- Service-per-domain client (`AuthService`, `CatalogService`, `PlaybackService` with token/profile passed per call). Lost: exposes the active-profile rule to every call site and makes the no-profile state reachable. Shallower interface, wider surface.
-- One `Session` type with `activeProfile: Profile | null` and runtime guards. Lost: every content method gains a `'no-profile-selected'` failure mode that the type split deletes for free.
-- Single `CatalogItem` type with optional `seasons`. Lost: admits half-hydrated listings and forces every consumer to check.
-- GraphQL domain-graph schema. Lost: domain graph becomes the public contract; every schema change is breaking for every screen.
+`npm test` chains the citation guards, smoke, routing, maturity, and fixture conformance, and
+allocates its own port. The Playwright suites are separate: `npm run verify`, or one of
+`npm run verify:<suite>`.
 
-### Open questions and risks
+## Known gaps
 
-- Where does maturity enforcement live: inside `CatalogService.search`/`play` (domain invariant) or only in the UI? The sketch assumes inside the services.
-- Does sign-up require email verification? If yes, `signUp` needs a pending state instead of returning `AccountSession`.
-- Google account merge: same email via password and Google, one account or two?
-- Concurrent stream limits per account: sketched as no cap; add a `stream-limit-reached` error and a check inside `CatalogService.play` if plans cap streams.
-- Does cold start force the profile picker (Netflix-style), or remember the last profile (`resumeSession` returning `ViewingSession`)? Product call.
+Observed behavior, not aspirations:
 
-### Next implementation step
-
-Build the auth-to-profile handoff end to end: `signInWithPassword`, `selectProfile`,
-`resumeSession`, with `internal/parse.ts` and a stub catalog. Every later feature hangs off
-`ViewingSession` existing, so that scaffold comes first.
+1. `manifestUrl` points at a `/stream` route that does not exist. Playback is YouTube-only.
+2. A Kitsu series returns `episodes: []` from `get`, so an anime series page has no episode list
+   (measured: `kitsu:7442` → 0 episodes, while `tt21097264` → 7).
+3. Profile `maturity` is stored unvalidated, and an unrecognized value blocks every title for
+   that profile.
+4. Browse has no cursor, so rails cannot page.
+5. State lives in memory, so a restart clears every account and profile.
