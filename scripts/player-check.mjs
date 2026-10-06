@@ -133,6 +133,30 @@ const attr = (selector, name) =>
   page.locator(selector).first().getAttribute(name);
 const value = (selector) => page.locator(selector).first().inputValue();
 const disabled = (selector) => page.locator(selector).first().isDisabled();
+// The glyph is CSS-driven: an <svg> never reflects the `hidden` property, so a
+// check on aria-label alone passes while the picture stays frozen.
+const icon = (root, name) =>
+  page.locator(`${root} [data-icon="${name}"]`).first().isVisible();
+const toggleGlyphs = async () => ({
+  play: await icon('#btn-toggle', 'play'),
+  pause: await icon('#btn-toggle', 'pause'),
+});
+const muteGlyphs = async () => ({
+  sound: await icon('#btn-mute', 'sound'),
+  mute: await icon('#btn-mute', 'mute'),
+});
+// render() runs on the embed's state event, so poll before judging the glyph.
+const checkGlyphs = async (name, read, want) => {
+  const seen = await until(async () => {
+    const current = await read();
+    return Object.entries(want).every(
+      ([key, expected]) => current[key] === expected,
+    )
+      ? current
+      : null;
+  }, 3000);
+  check(name, !!seen, JSON.stringify(seen ?? (await read())));
+};
 const ytInfo = () =>
   page.evaluate(() => {
     const player = window.YT?.get?.('yt-player');
@@ -243,6 +267,10 @@ check(
   playingLabel === 'Pause',
   `aria-label=${playingLabel}`,
 );
+await checkGlyphs('pause glyph shows while playing', toggleGlyphs, {
+  pause: true,
+  play: false,
+});
 await page.click('#btn-toggle');
 const paused = await until(async () => (await ytInfo())?.state === 2, 5000);
 check(
@@ -255,6 +283,10 @@ check(
   (await attr('#btn-toggle', 'aria-label')) === 'Play',
   `aria-label=${await attr('#btn-toggle', 'aria-label')}`,
 );
+await checkGlyphs('play glyph shows while paused', toggleGlyphs, {
+  play: true,
+  pause: false,
+});
 await page.click('#btn-toggle');
 const resumed = await until(async () => (await ytInfo())?.state === 1, 5000);
 check(
@@ -262,6 +294,10 @@ check(
   !!resumed,
   JSON.stringify(await ytInfo()),
 );
+await checkGlyphs('pause glyph returns after resume', toggleGlyphs, {
+  pause: true,
+  play: false,
+});
 
 const history = await until(
   async () => {
@@ -398,12 +434,20 @@ check(
   mutedPressed === 'true',
   `aria-pressed=${mutedPressed}`,
 );
+await checkGlyphs('mute glyph shows while muted', muteGlyphs, {
+  mute: true,
+  sound: false,
+});
 await page.keyboard.press('Enter');
 check(
   'mute button toggles back',
   (await attr('#btn-mute', 'aria-pressed')) === 'false',
   `aria-pressed=${await attr('#btn-mute', 'aria-pressed')}`,
 );
+await checkGlyphs('sound glyph shows when unmuted', muteGlyphs, {
+  sound: true,
+  mute: false,
+});
 
 await page.focus('#btn-full');
 await page.keyboard.press('Enter');
