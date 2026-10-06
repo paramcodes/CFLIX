@@ -2,6 +2,7 @@ import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import { join, extname, normalize } from 'node:path';
 import { AuthService, ProfileService, CatalogService } from './src/services.js';
+import { Boundary } from './src/boundary.js';
 
 const PAGE_MAP = {
   '/': '/index.html',
@@ -51,52 +52,74 @@ function bearer(req) {
 }
 
 const routes = {
-  'POST /api/auth/signup': async (req, body) => AuthService.signUp(body),
-  'POST /api/auth/signin': async (req, body) => AuthService.signIn(body),
-  'POST /api/auth/google': async (req, body) =>
-    AuthService.signInWithGoogle(body),
-  'POST /api/auth/signout': async (req, body, token) => {
+  'POST /api/auth/signup': async (req, rawBody) => {
+    const body = Boundary.parseSignUp(rawBody);
+    return AuthService.signUp(body);
+  },
+  'POST /api/auth/signin': async (req, rawBody) => {
+    const body = Boundary.parseSignIn(rawBody);
+    return AuthService.signIn(body);
+  },
+  'POST /api/auth/google': async (req, rawBody) => {
+    const body = Boundary.parseGoogleAuth(rawBody);
+    return AuthService.signInWithGoogle(body);
+  },
+  'POST /api/auth/signout': async (req, rawBody, token) => {
     await AuthService.signOut(token);
     return { ok: true };
   },
 
-  'GET /api/profiles': async (req, body, token) => {
+  'GET /api/profiles': async (req, rawBody, token) => {
     const account = AuthService.accountForToken(token);
     return { items: ProfileService.list(account.id) };
   },
-  'POST /api/profiles': async (req, body, token) => {
+  'POST /api/profiles': async (req, rawBody, token) => {
     const account = AuthService.accountForToken(token);
+    const body = Boundary.parseCreateProfile(rawBody);
     return ProfileService.create(account.id, body);
   },
 
-  'GET /api/catalog/browse': async (req, body, token, profileId, url) => {
+  'GET /api/catalog/browse': async (req, rawBody, token, rawProfileId, url) => {
     requireAccount(token);
-    return CatalogService.browse(profileId, url.searchParams.get('kind'), {
-      genre: url.searchParams.get('genre'),
+    const profileId = Boundary.parseProfileHeader(rawProfileId);
+    const query = Boundary.parseBrowseQuery(url);
+    return CatalogService.browse(profileId, query.kind, {
+      genre: query.genre,
     });
   },
-  'GET /api/catalog/get': async (req, body, token, profileId, url) => {
+  'GET /api/catalog/get': async (req, rawBody, token, rawProfileId, url) => {
     requireAccount(token);
-    return CatalogService.get(profileId, url.searchParams.get('id'));
+    const profileId = Boundary.parseProfileHeader(rawProfileId);
+    const query = Boundary.parseGetQuery(url);
+    return CatalogService.get(profileId, query.id);
   },
-  'GET /api/catalog/related': async (req, body, token, profileId, url) => {
+  'GET /api/catalog/related': async (req, rawBody, token, rawProfileId, url) => {
     requireAccount(token);
-    return CatalogService.related(profileId, url.searchParams.get('id'));
+    const profileId = Boundary.parseProfileHeader(rawProfileId);
+    const query = Boundary.parseGetQuery(url);
+    return CatalogService.related(profileId, query.id);
   },
-  'POST /api/catalog/search': async (req, body, token, profileId) => {
+  'POST /api/catalog/search': async (req, rawBody, token, rawProfileId) => {
     requireAccount(token);
+    const profileId = Boundary.parseProfileHeader(rawProfileId);
+    const body = Boundary.parseSearchBody(rawBody);
     return CatalogService.search(profileId, body);
   },
-  'POST /api/play': async (req, body, token, profileId) => {
+  'POST /api/play': async (req, rawBody, token, rawProfileId) => {
     const account = AuthService.accountForToken(token);
+    const profileId = Boundary.parseProfileHeader(rawProfileId);
+    const body = Boundary.parsePlayBody(rawBody);
     return CatalogService.play(account.id, profileId, body.ref);
   },
-  'POST /api/progress': async (req, body, token, profileId) => {
+  'POST /api/progress': async (req, rawBody, token, rawProfileId) => {
     requireAccount(token);
+    const profileId = Boundary.parseProfileHeader(rawProfileId);
+    const body = Boundary.parseProgressBody(rawBody);
     return CatalogService.recordProgress(profileId, body);
   },
-  'GET /api/history': async (req, body, token, profileId) => {
+  'GET /api/history': async (req, rawBody, token, rawProfileId) => {
     requireAccount(token);
+    const profileId = Boundary.parseProfileHeader(rawProfileId);
     return { items: await CatalogService.history(profileId) };
   },
 };
