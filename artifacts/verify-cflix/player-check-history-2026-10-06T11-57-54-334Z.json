@@ -1,0 +1,38 @@
+{
+  "itemId": "tt6933238",
+  "history": {
+    "id": "p_muwmjtuq_2:tt6933238",
+    "profileId": "p_muwmjtuq_2",
+    "itemId": "tt6933238",
+    "seconds": 1,
+    "updatedAt": "2026-10-06T11:58:00.344Z",
+    "item": {
+      "kind": "movie",
+      "id": "tt6933238",
+      "title": "Unabomber",
+      "synopsis": "A Harvard student becomes the Unabomber after psychological experiments. Years later, an FBI agent's pursuit reveals how his past shaped his deadly campaign that killed 3 and injured 23 from 1978-1995.",
+      "posterUrl": "https://images.metahub.space/poster/medium/tt6933238/img",
+      "backdropUrl": "https://images.metahub.space/background/medium/tt6933238/img",
+      "logoUrl": "https://images.metahub.space/logo/medium/tt6933238/img",
+      "year": 2026,
+      "durationSeconds": 6060,
+      "maturity": "adult",
+      "genres": [
+        "Biography",
+        "Crime",
+        "Drama"
+      ],
+      "cast": [
+        "Annabelle Wallis",
+        "Shailene Woodley",
+        "Jacob Tremblay"
+      ],
+      "rating": null,
+      "trailerYtId": "B3tR6qQjbgI",
+      "provider": "cinemeta",
+      "source": "provider"
+    }
+  },
+  "currentTime": 1.885555202178955,
+  "buffered": 0.14329851828329368
+}
