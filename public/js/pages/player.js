@@ -1,19 +1,10 @@
 import { api, fmt } from '../core.js';
+import { createPlayerEngine } from '../player/index.js';
 
-const YT_SCRIPT = 'https://www.youtube.com/iframe_api';
-const YT_HOST = 'https://www.youtube-nocookie.com';
 const NOTES = {
   trailer: 'Trailer only. CFLIX has no full-length stream for this title.',
   missing: 'No trailer for this title, so nothing plays here.',
   blocked: "This trailer can't be played on CFLIX, so nothing plays here.",
-};
-const YT_STATES = {
-  '-1': 'ready',
-  0: 'ended',
-  1: 'playing',
-  2: 'paused',
-  3: 'buffering',
-  5: 'ready',
 };
 const MEDIA_CONTROLS = [
   '#btn-toggle',
@@ -35,23 +26,6 @@ const $ = (selector) => document.querySelector(selector);
 const setHidden = (el, hidden) =>
   hidden ? el.setAttribute('hidden', '') : el.removeAttribute('hidden');
 const clock = (seconds) => fmt(Math.max(0, Math.floor(seconds)));
-
-function loadYouTubeApi() {
-  if (window.YT?.Player) return Promise.resolve(window.YT);
-  return new Promise((resolve) => {
-    const settle = () => resolve(window.YT?.Player ? window.YT : null);
-    const previous = window.onYouTubeIframeAPIReady;
-    window.onYouTubeIframeAPIReady = () => {
-      if (typeof previous === 'function') previous();
-      settle();
-    };
-    const script = document.createElement('script');
-    script.src = YT_SCRIPT;
-    script.onerror = settle;
-    document.head.appendChild(script);
-    setTimeout(settle, 15000);
-  });
-}
 
 export default async function player() {
   const refRaw = sessionStorage.getItem('cflix_play_ref');
@@ -211,9 +185,9 @@ export default async function player() {
   const toggle = () => {
     if (!state.player) return;
     if (state.status === 'playing' || state.status === 'buffering') {
-      state.player.pauseVideo();
+      state.player.pause();
     } else {
-      state.player.playVideo();
+      state.player.play();
     }
   };
 
@@ -366,7 +340,6 @@ export default async function player() {
   els.transport.addEventListener('focusout', () => setTimeout(scheduleHide));
   els.still.addEventListener('click', toggle);
 
-  const ytPromise = loadYouTubeApi();
   const parentPromise =
     ref.kind === 'series'
       ? api(`/api/catalog/get?id=${encodeURIComponent(ref.id)}`).catch(
@@ -438,68 +411,52 @@ export default async function player() {
   }
 
   showNotice('trailer', 'TRAILER');
-  const YT = await ytPromise;
-  if (!YT) {
-    showNotice('blocked', 'UNAVAILABLE');
-    setControlsEnabled(false);
-    render();
-    return;
-  }
-
   els.frame.hidden = false;
-  state.player = new YT.Player('yt-player', {
-    videoId: trailer,
-    host: YT_HOST,
-    playerVars: {
-      autoplay: 1,
-      playsinline: 1,
-      enablejsapi: 1,
-      origin: location.origin,
-      controls: 0,
-      disablekb: 1,
-      modestbranding: 1,
-      rel: 0,
-      iv_load_policy: 3,
+
+  const engine = createPlayerEngine({ trailerYtId: trailer });
+  state.player = engine;
+
+  engine.setEvents({
+    onReady: (ready) => {
+      state.ready = true;
+      state.volume = ready.volume;
+      state.muted = ready.muted;
+      state.status = 'ready';
+      if (Number.isFinite(ready.duration) && ready.duration > 0) {
+        state.duration = ready.duration;
+      }
+      if (resume > 0 && resume < state.duration) {
+        engine.seekTo(resume);
+      }
+      setControlsEnabled(true);
+      if (!ticker) ticker = setInterval(tick, 250);
+      render();
+      poke();
     },
-    events: {
-      onReady: (event) => {
-        const ready = event.target;
-        // Every operation is exposed through our own controls, and the embed
-        // document is cross-origin: letting sequential focus enter it traps Tab.
-        const frame = ready.getIframe?.();
-        if (frame) {
-          frame.tabIndex = -1;
-          frame.title = 'Trailer player';
-        }
-        state.ready = true;
-        state.volume = ready.getVolume();
-        state.muted = ready.isMuted();
-        state.status = 'ready';
-        const duration = ready.getDuration();
-        if (Number.isFinite(duration) && duration > 0)
-          state.duration = duration;
-        if (resume > 0 && resume < state.duration) ready.seekTo(resume, true);
-        setControlsEnabled(true);
-        if (!ticker) ticker = setInterval(tick, 250);
-        render();
-        poke();
-      },
-      onStateChange: (event) => {
-        state.status = YT_STATES[event.data] || 'ready';
-        render();
-        scheduleHide();
-      },
-      onError: () => {
-        state.ready = false;
-        state.status = 'broken';
-        showNotice('blocked', 'UNAVAILABLE');
-        setControlsEnabled(false);
-        render();
-        scheduleHide();
-      },
+    onStateChange: (stateName) => {
+      state.status = stateName;
+      render();
+      scheduleHide();
+    },
+    onError: () => {
+      state.ready = false;
+      state.status = 'broken';
+      showNotice('blocked', 'UNAVAILABLE');
+      setControlsEnabled(false);
+      render();
+      scheduleHide();
     },
   });
 
+  try {
+    await engine.mount('yt-player', { videoId: trailer, resume });
+  } catch {
+    state.ready = false;
+    state.status = 'broken';
+    showNotice('blocked', 'UNAVAILABLE');
+    setControlsEnabled(false);
+    render();
+  }
   setControlsEnabled(false);
   render();
 }
