@@ -19,7 +19,8 @@ function createDispatcher(handler) {
     const req = new Readable({
       read() {
         if (body != null) {
-          const payload = typeof body === 'string' ? body : JSON.stringify(body);
+          const payload =
+            typeof body === 'string' ? body : JSON.stringify(body);
           this.push(payload);
         }
         this.push(null);

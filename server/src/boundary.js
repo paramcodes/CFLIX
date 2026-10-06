@@ -102,7 +102,9 @@ export const Boundary = {
   parseCreateProfile(raw) {
     const body = assertObject(raw);
     const name = assertString(body.name, 'name', { min: 1, max: 50 });
-    const maturity = body.maturity ? String(body.maturity).toLowerCase() : 'teen';
+    const maturity = body.maturity
+      ? String(body.maturity).toLowerCase()
+      : 'teen';
     if (!VALID_MATURITIES.has(maturity)) {
       throw validationError(`invalid maturity level: ${body.maturity}`);
     }
@@ -147,7 +149,8 @@ export const Boundary = {
       throw validationError(`unknown search kind: ${body.kind}`);
     }
     const cursor = body.cursor != null ? String(body.cursor).trim() : null;
-    const limit = Number.isInteger(body.limit) && body.limit > 0 ? body.limit : 20;
+    const limit =
+      Number.isInteger(body.limit) && body.limit > 0 ? body.limit : 20;
     return { text, kind: rawKind, cursor, limit };
   },
 
@@ -166,7 +169,9 @@ export const Boundary = {
     return {
       ref: {
         id: brandId(id.trim(), 'MediaId'),
-        kind: body.ref.kind ? String(body.ref.kind).toLowerCase().trim() : undefined,
+        kind: body.ref.kind
+          ? String(body.ref.kind).toLowerCase().trim()
+          : undefined,
       },
     };
   },

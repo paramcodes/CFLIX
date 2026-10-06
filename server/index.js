@@ -93,7 +93,13 @@ const routes = {
     const query = Boundary.parseGetQuery(url);
     return CatalogService.get(profileId, query.id);
   },
-  'GET /api/catalog/related': async (req, rawBody, token, rawProfileId, url) => {
+  'GET /api/catalog/related': async (
+    req,
+    rawBody,
+    token,
+    rawProfileId,
+    url,
+  ) => {
     requireAccount(token);
     const profileId = Boundary.parseProfileHeader(rawProfileId);
     const query = Boundary.parseGetQuery(url);
