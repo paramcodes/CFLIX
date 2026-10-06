@@ -3,8 +3,16 @@
 import React, { Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { VideoPlayer } from '../../components/player/VideoPlayer';
-import { fetchApi } from '../../lib/api.js';
+import {
+  VideoPlayer,
+  type VideoPlayerItem,
+} from '../../components/player/VideoPlayer';
+import { fetchApi } from '../../lib/api';
+
+interface PlaybackResponse {
+  item?: VideoPlayerItem & { trailerYtId?: string | null };
+  resumeFromSeconds?: number;
+}
 
 function WatchContent() {
   const router = useRouter();
@@ -15,11 +23,11 @@ function WatchContent() {
     data: playback,
     isLoading,
     error,
-  } = useQuery({
+  } = useQuery<PlaybackResponse>({
     queryKey: ['play', id],
     queryFn: async () => {
       if (!id) throw new Error('No title to play');
-      return fetchApi('/api/play', {
+      return fetchApi<PlaybackResponse>('/api/play', {
         method: 'POST',
         body: { ref: { id } },
       });
@@ -41,7 +49,9 @@ function WatchContent() {
       <div className="w-screen h-screen bg-black flex flex-col items-center justify-center text-white p-4">
         <h1 className="text-xl font-bold mb-2">Unable to Play Video</h1>
         <p className="text-neutral-400 text-sm mb-4 text-center">
-          {error?.message || 'The stream could not be loaded.'}
+          {error instanceof Error
+            ? error.message
+            : 'The stream could not be loaded.'}
         </p>
         <button
           type="button"

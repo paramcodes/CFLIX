@@ -17,7 +17,7 @@ import {
   createPlayerEngine,
   type VideoPlayerEngine,
 } from '../../../public/js/player/index.js';
-import { fetchApi } from '../../lib/api.js';
+import { fetchApi } from '../../lib/api';
 
 function formatClock(seconds: number): string {
   const total = Math.max(0, Math.floor(seconds || 0));

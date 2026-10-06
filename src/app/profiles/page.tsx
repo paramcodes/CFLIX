@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, Check, ShieldAlert } from 'lucide-react';
-import { fetchApi, getActiveToken } from '../../lib/api.js';
+import { fetchApi, getActiveToken } from '../../lib/api';
 
 export interface ProfileData {
   id: string;
@@ -55,10 +55,8 @@ export default function ProfilesPage() {
   const handleCreateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newProfileName.trim()) return;
-    setError('');
-
     try {
-      const created = await fetchApi('/api/profiles', {
+      const created = await fetchApi<ProfileData>('/api/profiles', {
         method: 'POST',
         body: {
           name: newProfileName.trim(),
@@ -66,8 +64,7 @@ export default function ProfilesPage() {
         },
       });
 
-      setProfiles((prev) => [...prev, created as ProfileData]);
-      setIsDialogOpen(false);
+      setProfiles((prev) => [...prev, created]);
       setNewProfileName('');
       setNewProfileMaturity('adult');
     } catch (err) {

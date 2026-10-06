@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { cn } from '../../lib/utils.js';
+import { cn } from '../../lib/utils';
 
 const GRADIENTS = [
   'from-red-900 to-black',

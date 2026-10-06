@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ContentRail, type ContentRailItem } from './ContentRail';
 import { Skeleton } from '../ui/Skeleton';
-import { fetchApi } from '../../lib/api.js';
+import { fetchApi } from '../../lib/api';
 
 export interface LazyRailProps {
   title: string;
@@ -49,7 +49,7 @@ export function LazyRail({
   const { data, isLoading } = useQuery<ContentRailItem[]>({
     queryKey: [queryKey || endpoint],
     queryFn: async () => {
-      const res = await fetchApi(endpoint);
+      const res = await fetchApi<{ items?: ContentRailItem[] }>(endpoint);
       return res.items || [];
     },
     enabled: shouldFetch,

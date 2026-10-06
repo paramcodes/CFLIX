@@ -8,7 +8,7 @@ import {
   type MediaCardProps,
 } from '../../components/media/MediaCard';
 import { Skeleton } from '../../components/ui/Skeleton';
-import { fetchApi } from '../../lib/api.js';
+import { fetchApi } from '../../lib/api';
 
 const KINDS = [
   { id: '', label: 'All' },

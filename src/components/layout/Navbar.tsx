@@ -4,8 +4,8 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Search, User, LogOut } from 'lucide-react';
-import { getActiveProfile } from '../../lib/api.js';
-import { cn } from '../../lib/utils.js';
+import { getActiveProfile } from '../../lib/api';
+import { cn } from '../../lib/utils';
 
 interface NavbarProfile {
   name: string;

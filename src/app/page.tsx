@@ -9,7 +9,7 @@ import {
   type ContentRailItem,
 } from '../components/media/ContentRail';
 import { LazyRail } from '../components/media/LazyRail';
-import { fetchApi, getActiveProfile, getActiveToken } from '../lib/api.js';
+import { fetchApi, getActiveProfile, getActiveToken } from '../lib/api';
 
 interface UserProfile {
   name: string;

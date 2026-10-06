@@ -3,7 +3,7 @@
 import React, { useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { MediaCard, type MediaCardProps } from './MediaCard';
-import { cn } from '../../lib/utils.js';
+import { cn } from '../../lib/utils';
 
 export interface ContentRailItem {
   item?: MediaCardProps['item'];

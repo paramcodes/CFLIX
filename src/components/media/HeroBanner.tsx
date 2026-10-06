@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { Play, Info } from 'lucide-react';
-import { cn } from '../../lib/utils.js';
+import { cn } from '../../lib/utils';
 
 export interface HeroItem {
   id: string;

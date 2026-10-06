@@ -5,9 +5,29 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { Play } from 'lucide-react';
-import { EpisodeList } from '../../components/media/EpisodeList';
-import { ContentRail } from '../../components/media/ContentRail';
-import { fetchApi } from '../../lib/api.js';
+import {
+  EpisodeList,
+  type EpisodeItem,
+} from '../../components/media/EpisodeList';
+import {
+  ContentRail,
+  type ContentRailItem,
+} from '../../components/media/ContentRail';
+import { fetchApi } from '../../lib/api';
+
+interface TitleDetail {
+  id: string;
+  title: string;
+  synopsis: string;
+  kind: string;
+  posterUrl: string | null;
+  backdropUrl: string | null;
+  year: number | null;
+  durationSeconds: number | null;
+  maturity: string;
+  rating: number | null;
+  episodes?: EpisodeItem[];
+}
 
 function TitleDetailContent() {
   const searchParams = useSearchParams();
@@ -17,20 +37,22 @@ function TitleDetailContent() {
     data: item,
     isLoading,
     error,
-  } = useQuery({
+  } = useQuery<TitleDetail>({
     queryKey: ['title', id],
     queryFn: async () => {
       if (!id) throw new Error('No title id provided');
-      return fetchApi(`/api/catalog/get?id=${encodeURIComponent(id)}`);
+      return fetchApi<TitleDetail>(
+        `/api/catalog/get?id=${encodeURIComponent(id)}`,
+      );
     },
     enabled: !!id,
   });
 
-  const { data: relatedData } = useQuery({
+  const { data: relatedData } = useQuery<ContentRailItem[]>({
     queryKey: ['related', id],
     queryFn: async () => {
       if (!id) return [];
-      const res = await fetchApi(
+      const res = await fetchApi<{ items?: ContentRailItem[] }>(
         `/api/catalog/related?id=${encodeURIComponent(id)}`,
       ).catch(() => ({ items: [] }));
       return res.items || [];

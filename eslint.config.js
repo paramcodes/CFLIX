@@ -24,27 +24,12 @@ export default [
     },
   },
   {
-    // Frontend browser & React modules
-    files: ['public/js/**/*.js', 'public/wire.js', 'src/**/*.{js,jsx}'],
+    // Frontend browser & vanilla scripts
+    files: ['public/js/**/*.js', 'public/wire.js'],
     languageOptions: {
       globals: {
         ...globals.browser,
-        ...globals.node,
       },
-      parserOptions: {
-        ecmaFeatures: {
-          jsx: true,
-        },
-      },
-    },
-    rules: {
-      'no-unused-vars': [
-        'warn',
-        {
-          argsIgnorePattern: '^_',
-          varsIgnorePattern: '^(_|React$)',
-        },
-      ],
     },
   },
   {
@@ -58,15 +43,15 @@ export default [
   },
   {
     // Scripts (Playwright runners + adapter check scripts)
-    files: ['scripts/**/*.mjs', 'scripts/**/*.js'],
+    files: ['scripts/**/*.mjs', 'scripts/**/*.js', 'test/**/*.js'],
     languageOptions: {
       globals: {
         ...globals.node,
-        ...globals.browser, // Playwright evaluate closures run in browser context
+        ...globals.browser,
       },
     },
     rules: {
-      'no-await-in-loop': 'off', // Sequential test loops are intentional
+      'no-await-in-loop': 'off',
     },
   },
   {

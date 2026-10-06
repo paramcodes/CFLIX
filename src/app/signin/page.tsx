@@ -2,7 +2,12 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { fetchApi } from '../../lib/api.js';
+import { fetchApi } from '../../lib/api';
+
+interface AuthResponse {
+  session?: { token: string; expiresAt: number };
+  user?: { id: string; email: string; provider: string };
+}
 
 export default function SignInPage() {
   const router = useRouter();
@@ -19,7 +24,7 @@ export default function SignInPage() {
 
     try {
       const endpoint = isSignUp ? '/api/auth/signup' : '/api/auth/signin';
-      const res = await fetchApi(endpoint, {
+      const res = await fetchApi<AuthResponse>(endpoint, {
         method: 'POST',
         body: { email, password },
       });
@@ -42,7 +47,7 @@ export default function SignInPage() {
     setLoading(true);
     try {
       const googleEmail = email.trim() || 'google_user@test.dev';
-      const res = await fetchApi('/api/auth/google', {
+      const res = await fetchApi<AuthResponse>(`/api/auth/google`, {
         method: 'POST',
         body: { idToken: `google:${googleEmail}` },
       });
