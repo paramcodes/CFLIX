@@ -425,9 +425,7 @@ export default async function player() {
       if (Number.isFinite(ready.duration) && ready.duration > 0) {
         state.duration = ready.duration;
       }
-      if (resume > 0 && resume < state.duration) {
-        engine.seekTo(resume);
-      }
+      // The engine applies `resume` itself before it reports ready.
       setControlsEnabled(true);
       if (!ticker) ticker = setInterval(tick, 250);
       render();
@@ -448,6 +446,11 @@ export default async function player() {
     },
   });
 
+  // Controls stay disabled until the engine reports ready. mount() resolves only
+  // after onReady, so this must run before the await, never after it.
+  setControlsEnabled(false);
+  render();
+
   try {
     await engine.mount('yt-player', { videoId: trailer, resume });
   } catch {
@@ -457,6 +460,4 @@ export default async function player() {
     setControlsEnabled(false);
     render();
   }
-  setControlsEnabled(false);
-  render();
 }

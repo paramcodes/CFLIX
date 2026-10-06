@@ -185,6 +185,17 @@ test('Fast In-Memory Test Suite (node:test)', async (t) => {
     assert.equal(list.json.items.length, 2);
   });
 
+  await t.test('Profile without maturity defaults to adult', async () => {
+    const res = await api({
+      method: 'POST',
+      path: '/api/profiles',
+      headers: { authorization: `Bearer ${token}` },
+      body: { name: 'Unspecified' },
+    });
+    assert.equal(res.status, 200);
+    assert.equal(res.json.maturity, 'adult');
+  });
+
   await t.test('Catalog maturity invariant enforcement', async () => {
     // Child profile must never see adult content
     const childSearch = await api({

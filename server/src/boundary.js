@@ -102,9 +102,8 @@ export const Boundary = {
   parseCreateProfile(raw) {
     const body = assertObject(raw);
     const name = assertString(body.name, 'name', { min: 1, max: 50 });
-    const maturity = body.maturity
-      ? String(body.maturity).toLowerCase()
-      : 'teen';
+    if (body.maturity == null) return { name, maturity: undefined };
+    const maturity = String(body.maturity).toLowerCase();
     if (!VALID_MATURITIES.has(maturity)) {
       throw validationError(`invalid maturity level: ${body.maturity}`);
     }
