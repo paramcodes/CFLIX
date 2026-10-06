@@ -3,6 +3,7 @@ import { readFile, stat } from 'node:fs/promises';
 import { join, extname, normalize } from 'node:path';
 import { AuthService, ProfileService, CatalogService } from './src/services.js';
 import { Boundary } from './src/boundary.js';
+import { DomainError } from './src/errors.js';
 
 const PAGE_MAP = {
   '/': '/index.html',
@@ -49,6 +50,35 @@ async function readBody(req) {
 function bearer(req) {
   const h = req.headers.authorization || '';
   return h.startsWith('Bearer ') ? h.slice(7) : null;
+}
+
+const DOMAIN_STATUS = {
+  UNAUTHORIZED: 401,
+  SESSION_EXPIRED: 401,
+  NOT_FOUND: 404,
+};
+
+function requestUrl(req) {
+  try {
+    return new URL(req.url, `http://${req.headers?.host || 'localhost'}`);
+  } catch {
+    return null;
+  }
+}
+
+function sendError(res, err) {
+  if (err instanceof DomainError) {
+    json(res, DOMAIN_STATUS[err.code] ?? 400, {
+      error: { code: err.code, message: err.message },
+    });
+    return;
+  }
+  console.error('cflix: unexpected error handling request', err);
+  json(res, 500, { error: { code: 'INTERNAL', message: 'internal error' } });
+}
+
+function sendMalformedRequest(res) {
+  sendError(res, new DomainError('BAD_REQUEST', 'malformed request'));
 }
 
 const routes = {
@@ -132,16 +162,17 @@ const routes = {
 
 function requireAccount(token) {
   if (!token) {
-    const err = new Error('unauthorized');
-    err.code = 'UNAUTHORIZED';
-    throw err;
+    throw new DomainError('UNAUTHORIZED', 'unauthorized');
   }
   return AuthService.accountForToken(token);
 }
 
 export async function handleRequest(req, res) {
-  const host = req.headers?.host || 'localhost';
-  const url = new URL(req.url, `http://${host}`);
+  const url = requestUrl(req);
+  if (!url) {
+    sendMalformedRequest(res);
+    return;
+  }
   const key = `${req.method} ${url.pathname}`;
 
   if (routes[key]) {
@@ -152,17 +183,7 @@ export async function handleRequest(req, res) {
       const result = await routes[key](req, body, token, profileId, url);
       json(res, 200, result);
     } catch (err) {
-      const status =
-        err.code === 'UNAUTHORIZED'
-          ? 401
-          : err.code === 'SESSION_EXPIRED'
-            ? 401
-            : err.code === 'NOT_FOUND'
-              ? 404
-              : 400;
-      json(res, status, {
-        error: { code: err.code || 'ERROR', message: err.message },
-      });
+      sendError(res, err);
     }
     return;
   }
@@ -215,25 +236,36 @@ export async function initNextApp(options = {}) {
 }
 
 export const server = createServer(async (req, res) => {
-  const host = req.headers?.host || 'localhost';
-  const url = new URL(req.url, `http://${host}`);
-  const key = `${req.method} ${url.pathname}`;
+  try {
+    const url = requestUrl(req);
+    if (!url) {
+      sendMalformedRequest(res);
+      return;
+    }
+    const key = `${req.method} ${url.pathname}`;
 
-  // 1. API routes are always handled by backend services & Boundary
-  if (routes[key]) {
+    // 1. API routes are always handled by backend services & Boundary
+    if (routes[key]) {
+      return handleRequest(req, res);
+    }
+
+    // 2. Next.js App Router handles pages when FRONTEND=next or USE_NEXT=true
+    if (
+      nextHandler &&
+      (process.env.FRONTEND === 'next' || process.env.USE_NEXT === 'true')
+    ) {
+      return nextHandler(req, res);
+    }
+
+    // 3. Fallback to static prototype
     return handleRequest(req, res);
+  } catch (err) {
+    if (res.headersSent) {
+      res.destroy();
+      return;
+    }
+    sendError(res, err);
   }
-
-  // 2. Next.js App Router handles pages when FRONTEND=next or USE_NEXT=true
-  if (
-    nextHandler &&
-    (process.env.FRONTEND === 'next' || process.env.USE_NEXT === 'true')
-  ) {
-    return nextHandler(req, res);
-  }
-
-  // 3. Fallback to static prototype
-  return handleRequest(req, res);
 });
 
 const isDirectRun =
