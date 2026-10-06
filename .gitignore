@@ -4,3 +4,6 @@ node_modules/
 decisions*.tsv
 children.tsv
 .worktrees/
+todo.md
+data/
+*.db*
