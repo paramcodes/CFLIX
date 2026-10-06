@@ -449,6 +449,116 @@ await checkGlyphs('sound glyph shows when unmuted', muteGlyphs, {
   mute: false,
 });
 
+const volStyle = () =>
+  page.evaluate(() => {
+    const track = document.querySelector('.player__voltrack');
+    const pill = getComputedStyle(track, '::before');
+    return {
+      width: getComputedStyle(track).width,
+      opacity: getComputedStyle(track).opacity,
+      pill: `${pill.borderTopWidth} ${pill.borderTopStyle} ${pill.borderTopColor} on ${pill.backgroundColor}`,
+    };
+  });
+const transportClip = async () => {
+  const box = await page.locator('.player__transport').boundingBox();
+  return {
+    x: 0,
+    y: Math.max(0, box.y - 40),
+    width: 1440,
+    height: Math.min(900, box.y + box.height + 40 - Math.max(0, box.y - 40)),
+  };
+};
+
+await page.mouse.move(10, 10);
+await page.evaluate(() => document.activeElement?.blur());
+const railHidden = await until(
+  async () => (await volStyle()).opacity === '0',
+  2000,
+);
+check(
+  'volume rail stays hidden until the volume icon is hovered',
+  !!railHidden,
+  JSON.stringify(await volStyle()),
+);
+await page.screenshot({
+  path: `${OUT_DIR}/player-volume-hidden-${stamp}.png`,
+  clip: await transportClip(),
+});
+
+await page.locator('#btn-mute').hover();
+const railShown = await until(
+  async () => (await volStyle()).opacity === '1',
+  2000,
+);
+const revealed = await volStyle();
+check(
+  'hovering the volume icon reveals the rail',
+  !!railShown && revealed.width === '74px',
+  JSON.stringify(revealed),
+);
+check(
+  'revealed rail carries the pill background and border',
+  revealed.pill.startsWith('1px solid') &&
+    !revealed.pill.endsWith('on transparent'),
+  JSON.stringify(revealed),
+);
+// getComputedStyle(input, '::-webkit-slider-thumb') answers with the input's
+// own styles, so how the knob paints is not observable from the DOM. Parsing is
+// the next best signal, because a selector list mixing -webkit and -moz is
+// discarded whole and that is what hid these rules.
+const thumbRules = await page.evaluate(() => {
+  const found = [];
+  const walk = (rules) => {
+    for (const rule of rules) {
+      if (rule.selectorText?.includes('slider-thumb'))
+        found.push(rule.selectorText);
+      else if (rule.cssRules) walk(rule.cssRules);
+    }
+  };
+  for (const sheet of document.styleSheets) {
+    try {
+      walk(sheet.cssRules);
+    } catch {}
+  }
+  return found;
+});
+check(
+  'volume thumb rules survive CSS parsing',
+  thumbRules.some((s) =>
+    s.includes('.player__vol:hover .player__volrange::-webkit-slider-thumb'),
+  ) &&
+    thumbRules.some((s) =>
+      s.includes('.player__volrange:hover::-webkit-slider-thumb'),
+    ),
+  JSON.stringify(thumbRules),
+);
+await page.screenshot({
+  path: `${OUT_DIR}/player-volume-hover-${stamp}.png`,
+  clip: await transportClip(),
+});
+
+await page.mouse.move(10, 10);
+const railAway = await until(
+  async () => (await volStyle()).opacity === '0',
+  2000,
+);
+check(
+  'leaving the volume icon hides the rail again',
+  !!railAway,
+  JSON.stringify(await volStyle()),
+);
+await page.focus('#vol');
+const railFocus = await until(
+  async () => (await volStyle()).opacity === '1',
+  2000,
+);
+check(
+  'keyboard focus on the volume slider reveals the rail',
+  !!railFocus,
+  JSON.stringify(await volStyle()),
+);
+await page.evaluate(() => document.activeElement.blur());
+
 await page.focus('#btn-full');
 await page.keyboard.press('Enter');
 const fullscreen = await until(
