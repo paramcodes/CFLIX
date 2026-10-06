@@ -81,6 +81,13 @@ export interface EpisodeEntity {
   stillUrl: string | null;
 }
 
+// ------------------------------------------------------------------ Identity Provider Port
+
+export interface IdentityProviderPort {
+  verifyToken(
+    idToken: string,
+  ): Promise<{ email: string; providerUserId?: string }>;
+}
 // ------------------------------------------------------------------ Repository Ports
 
 export interface AccountRepositoryPort {
