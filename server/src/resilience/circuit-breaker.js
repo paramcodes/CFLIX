@@ -8,8 +8,13 @@
  *   - CLOSED: Normal operation. Requests flow to the provider.
  *   - OPEN: Tripped after N consecutive failures. Calls return fallback immediately
  *           without initiating network requests, protecting Node connection pools.
- *   - HALF_OPEN: Probe state after cooldown period. A single request tests if the
- *                upstream service has recovered.
+ *   - HALF_OPEN: Probe state after cooldown period. Exactly one request is admitted, as the
+ *                probe; every other caller fast-fails to the fallback until that probe
+ *                settles. A recovering upstream is on its way back from a herd of requests
+ *                it just refused, so admitting all of them would repeat the outage.
+ *
+ * A rejection is the only failure signal. Callers whose upstream resolves `null` on failure
+ * have to reject deliberately, or every outage reads as a success and the circuit cannot open.
  */
 
 /**
@@ -18,7 +23,11 @@
  * @typedef {Object} CircuitBreakerOptions
  * @property {number} [failureThreshold=5] Consecutive errors before tripping OPEN
  * @property {number} [resetTimeoutMs=10000] Milliseconds to stay OPEN before HALF_OPEN probe
- * @property {number} [callTimeoutMs=5000] Maximum time allowed per call before timing out
+ * @property {number} [callTimeoutMs=20000] Maximum time allowed per call before timing out.
+ *   Must exceed the upstream adapter's own timeout: every adapter caps one request at 8000ms
+ *   and `cinemeta.get` asks twice, so 16s is the ceiling the adapters themselves put on a
+ *   legitimate read. A budget below that does not cap anything — it cannot abort the fetch —
+ *   so it only records successful reads as failures.
  */
 
 export class CircuitBreaker {
@@ -30,16 +39,22 @@ export class CircuitBreaker {
     this.name = name;
     this.failureThreshold = options.failureThreshold ?? 5;
     this.resetTimeoutMs = options.resetTimeoutMs ?? 10000;
-    this.callTimeoutMs = options.callTimeoutMs ?? 5000;
+    this.callTimeoutMs = options.callTimeoutMs ?? 20000;
 
     /** @type {CircuitState} */
     this.state = 'CLOSED';
     this.consecutiveFailures = 0;
     this.lastStateChange = Date.now();
+    /** The single HALF_OPEN probe. Set on admission, cleared when it settles. */
+    this.probeInFlight = false;
   }
 
   /**
    * Execute an operation protected by the circuit breaker.
+   *
+   * A rejection — from `fn` itself or from `withTimeout` — is the failure signal, and it is the
+   * only one. `fn` has to reject when its upstream failed; a `fn` that resolves `null` on
+   * failure records a success and the circuit stays closed forever.
    *
    * @template T
    * @param {() => Promise<T>} fn The async operation to protect
@@ -60,6 +75,15 @@ export class CircuitBreaker {
       }
     }
 
+    // The state is HALF_OPEN for every caller arriving after the one that opened the probe, so
+    // gating on the state alone lets the whole herd through and recovery becomes a second
+    // outage. Only the first gets the slot.
+    const probe = this.state === 'HALF_OPEN';
+    if (probe) {
+      if (this.probeInFlight) return fallback;
+      this.probeInFlight = true;
+    }
+
     try {
       // Execute operation with timeout protection
       const result = await this.withTimeout(fn);
@@ -68,10 +92,17 @@ export class CircuitBreaker {
     } catch {
       this.onFailure();
       return fallback;
+    } finally {
+      if (probe) this.probeInFlight = false;
     }
   }
 
   /**
+   * Racing a rejection against `fn`. It settles the caller, it does not cancel `fn`: the
+   * adapters own their own `AbortController` and take no external signal, so an abandoned call
+   * holds its socket until the adapter's own timeout releases it. That is why `callTimeoutMs`
+   * sits above the adapters' timeout rather than below it.
+   *
    * @template T
    * @param {() => Promise<T>} fn
    * @returns {Promise<T>}
@@ -132,6 +163,7 @@ export class CircuitBreaker {
     this.state = 'CLOSED';
     this.consecutiveFailures = 0;
     this.lastStateChange = Date.now();
+    this.probeInFlight = false;
   }
 
   getStatus() {
@@ -140,6 +172,7 @@ export class CircuitBreaker {
       state: this.state,
       consecutiveFailures: this.consecutiveFailures,
       lastStateChange: this.lastStateChange,
+      probeInFlight: this.probeInFlight,
     };
   }
 }

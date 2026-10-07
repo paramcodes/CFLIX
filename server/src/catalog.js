@@ -186,24 +186,55 @@ async function throughCache(key, loader) {
   return value;
 }
 
+/** Carries the provider and op for a debugger or a log line. `execute` catches it, so no
+ *  caller ever sees one: the fallback is still exactly the value it always was. */
+class UpstreamEmpty extends Error {
+  constructor(name, op) {
+    super(`upstream ${name} returned nothing for ${op}`);
+    this.name = 'UpstreamEmpty';
+  }
+}
+
 /**
  * Every provider read goes through here, protected by an upstream Circuit Breaker.
- * Catches timeouts and upstream failures, tripping OPEN after repeated outages
- * so subsequent requests fast-fail to fallback without exhausting connection pools.
+ *
+ * An adapter never throws: `getJson` in cinemeta.js, `kit` in kitsu.js and tvmaze.js all
+ * swallow every failure and resolve `null`, which a list call turns into `[]`. A call that
+ * resolves therefore carries no failure signal, so a call that reached upstream and came back
+ * empty is reported by rejecting instead — the one outcome `execute` counts. Without it
+ * `onSuccess` ran on every outage and the circuit could never open, so a full upstream outage
+ * cost every request the adapter's whole retry budget and then fast-failed nothing.
+ *
+ * An empty payload is also what a genuine miss returns, and at this layer the two are the same
+ * shape. It costs nothing: every caller already falls back on empty (`browseItems` reads the
+ * fixture, `search` reads its own seed hits, `episodes` and `get` read their fallback), so the
+ * answer a profile sees is identical whether the circuit is open or the upstream had nothing.
+ *
+ * The cache is read before the breaker on purpose. A hit is not an upstream call, so OPEN must
+ * not deny it: the circuit exists to stop requests reaching a dead provider, and this one
+ * already has its answer. It also makes "cold miss" structural rather than a claim, since the
+ * loader cannot run without one.
  */
 async function providerCall(name, op, keyParts, call, fallback) {
   const adapter = adapterFor(name);
   if (!adapter) return fallback;
+  const key = cacheKey(name, op, ...keyParts);
+  const cached = await cache.get(key);
+  if (cached !== null) return cached;
   const breaker = getCircuitBreaker(name, {
     failureThreshold: 5,
     resetTimeoutMs: 10000,
-    callTimeoutMs: 5000,
+    // Above the adapters' own 8000ms, which `cinemeta.get` pays twice over on a read that
+    // legitimately misses: a budget under that ceiling abandons a fetch it cannot cancel and
+    // books the read as a failure, so a slow-but-healthy upstream opened the circuit for 10s.
+    callTimeoutMs: Number(process.env.CFLIX_CALL_TIMEOUT_MS || 20000),
   });
   return breaker.execute(async () => {
-    const value = await throughCache(cacheKey(name, op, ...keyParts), () =>
-      call(adapter),
-    );
-    return value == null ? fallback : value;
+    const value = await throughCache(key, () => call(adapter));
+    if (value == null || (Array.isArray(value) && value.length === 0)) {
+      throw new UpstreamEmpty(name, op);
+    }
+    return value;
   }, fallback);
 }
 
