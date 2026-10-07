@@ -2,6 +2,7 @@ import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import { join, extname, normalize } from 'node:path';
 import { AuthService, ProfileService, CatalogService } from './src/services.js';
+import { requireOwnedProfile } from './src/catalog.js';
 import { Boundary } from './src/boundary.js';
 
 const PAGE_MAP = {
@@ -79,56 +80,67 @@ const routes = {
     return ProfileService.create(account.id, body);
   },
 
-  'GET /api/catalog/browse': async (req, rawBody, token, rawProfileId, url) => {
-    requireAccount(token);
-    const profileId = Boundary.parseProfileHeader(rawProfileId);
-    const query = Boundary.parseBrowseQuery(url);
-    return CatalogService.browse(profileId, query.kind, {
-      genre: query.genre,
-    });
-  },
-  'GET /api/catalog/get': async (req, rawBody, token, rawProfileId, url) => {
-    requireAccount(token);
-    const profileId = Boundary.parseProfileHeader(rawProfileId);
-    const query = Boundary.parseGetQuery(url);
-    return CatalogService.get(profileId, query.id);
-  },
-  'GET /api/catalog/related': async (
-    req,
-    rawBody,
-    token,
-    rawProfileId,
-    url,
-  ) => {
-    requireAccount(token);
-    const profileId = Boundary.parseProfileHeader(rawProfileId);
-    const query = Boundary.parseGetQuery(url);
-    return CatalogService.related(profileId, query.id);
-  },
-  'POST /api/catalog/search': async (req, rawBody, token, rawProfileId) => {
-    requireAccount(token);
-    const profileId = Boundary.parseProfileHeader(rawProfileId);
-    const body = Boundary.parseSearchBody(rawBody);
-    return CatalogService.search(profileId, body);
-  },
-  'POST /api/play': async (req, rawBody, token, rawProfileId) => {
-    const account = AuthService.accountForToken(token);
-    const profileId = Boundary.parseProfileHeader(rawProfileId);
-    const body = Boundary.parsePlayBody(rawBody);
-    return CatalogService.play(account.id, profileId, body.ref);
-  },
-  'POST /api/progress': async (req, rawBody, token, rawProfileId) => {
-    requireAccount(token);
-    const profileId = Boundary.parseProfileHeader(rawProfileId);
+  'GET /api/catalog/browse': withSession(
+    async (req, rawBody, { profileId }, url) => {
+      const query = Boundary.parseBrowseQuery(url);
+      return CatalogService.browse(profileId, query.kind, {
+        genre: query.genre,
+      });
+    },
+  ),
+  'GET /api/catalog/get': withSession(
+    async (req, rawBody, { profileId }, url) => {
+      const query = Boundary.parseGetQuery(url);
+      return CatalogService.get(profileId, query.id);
+    },
+  ),
+  'GET /api/catalog/related': withSession(
+    async (req, rawBody, { profileId }, url) => {
+      const query = Boundary.parseGetQuery(url);
+      return CatalogService.related(profileId, query.id);
+    },
+  ),
+  'POST /api/catalog/search': withSession(
+    async (req, rawBody, { profileId }) => {
+      const body = Boundary.parseSearchBody(rawBody);
+      return CatalogService.search(profileId, body);
+    },
+  ),
+  'POST /api/play': withSession(
+    async (req, rawBody, { account, profileId }) => {
+      const body = Boundary.parsePlayBody(rawBody);
+      return CatalogService.play(account.id, profileId, body.ref);
+    },
+  ),
+  'POST /api/progress': withSession(async (req, rawBody, { profileId }) => {
     const body = Boundary.parseProgressBody(rawBody);
     return CatalogService.recordProgress(profileId, body);
-  },
-  'GET /api/history': async (req, rawBody, token, rawProfileId) => {
-    requireAccount(token);
-    const profileId = Boundary.parseProfileHeader(rawProfileId);
+  }),
+  'GET /api/history': withSession(async (req, rawBody, { profileId }) => {
     return { items: await CatalogService.history(profileId) };
-  },
+  }),
 };
+
+/**
+ * Resolves the session for a route: the account from the bearer token and the profile it is acting
+ * as from `x-cflix-profile`. The pair is bound here, once, before the handler body runs, so the
+ * header can only ever select a profile of the caller and no handler can forget to check.
+ *
+ * A profile the caller does not own answers exactly like one that does not exist. `newId` mints ids
+ * from a timestamp, so a known-foreign id and an absent id must be indistinguishable.
+ *
+ * Only the catalog, play, progress and history routes are wrapped. Auth and profile routes resolve
+ * their own account from the token, and `POST /api/profiles` is deliberately left out because a
+ * client legitimately sends its previously-active profile id while creating a new one.
+ */
+function withSession(handler) {
+  return async (req, rawBody, token, rawProfileId, url) => {
+    const account = requireAccount(token);
+    const profileId = Boundary.parseProfileHeader(rawProfileId);
+    if (profileId) requireOwnedProfile(account.id, profileId);
+    return handler(req, rawBody, { account, profileId }, url);
+  };
+}
 
 function requireAccount(token) {
   if (!token) {
@@ -260,4 +272,4 @@ if (isDirectRun || process.env.LISTEN === 'true') {
   }
 }
 
-export { routes, requireAccount, bearer, json };
+export { routes, withSession, requireAccount, bearer, json };
