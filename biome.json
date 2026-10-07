@@ -19,11 +19,11 @@
     "rules": {
       "recommended": true,
       "correctness": {
-        "noUnusedFunctionParameters": "off",
-        "noUnusedImports": "off"
+        "noUnusedFunctionParameters": "error",
+        "noUnusedImports": "error"
       },
       "complexity": {
-        "useOptionalChain": "off"
+        "useOptionalChain": "error"
       },
       "performance": {
         "noImgElement": "off"
@@ -33,12 +33,12 @@
         "noAutofocus": "off"
       },
       "suspicious": {
-        "noExplicitAny": "off",
+        "noExplicitAny": "error",
         "noArrayIndexKey": "off",
         "useIterableCallbackReturn": "off"
       },
       "style": {
-        "noNonNullAssertion": "off"
+        "noNonNullAssertion": "error"
       }
     }
   }

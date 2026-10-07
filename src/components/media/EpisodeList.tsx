@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { Play } from 'lucide-react';
 
@@ -30,7 +30,7 @@ export function EpisodeList({ _seriesId, episodes = [] }: EpisodeListProps) {
   for (const ep of episodes) {
     const s = ep.seasonNumber || 1;
     if (!seasonsMap.has(s)) seasonsMap.set(s, []);
-    seasonsMap.get(s)!.push(ep);
+    seasonsMap.get(s)?.push(ep);
   }
 
   const seasonNumbers = [...seasonsMap.keys()].sort((a, b) => a - b);

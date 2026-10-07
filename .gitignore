@@ -9,3 +9,4 @@ data/
 *.db*
 .next/
 *.tsbuildinfo
+todo.md

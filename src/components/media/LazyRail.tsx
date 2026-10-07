@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ContentRail, type ContentRailItem } from './ContentRail';
 import { Skeleton } from '../ui/Skeleton';
