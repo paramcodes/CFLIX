@@ -1,11 +1,32 @@
 /** File-backed CacheStore. The interface is contract.js; adapters import only this. */
 import { createHash, randomUUID } from 'node:crypto';
-import { mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
+import {
+  mkdir,
+  readFile,
+  readdir,
+  rename,
+  rm,
+  stat,
+  writeFile,
+} from 'node:fs/promises';
 import { join } from 'node:path';
 
 const DEFAULT_DIR = '/tmp/opencode/cflix-cache';
 const DEFAULT_TTL_MS = 86_400_000;
+/**
+ * How many entry files the directory may hold before a sweep evicts. `search` is keyed on the
+ * query string and Cinemeta answers every query with its whole top catalog, so without a cap one
+ * user's typos become permanent ~100-item files.
+ */
+const DEFAULT_MAX_ENTRIES = 500;
 const ignore = () => {};
+
+/**
+ * Whether a value is worth persisting. An empty list is indistinguishable from an upstream
+ * outage, so caching one suppresses the caller's seed fallback for the whole TTL.
+ */
+export const cacheable = (value) =>
+  value != null && !(Array.isArray(value) && value.length === 0);
 
 /**
  * @typedef {Object} Entry
@@ -67,10 +88,26 @@ function parseEntry(text, key) {
 
 export function createCacheStore(options = {}) {
   const dir = options.dir || process.env.CFLIX_CACHE_DIR || DEFAULT_DIR;
-  const rawTtl = options.ttlMs ?? (process.env.CFLIX_CACHE_TTL_MS || undefined);
-  const ttl = Number(rawTtl);
+  // An empty or blank setting means unset, which is the default rather than the 0 that
+  // `Number('')` would otherwise report: `CFLIX_CACHE_TTL_MS=0` is a deliberate operator choice
+  // and it has to stay distinguishable from a variable exported without a value.
+  const rawTtl = options.ttlMs ?? process.env.CFLIX_CACHE_TTL_MS;
+  const ttl =
+    rawTtl == null || String(rawTtl).trim() === '' ? NaN : Number(rawTtl);
   const ttlMs = Number.isFinite(ttl) && ttl >= 0 ? ttl : DEFAULT_TTL_MS;
+  const maxEntries = Math.max(
+    1,
+    Number(options.maxEntries) || DEFAULT_MAX_ENTRIES,
+  );
   const l1Capacity = Number(options.l1Capacity) || 500;
+  // 0 is what an operator setting a TTL of 0 means: cache nothing. It used to mean "always
+  // expired", and an always-expired entry was served anyway, so it meant cache forever and never
+  // revalidate — the one value an operator would never choose.
+  if (ttlMs === 0) {
+    const noRead = async () => null;
+    const noWrite = async () => {};
+    return { get: noRead, put: noWrite, invalidate: noWrite };
+  }
   const l1 = new LruMemoryCache(l1Capacity);
   /** @type {Map<string, Promise<unknown>>} */
   const writes = new Map();
@@ -198,6 +235,9 @@ export function createCacheStore(options = {}) {
       } catch {
         l1.delete(key);
       }
+      // A sweep is a directory scan, so it runs off the write path rather than inside it. An
+      // error here leaves the entry written, which is the only outcome that matters.
+      sweep(path).catch(ignore);
     }).catch((err) => warn(`cache write failed for ${key}`, err));
   }
 
@@ -216,10 +256,51 @@ export function createCacheStore(options = {}) {
       key,
       Promise.resolve()
         .then(loader)
-        // Storing the loader's own null would turn a miss into a hit that serves null.
-        .then((value) => (value == null ? null : put(key, value)))
+        // Storing the loader's own null, or an empty list an outage produced, would turn a
+        // transient upstream failure into a hit that suppresses the caller's fallback.
+        .then((value) => (cacheable(value) ? put(key, value) : null))
         .catch((err) => warn(`cache refresh failed for ${key}`, err))
         .finally(() => refreshing.delete(key)),
+    );
+  }
+
+  /**
+   * Evicts the oldest entries once the directory is over `maxEntries`, down to a low-water mark
+   * so the sweep costs one pass per `maxEntries / 5` writes rather than one per write. Least
+   * recently written is the only order the disk layer can know: it stores no read time, and an
+   * entry that is never read again is the one worth dropping. `keepPath` is the file the caller
+   * just wrote, which a same-millisecond mtime tie could otherwise pick.
+   */
+  async function sweep(keepPath) {
+    let names;
+    try {
+      names = await readdir(dir);
+    } catch {
+      return;
+    }
+    const files = names.filter((name) => name.endsWith('.json'));
+    if (files.length <= maxEntries) return;
+    const keepEntries = Math.max(1, Math.floor(maxEntries * 0.8));
+    const stamped = await Promise.all(
+      files.map(async (name) => {
+        const path = join(dir, name);
+        if (path === keepPath) return null;
+        try {
+          return { path, mtimeMs: (await stat(path)).mtimeMs };
+        } catch {
+          return null;
+        }
+      }),
+    );
+    const doomed = stamped
+      .filter(Boolean)
+      .sort((a, b) => a.mtimeMs - b.mtimeMs)
+      .slice(0, files.length - keepEntries);
+    // The filename is a hash of the key, so an evicted file cannot be mapped back to its L1
+    // entry. It does not have to be: `get` stats the file it wants, finds it gone, and drops the
+    // memory entry then.
+    await Promise.all(
+      doomed.map(({ path }) => rm(path, { force: true }).catch(ignore)),
     );
   }
 

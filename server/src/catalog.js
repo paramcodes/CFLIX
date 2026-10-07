@@ -3,7 +3,7 @@ import { movies, series } from './catalog-data.js';
 import { maturityAllowed } from './types.js';
 import { DomainError } from './errors.js';
 import { activeProvider, cacheKey } from './providers/contract.js';
-import { cache } from './providers/cache.js';
+import { cache, cacheable } from './providers/cache.js';
 import { cinemeta } from './providers/cinemeta.js';
 import * as tvmaze from './providers/tvmaze.js';
 import * as kitsu from './providers/kitsu.js';
@@ -172,15 +172,20 @@ const seedSearchItems = ({ text, kind }) => {
 /* ------------------------------------------------------------------ provider reads */
 
 /**
- * `cache.get` never awaits a loader and a cold miss returns null, so the fetch lives here. An
- * empty list is indistinguishable from an upstream outage, so it is never persisted: caching one
- * would suppress the seed fallback for the whole TTL.
+ * The loader is handed to `cache.get`, not only called on a miss. A loader that is never
+ * registered there leaves the whole stale-while-revalidate branch unreachable, so an entry is
+ * written once and served forever: measured on trunk with a 50ms TTL, a read 300ms later still
+ * returned the value it had been given at t=0.
+ *
+ * `cacheable` is the same guard the cache applies to its own background refresh, so a cold miss
+ * and a stale refresh agree on what is worth persisting. An empty list is indistinguishable from
+ * an upstream outage, so caching one would suppress the caller's seed fallback for the whole TTL.
  */
 async function throughCache(key, loader) {
-  const hit = await cache.get(key);
+  const hit = await cache.get(key, loader);
   if (hit !== null) return hit;
   const value = await loader();
-  if (value != null && !(Array.isArray(value) && value.length === 0)) {
+  if (cacheable(value)) {
     await cache.put(key, value);
   }
   return value;
@@ -265,14 +270,14 @@ class UpstreamUnavailable extends Error {
  *
  * The cache is read before the breaker on purpose. A hit is not an upstream call, so OPEN must
  * not deny it: the circuit exists to stop requests reaching a dead provider, and this one
- * already has its answer.
+ * already has its answer. The same is true of the refresh a stale read schedules — it goes
+ * through the breaker, so OPEN fast-fails it to the fallback, and a fallback is never persisted,
+ * so an outage leaves the stale entry in place instead of overwriting it with the outage.
  */
 async function providerCall(name, op, keyParts, call, fallback) {
   const adapter = adapterFor(name);
   if (!adapter) return fallback;
   const key = cacheKey(name, op, ...keyParts);
-  const cached = await cache.get(key);
-  if (cached !== null) return cached;
   const breaker = getCircuitBreaker(name, {
     failureThreshold: 5,
     resetTimeoutMs: 10000,
@@ -281,16 +286,23 @@ async function providerCall(name, op, keyParts, call, fallback) {
     // books the read as a failure, so a slow-but-healthy upstream opened the circuit for 10s.
     callTimeoutMs: CALL_TIMEOUT_MS,
   });
-  let outage = false;
-  const result = await breaker.execute(async () => {
-    const value = await throughCache(key, () =>
-      call(adapter, () => {
+  /**
+   * The guarded fetch, and the loader `cache.get` remembers for an expired entry. The refresh
+   * runs this rather than a bare `call`, so an outage during a background refresh is counted by
+   * the same breaker instead of quietly re-hitting a dead upstream on every TTL.
+   */
+  const loader = () =>
+    breaker.execute(async () => {
+      let outage = false;
+      const value = await call(adapter, () => {
         outage = true;
-      }),
-    );
-    if (outage) throw new UpstreamUnavailable(name, op);
-    return value;
-  }, fallback);
+      });
+      if (outage) throw new UpstreamUnavailable(name, op);
+      return value;
+    }, fallback);
+  // An expired entry is served as a stale value and refreshed behind the caller's back; a cold
+  // miss returns null and fetches here.
+  const result = await throughCache(key, loader);
   return result == null ? fallback : result;
 }
 
