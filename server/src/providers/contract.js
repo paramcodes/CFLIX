@@ -64,12 +64,21 @@
 /**
  * Adapter contract. One module per provider.
  *
+ * Every method takes an optional `onUpstreamFailure` and calls it when the failure was the
+ * upstream being UNREACHABLE rather than having nothing: a transport error, a timeout, a 5xx or
+ * a 429. A 404 and a 2xx carrying an empty payload are the upstream answering that it has no
+ * such title, which is a miss and is never reported. The return value cannot carry this, because
+ * an adapter degrades to `null`/`[]` for both, so the distinction has to travel beside the value.
+ * `providerCall` in catalog.js passes the callback to the Circuit Breaker, which is the only
+ * thing in the process that counts failures. An adapter must still never throw: the value it
+ * returns is what a page renders, and a slow CDN must not become a 500.
+ *
  * @typedef {Object} ProviderAdapter
  * @property {string} name
- * @property {(opts: {kind?: 'movie'|'series', genre?: string, skip?: number, limit?: number}) => Promise<CatalogItem[]>} browse
- * @property {(id: string) => Promise<CatalogItem|null>} get
- * @property {(text: string, opts?: {kind?: 'movie'|'series'|'anime', limit?: number}) => Promise<CatalogItem[]>} search
- * @property {(item: CatalogItem, opts?: {season?: number}) => Promise<Episode[]>} episodes
+ * @property {(opts: {kind?: 'movie'|'series', genre?: string, skip?: number, limit?: number, onUpstreamFailure?: (reason: string) => void}) => Promise<CatalogItem[]>} browse
+ * @property {(id: string, opts?: {onUpstreamFailure?: (reason: string) => void}) => Promise<CatalogItem|null>} get
+ * @property {(text: string, opts?: {kind?: 'movie'|'series'|'anime', limit?: number, onUpstreamFailure?: (reason: string) => void}) => Promise<CatalogItem[]>} search
+ * @property {(item: CatalogItem, opts?: {season?: number, onUpstreamFailure?: (reason: string) => void}) => Promise<Episode[]>} episodes
  * @property {(id: string) => string|null} episodeOwnerId
  *   The series id owning `id`, given one of this adapter's own episode ids, else null. Declared
  *   per adapter rather than in a shared table because an adapter is the only thing that knows the

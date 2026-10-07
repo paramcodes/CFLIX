@@ -172,6 +172,11 @@ function toItem(raw, kind, episodes) {
 
 /**
  * @param {string} path
+ * @param {(reason: string) => void} [onUpstreamFailure] Called once when the upstream turned out
+ *   to be unreachable rather than merely unhelpful. A transport error, an abort, a 5xx or a 429
+ *   that survived the retry budget are outages; a 4xx and a 2xx with an empty body are the
+ *   upstream answering that it has nothing, which is a miss and not a failure. This is the only
+ *   place the two are still distinguishable, so it is the only place that has to decide.
  * @returns {Promise<object|null>} Null unless a 200 with a JSON body arrives
  *   inside the retry budget. Never throws: upstream 504s under load, so an
  *   adapter that throws turns a slow CDN into a 500.
@@ -179,7 +184,15 @@ function toItem(raw, kind, episodes) {
  *   A1's cache seam: replace this body with a CacheStore lookup keyed
  *   `cacheKey('cinemeta', path)` and a fetch on miss. Nothing else changes.
  */
-async function getJson(path) {
+async function getJson(path, onUpstreamFailure) {
+  // Reported at most once per call, so a 5xx that survives both attempts is one outage and not
+  // two: `consecutiveFailures` has to count calls, not attempts.
+  let reported = false;
+  const fail = (reason) => {
+    if (reported) return;
+    reported = true;
+    onUpstreamFailure?.(reason);
+  };
   for (let attempt = 0; attempt < 2; attempt++) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
@@ -194,7 +207,11 @@ async function getJson(path) {
       }
       // 5xx and 429 are worth one more ask; 4xx is an answer, not a hiccup.
       if (res.status < 500 && res.status !== 429) return null;
-    } catch {
+      fail(`HTTP ${res.status}`);
+    } catch (err) {
+      // No second ask here, matching the retry budget this file already had, so the report
+      // cannot wait for an attempt that never happens.
+      fail(err?.name || 'transport error');
       return null;
     } finally {
       clearTimeout(timer);
@@ -203,11 +220,11 @@ async function getJson(path) {
   return null;
 }
 
-async function catalogMetas(kind, extra) {
+async function catalogMetas(kind, extra, onUpstreamFailure) {
   const path = extra
     ? `catalog/${kind}/top/${extra}.json`
     : `catalog/${kind}/top.json`;
-  const body = await getJson(path);
+  const body = await getJson(path, onUpstreamFailure);
   return Array.isArray(body?.metas) ? body.metas : [];
 }
 
@@ -216,8 +233,11 @@ async function catalogMetas(kind, extra) {
  * to null: a kind mismatch gives `{"meta": null}`, and an id that exists nowhere
  * gives a 200 stub carrying the id back with every content field null.
  */
-async function meta(kind, id) {
-  const body = await getJson(`meta/${kind}/${encodeURIComponent(id)}.json`);
+async function meta(kind, id, onUpstreamFailure) {
+  const body = await getJson(
+    `meta/${kind}/${encodeURIComponent(id)}.json`,
+    onUpstreamFailure,
+  );
   const raw = body?.meta;
   if (!raw || typeof raw !== 'object') return null;
   return plainText(raw.name) ? raw : null;
@@ -264,15 +284,23 @@ function window(items, skip, limit) {
   return items.slice(from, from + size);
 }
 
-async function browse({ kind, genre, skip = 0, limit } = {}) {
+async function browse({
+  kind,
+  genre,
+  skip = 0,
+  limit,
+  onUpstreamFailure,
+} = {}) {
   const extra = genre ? `genre=${encodeURIComponent(genre)}` : '';
   const groups = await Promise.all(
-    kindsFor(kind).map((k) => catalogMetas(k, extra).then(catalogItems)),
+    kindsFor(kind).map((k) =>
+      catalogMetas(k, extra, onUpstreamFailure).then(catalogItems),
+    ),
   );
   return window(interleave(groups), skip, limit);
 }
 
-async function get(id) {
+async function get(id, { onUpstreamFailure } = {}) {
   const wanted = plainText(id);
   if (!wanted) return null;
 
@@ -280,7 +308,7 @@ async function get(id) {
   // 200 plus a different title, so the series endpoint is probed first and its
   // answer is trusted only when it actually carries episodes. `meta/series/{movieId}`
   // is the one honest signal: it returns `{"meta": null}`.
-  const asSeries = await meta('series', wanted);
+  const asSeries = await meta('series', wanted, onUpstreamFailure);
   if (asSeries) {
     const full = episodesOf(asSeries, wanted);
     if (full.length) return toItem(asSeries, 'series', full);
@@ -288,27 +316,31 @@ async function get(id) {
 
   // A series with no released episode falls through here and is served the same
   // wrong movie a kind mismatch produces. Cinemeta gives no way to tell it apart.
-  const asMovie = await meta('movie', wanted);
+  const asMovie = await meta('movie', wanted, onUpstreamFailure);
   return asMovie ? toItem(asMovie, 'movie', []) : null;
 }
 
-async function search(query, { kind, limit } = {}) {
+async function search(query, { kind, limit, onUpstreamFailure } = {}) {
   const q = plainText(query);
   if (!q) return [];
   const groups = await Promise.all(
     kindsFor(kind).map((k) =>
-      catalogMetas(k, `search=${encodeURIComponent(q)}`).then(catalogItems),
+      catalogMetas(
+        k,
+        `search=${encodeURIComponent(q)}`,
+        onUpstreamFailure,
+      ).then(catalogItems),
     ),
   );
   return window(interleave(groups), 0, limit);
 }
 
-async function episodes(item, { season } = {}) {
+async function episodes(item, { season, onUpstreamFailure } = {}) {
   const seriesId = item && typeof item === 'object' ? plainText(item.id) : '';
   if (!seriesId) return [];
   // Always re-reads meta rather than trusting item.episodes, which is empty from
   // browse and truncated to the latest 20 anywhere upstream.
-  const raw = await meta('series', seriesId);
+  const raw = await meta('series', seriesId, onUpstreamFailure);
   if (!raw) return [];
   const all = episodesOf(raw, seriesId);
   const wanted =

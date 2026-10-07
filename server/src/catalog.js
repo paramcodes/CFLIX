@@ -187,24 +187,111 @@ async function throughCache(key, loader) {
 }
 
 /**
+ * One upstream request's ceiling, as every adapter declares it: `TIMEOUT_MS` in cinemeta.js,
+ * `REQUEST_TIMEOUT_MS` in kitsu.js and tvmaze.js. A read costs one of these per request it makes,
+ * so this is the unit the budget below is measured in.
+ */
+const ADAPTER_REQUEST_MS = 8000;
+
+/**
+ * The most requests one guarded call makes. `cinemeta.get` probes `meta/series/{id}` and then
+ * `meta/movie/{id}`, because upstream answers a kind mismatch with 200 and a different title, so
+ * a legitimate miss costs two round trips. Nothing else asks more.
+ */
+const MAX_UPSTREAM_ASKS = 2;
+
+/**
+ * What one guarded call may cost before the upstream is treated as unreachable: every request the
+ * worst adapter makes, at its own full timeout. A budget under this records successful reads as
+ * failures — a healthy-but-slow upstream crosses it, and the breaker opens on traffic that
+ * succeeded. Measured with a stub answering 200 after 5000ms: a budget of 8000 turned six
+ * legitimate misses into five recorded failures and left the circuit OPEN.
+ */
+const FLOOR_MS = ADAPTER_REQUEST_MS * MAX_UPSTREAM_ASKS;
+
+/**
+ * `CFLIX_CALL_TIMEOUT_MS` overrides the breaker budget, guarded the way the TTL is guarded in
+ * `createCacheStore`: `Number('abc')` is NaN, `Number('-1')` is negative and `Number('0')` is
+ * zero, and any of those handed to `setTimeout` breaks every read instead of bounding one. It is
+ * floored at `FLOOR_MS` rather than honoured literally, because a budget that low cannot cap
+ * anything — `withTimeout` settles the caller but cannot abort the fetch — so it would only ever
+ * book reads that succeeded as failures.
+ *
+ * @param {string|undefined} raw
+ * @returns {number} A finite budget no smaller than `FLOOR_MS`.
+ */
+export function callTimeoutMs(raw) {
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed <= 0) return 20000;
+  return Math.max(parsed, FLOOR_MS);
+}
+
+export const CALL_TIMEOUT_MS = callTimeoutMs(process.env.CFLIX_CALL_TIMEOUT_MS);
+
+/** Carries the provider and op for a debugger or a log line. `execute` catches it, so no
+ *  caller ever sees one: the fallback is still exactly the value it always was. */
+class UpstreamUnavailable extends Error {
+  constructor(name, op) {
+    super(`upstream ${name} was unreachable for ${op}`);
+    this.name = 'UpstreamUnavailable';
+  }
+}
+
+/**
  * Every provider read goes through here, protected by an upstream Circuit Breaker.
- * Catches timeouts and upstream failures, tripping OPEN after repeated outages
- * so subsequent requests fast-fail to fallback without exhausting connection pools.
+ *
+ * An outage and a legitimate miss look identical in the value an adapter returns: `getJson` in
+ * cinemeta.js, `kit` in kitsu.js and `request` in tvmaze.js all swallow every failure and
+ * resolve `null`, which a list call flattens to `[]`. A 404 for an id nobody has, an empty
+ * search result and a dead CDN are the same shape, so nothing above the fetch can tell them
+ * apart. Guessing from that shape is wrong in both directions: reading every empty as an outage
+ * takes the provider offline after five ordinary misses, and reading none of them as one is the
+ * bug this breaker was written to fix. So the adapters classify at their fetch seam, where the
+ * distinction is still visible, and report it through the `onUpstreamFailure` callback this
+ * function hands them. A transport error, a timeout, a 5xx and a 429 are an outage; a 4xx and a
+ * 2xx carrying an empty payload are the upstream answering that it has nothing. Only an outage
+ * throws, which is the one outcome `execute` counts.
+ *
+ * THE COST, stated plainly: a real outage opens the circuit, and then every read on that
+ * provider fast-fails to its fallback for `resetTimeoutMs`. For `browse` the fallback is the
+ * fixture, which is what an outage already produced. For `get`, `play`, `related` and
+ * `recordProgress` the fallback is `null`, which `resolveItem` turns into a thrown `NOT_FOUND`
+ * and `recordProgress` turns into `MATURITY_BLOCKED` — so during a genuine outage those reads
+ * report a title as absent when it is merely unreachable, and a profile that just watched
+ * something is told it is not available to it. That is worse than a slow page, and it is the
+ * trade a circuit breaker makes: stop paying an upstream retry budget on every request in order
+ * to stop reporting success during an outage. Five legitimate misses cost nothing, because a
+ * miss is not a failure.
+ *
+ * The cache is read before the breaker on purpose. A hit is not an upstream call, so OPEN must
+ * not deny it: the circuit exists to stop requests reaching a dead provider, and this one
+ * already has its answer.
  */
 async function providerCall(name, op, keyParts, call, fallback) {
   const adapter = adapterFor(name);
   if (!adapter) return fallback;
+  const key = cacheKey(name, op, ...keyParts);
+  const cached = await cache.get(key);
+  if (cached !== null) return cached;
   const breaker = getCircuitBreaker(name, {
     failureThreshold: 5,
     resetTimeoutMs: 10000,
-    callTimeoutMs: 5000,
+    // Above the adapters' own 8000ms, which `cinemeta.get` pays twice over on a read that
+    // legitimately misses: a budget under that ceiling abandons a fetch it cannot cancel and
+    // books the read as a failure, so a slow-but-healthy upstream opened the circuit for 10s.
+    callTimeoutMs: CALL_TIMEOUT_MS,
   });
-  return breaker.execute(async () => {
-    const value = await throughCache(cacheKey(name, op, ...keyParts), () =>
-      call(adapter),
+  let outage = false;
+  const result = await breaker.execute(async () => {
+    const value = await throughCache(key, () =>
+      call(adapter, () => {
+        outage = true;
+      }),
     );
-    return value == null ? fallback : value;
+    if (outage) throw new UpstreamUnavailable(name, op);
+    return value;
   }, fallback);
+  return result == null ? fallback : result;
 }
 
 async function providerBrowseItems(kind, genre) {
@@ -212,7 +299,8 @@ async function providerBrowseItems(kind, genre) {
     providerForKind(kind),
     'browse',
     [kind ?? 'all', genre ?? '-'],
-    (adapter) => adapter.browse({ kind, genre, limit: BROWSE_LIMIT }),
+    (adapter, onUpstreamFailure) =>
+      adapter.browse({ kind, genre, limit: BROWSE_LIMIT, onUpstreamFailure }),
     [],
   );
   // The genre is re-applied rather than trusted from the adapter: `filter[genres]` silently
@@ -228,7 +316,7 @@ const providerGetItem = (id) =>
     providerForId(id),
     'get',
     [id],
-    (adapter) => adapter.get(id),
+    (adapter, onUpstreamFailure) => adapter.get(id, { onUpstreamFailure }),
     null,
   );
 
@@ -237,7 +325,8 @@ async function providerSearchItems(text, kind, limit) {
     providerForKind(kind),
     'search',
     [kind ?? 'all', lower(text)],
-    (adapter) => adapter.search(text, { kind, limit }),
+    (adapter, onUpstreamFailure) =>
+      adapter.search(text, { kind, limit, onUpstreamFailure }),
     [],
   );
   // Cinemeta ignores the `search=` catalog path segment and answers with its top catalog, so its
@@ -252,7 +341,8 @@ function providerEpisodes(item) {
     name,
     'episodes',
     [item.id],
-    (adapter) => adapter.episodes(item),
+    (adapter, onUpstreamFailure) =>
+      adapter.episodes(item, { onUpstreamFailure }),
     [],
   );
 }

@@ -146,10 +146,22 @@ function serialize(fn) {
  * once the shared store lands; every other function here goes through it.
  *
  * @param {string} path Absolute upstream path with query string.
+ * @param {(reason: string) => void} [onUpstreamFailure] Reports the failures that are not
+ *   "no such show": a transport error, a timeout, a 5xx, or a 429 that outlived the retry.
+ *   A 404 is the upstream answering that nothing is there, so it is never reported — that is
+ *   what keeps one unknown id from reading as an outage.
  * @returns {Promise<any>} Parsed JSON, or null on any failure. Never throws at the caller.
  */
-function request(path) {
+function request(path, onUpstreamFailure) {
   return serialize(async () => {
+    // Reported at most once per request, so a 5xx that survives both attempts is one outage
+    // and not two: `consecutiveFailures` has to count calls, not attempts.
+    let reported = false;
+    const fail = (reason) => {
+      if (reported) return;
+      reported = true;
+      onUpstreamFailure?.(reason);
+    };
     for (let attempt = 0; attempt < 2; attempt += 1) {
       if (attempt > 0) await sleep(RETRY_AFTER_MS);
       const controller = new AbortController();
@@ -165,12 +177,20 @@ function request(path) {
         }
         if (!res.ok) {
           await res.body?.cancel();
+          // A 429 reaches here only on the last attempt; the first one `continue`s above. It is
+          // a rate limit rather than a miss, and this adapter exists to respect a rate limit, so
+          // it has to count as one. A 404 is the upstream saying there is no such show.
+          if (res.status >= 500 || res.status === 429)
+            fail(`HTTP ${res.status}`);
           return null;
         }
         const text = await res.text();
         // Lookup endpoints answer an unresolved id with the literal body "null".
         return text === 'null' ? null : JSON.parse(text);
-      } catch {
+      } catch (err) {
+        // No second ask here, matching the retry budget this file already had, so the report
+        // cannot wait for an attempt that never happens.
+        fail(err?.name || 'transport error');
         return null;
       } finally {
         clearTimeout(timer);
@@ -270,13 +290,13 @@ function listing(show, seasonCount) {
 }
 
 /** Full detail shape: episodes, artwork and cast, all three fetched beside the show. */
-async function enrich(show) {
+async function enrich(show, onUpstreamFailure) {
   const showId = show.id;
   const fallbackMinutes = Number(show.averageRuntime ?? show.runtime) || 0;
   const [episodeList, images, cast] = await Promise.all([
-    request(`/shows/${showId}/episodes`),
-    request(`/shows/${showId}/images`),
-    request(`/shows/${showId}/cast`),
+    request(`/shows/${showId}/episodes`, onUpstreamFailure),
+    request(`/shows/${showId}/images`, onUpstreamFailure),
+    request(`/shows/${showId}/cast`, onUpstreamFailure),
   ]);
   const episodes = Array.isArray(episodeList)
     ? episodeList.map((episode) =>
@@ -295,7 +315,13 @@ async function enrich(show) {
  * @param {{kind?: string, genre?: string, skip?: number, limit?: number}} opts
  * @returns {Promise<CatalogItem[]>}
  */
-export async function browse({ kind = 'series', genre, skip = 0, limit } = {}) {
+export async function browse({
+  kind = 'series',
+  genre,
+  skip = 0,
+  limit,
+  onUpstreamFailure,
+} = {}) {
   if (kind === 'movie') return [];
   const wanted = genre ? String(genre).toLowerCase() : null;
   const start = Math.max(0, Number(skip) || 0);
@@ -307,6 +333,7 @@ export async function browse({ kind = 'series', genre, skip = 0, limit } = {}) {
     seeds.map((seed) =>
       request(
         `/singlesearch/shows?q=${encodeURIComponent(seed)}&embed=seasons`,
+        onUpstreamFailure,
       ),
     ),
   );
@@ -325,11 +352,11 @@ export async function browse({ kind = 'series', genre, skip = 0, limit } = {}) {
  * @param {string} id TVmaze numeric show id.
  * @returns {Promise<CatalogItem|null>}
  */
-export async function get(id) {
+export async function get(id, { onUpstreamFailure } = {}) {
   const showId = String(id ?? '').trim();
   if (!/^\d+$/.test(showId)) return null;
-  const show = await request(`/shows/${showId}`);
-  return show ? enrich(show) : null;
+  const show = await request(`/shows/${showId}`, onUpstreamFailure);
+  return show ? enrich(show, onUpstreamFailure) : null;
 }
 
 /**
@@ -337,11 +364,17 @@ export async function get(id) {
  * @param {{kind?: string, limit?: number}} opts
  * @returns {Promise<CatalogItem[]>}
  */
-export async function search(text, { kind = 'series', limit } = {}) {
+export async function search(
+  text,
+  { kind = 'series', limit, onUpstreamFailure } = {},
+) {
   const query = String(text ?? '').trim();
   if (query === '' || kind === 'movie') return [];
   const cap = limitOf(limit);
-  const hits = await request(`/search/shows?q=${encodeURIComponent(query)}`);
+  const hits = await request(
+    `/search/shows?q=${encodeURIComponent(query)}`,
+    onUpstreamFailure,
+  );
   if (!Array.isArray(hits)) return [];
   const top = hits
     .slice(0, cap)
@@ -351,7 +384,10 @@ export async function search(text, { kind = 'series', limit } = {}) {
   // below 14 to stay inside a single rate-limit window.
   return Promise.all(
     top.map(async (show) => {
-      const withSeasons = await request(`/shows/${show.id}?embed=seasons`);
+      const withSeasons = await request(
+        `/shows/${show.id}?embed=seasons`,
+        onUpstreamFailure,
+      );
       return listing(show, withSeasons?._embedded?.seasons?.length ?? 0);
     }),
   );
@@ -362,11 +398,14 @@ export async function search(text, { kind = 'series', limit } = {}) {
  * @param {{season?: number}} opts
  * @returns {Promise<Episode[]>}
  */
-export async function episodes(item, { season } = {}) {
+export async function episodes(item, { season, onUpstreamFailure } = {}) {
   const showId = String(item?.id ?? '').trim();
   if (!/^\d+$/.test(showId)) return [];
   // One call returns the show and its episodes, which the show's averageRuntime backfills.
-  const show = await request(`/shows/${showId}?embed=episodes`);
+  const show = await request(
+    `/shows/${showId}?embed=episodes`,
+    onUpstreamFailure,
+  );
   const list = show?._embedded?.episodes;
   if (!Array.isArray(list)) return [];
   const fallbackMinutes = Number(show.averageRuntime ?? show.runtime) || 0;
