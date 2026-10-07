@@ -8,8 +8,17 @@ const PUBLIC_ROOT = new URL('../public/', import.meta.url);
 
 const NAME_PAYLOAD = '"><img src=x onerror=window.__pwned=1>';
 const TITLE_PAYLOAD = '<img src=x onerror=window.__pwned=1>';
-const POSTER_PAYLOAD =
+
+// One poster payload per claim, because a payload can only disprove the
+// implementation that shares its property names. The first one below
+// re-declares background-image, and measured against the innerHTML template on
+// cce038f it collapsed back to a single background-image on reparse, so every
+// CSSOM assertion made against it passed on the vulnerable code too.
+const SCRIPT_PAYLOAD =
   "x');background-image:url(javascript:window.__pwned=1)//";
+const SMUGGLE_PAYLOAD =
+  "x');position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:99999//";
+const BREAKOUT_PAYLOAD = 'x\')//"><img src=x onerror=window.__pwned=1>';
 
 const PROFILES_ITEMS = [
   { id: 'pf_1', name: NAME_PAYLOAD, maturity: 'adult' },
@@ -72,57 +81,74 @@ afterAll(async () => {
   await new Promise((resolve) => server?.close(resolve));
 });
 
+// window.__pwned only moves once an event handler has run, and an onerror from
+// an injected element fires on the microtask queue after the markup lands. Read
+// it only after a settle, or the assertion passes on the vulnerable code.
+async function renderRail(page, { poster, title = 'Plain Title' }) {
+  await page.goto(`${base}/fillrow.html`);
+  return page.evaluate(
+    async ([posterUrl, cardTitle]) => {
+      // new Function keeps Vite's SSR import transform out of page code.
+      const load = new Function('p', 'return import(p)');
+      const { fillRow } = await load('/js/core.js');
+      fillRow('row-related', [
+        { id: 'seed:m1', title: cardTitle, posterUrl },
+        { id: 'seed:m2', title: 'Plain Title', posterUrl: null },
+      ]);
+      const rail = document.getElementById('row-related');
+      const cards = rail.querySelectorAll('article.card');
+      const art = cards[0].querySelector('.card__art');
+      const artStyle = art.getAttribute('style');
+      // Round-trip the serialized card through a fresh HTML parser: what that
+      // parser builds is what an attacker would get.
+      const doc = new DOMParser().parseFromString(
+        `<div id="probe">${cards[0].outerHTML}</div>`,
+        'text/html',
+      );
+      const reparsed = [...doc.querySelectorAll('*')];
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      return {
+        cards: cards.length,
+        titleText: cards[0].querySelector('.card__title').textContent,
+        secondTitle: cards[1].querySelector('.card__title').textContent,
+        injected: rail.querySelectorAll('img').length,
+        executed: window.__pwned,
+        artStyle,
+        artProperties: [...art.style].sort(),
+        // Reparse the serialized attribute the way an HTML parser would.
+        reparsedStyleProperties: (() => {
+          const probe = document.createElement('div');
+          probe.setAttribute('style', artStyle ?? '');
+          return [...probe.style].sort();
+        })(),
+        inlineBackground: art.style.backgroundImage,
+        computedBackground: getComputedStyle(art).backgroundImage,
+        computedPosition: getComputedStyle(art).position,
+        computedWidth: getComputedStyle(art).width,
+        viewportWidth: window.innerWidth,
+        reparsedImgs: doc.querySelectorAll('img').length,
+        reparsedHandlerAttrs: reparsed.flatMap((e) =>
+          [...e.attributes].map((a) => a.name).filter((n) => /^on/i.test(n)),
+        ),
+        artClasses: art.className,
+        placeholderClasses: cards[1].querySelector('.card__art').className,
+        dataId: cards[0].dataset.id,
+        cardClass: cards[0].className,
+        cursor: cards[0].style.cursor,
+      };
+    },
+    [poster, title],
+  );
+}
+
 describe('stored XSS sinks: real Chromium, real HTML parser, real module graph', () => {
   it('fillRow keeps posterUrl, title and id out of every HTML context', async () => {
     const page = await browser.newPage();
     try {
-      await page.goto(`${base}/fillrow.html`);
-      const result = await page.evaluate(
-        async ([poster, title]) => {
-          // new Function keeps Vite's SSR import transform out of page code.
-          const load = new Function('p', 'return import(p)');
-          const { fillRow } = await load('/js/core.js');
-          fillRow('row-related', [
-            { id: 'seed:m1', title, posterUrl: poster },
-            { id: 'seed:m2', title: 'Plain Title', posterUrl: null },
-          ]);
-          const rail = document.getElementById('row-related');
-          const cards = rail.querySelectorAll('article.card');
-          return {
-            cards: cards.length,
-            titleText: cards[0].querySelector('.card__title').textContent,
-            secondTitle: cards[1].querySelector('.card__title').textContent,
-            injected: rail.querySelectorAll('img').length,
-            executed: window.__pwned,
-            artStyle: cards[0]
-              .querySelector('.card__art')
-              .getAttribute('style'),
-            artProperties: [
-              ...cards[0].querySelector('.card__art').style,
-            ].sort(),
-            // Reparse the serialized attribute the way an HTML parser would.
-            reparsedStyleProperties: (() => {
-              const probe = document.createElement('div');
-              probe.setAttribute(
-                'style',
-                cards[0].querySelector('.card__art').getAttribute('style'),
-              );
-              return [...probe.style].sort();
-            })(),
-            computedBackground: getComputedStyle(
-              cards[0].querySelector('.card__art'),
-            ).backgroundImage,
-            artClasses: cards[0].querySelector('.card__art').className,
-            placeholderClasses: cards[1].querySelector('.card__art').className,
-            dataId: cards[0].dataset.id,
-            cardClass: cards[0].className,
-            cursor: cards[0].style.cursor,
-            artBackground:
-              cards[0].querySelector('.card__art').style.backgroundImage,
-          };
-        },
-        [POSTER_PAYLOAD, TITLE_PAYLOAD],
-      );
+      const result = await renderRail(page, {
+        poster: SCRIPT_PAYLOAD,
+        title: TITLE_PAYLOAD,
+      });
 
       assert.equal(result.cards, 2, 'both items rendered as cards');
       assert.equal(
@@ -158,8 +184,8 @@ describe('stored XSS sinks: real Chromium, real HTML parser, real module graph',
         /^card__art ph ph--[a-h]$/,
         'a null posterUrl keeps the placeholder class',
       );
-      // encodeURI leaves ' alone, so the value is set through the CSSOM instead:
-      // one declaration, parsed as a single url() token, never as new markup.
+      // encodeURI leaves ' alone, so the value reaches CSSOM with no
+      // surrounding attribute: one declaration, parsed as a single url() token.
       assert.deepEqual(
         result.artProperties,
         ['background-image'],
@@ -174,10 +200,90 @@ describe('stored XSS sinks: real Chromium, real HTML parser, real module graph',
         result.computedBackground.startsWith('url("'),
         `the value stays one url() token: ${result.computedBackground}`,
       );
+      // The javascript: scheme survives into the resolved value. It does not
+      // execute because CSS url() never fetches a javascript: URL, so the claim
+      // is that the payload is inert data, not that it is rewritten. The
+      // template's parse produced only url("x"), which is why the assertion
+      // compares against the payload itself.
       assert.ok(
-        !/onerror|onload|<img/i.test(result.artStyle ?? ''),
-        `poster payload cannot reach markup: ${result.artStyle}`,
+        result.inlineBackground.includes(SCRIPT_PAYLOAD),
+        `the payload survives whole as one inert value: ${result.inlineBackground}`,
       );
+      assert.deepEqual(
+        result.reparsedHandlerAttrs,
+        [],
+        'the reparsed card carries no event-handler attribute',
+      );
+    } finally {
+      await page.close();
+    }
+  }, 60000);
+
+  it('fillRow cannot be made to accept a second CSS declaration', async () => {
+    const page = await browser.newPage();
+    try {
+      const result = await renderRail(page, { poster: SMUGGLE_PAYLOAD });
+
+      assert.deepEqual(
+        result.artProperties,
+        ['background-image'],
+        `the payload adds no declaration: ${result.artStyle}`,
+      );
+      assert.deepEqual(
+        result.reparsedStyleProperties,
+        ['background-image'],
+        `the serialized style attribute reparses to one declaration: ${result.artStyle}`,
+      );
+      assert.ok(
+        result.computedBackground.startsWith('url("'),
+        `the value stays one url() token: ${result.computedBackground}`,
+      );
+      assert.ok(
+        result.inlineBackground.includes(SMUGGLE_PAYLOAD),
+        `the payload survives whole as one inert value: ${result.inlineBackground}`,
+      );
+      // The template would have accepted position, top, left, width, height
+      // and z-index as six declarations of their own.
+      assert.equal(
+        result.computedPosition,
+        'static',
+        'the smuggled position:fixed did not take effect',
+      );
+      assert.ok(
+        result.computedWidth !== `${result.viewportWidth}px`,
+        `the smuggled width:100vw did not take effect: ${result.computedWidth}`,
+      );
+      assert.equal(result.executed, undefined, 'no payload executed');
+    } finally {
+      await page.close();
+    }
+  }, 60000);
+
+  it('fillRow cannot be turned into markup by a posterUrl', async () => {
+    const page = await browser.newPage();
+    try {
+      const result = await renderRail(page, { poster: BREAKOUT_PAYLOAD });
+
+      assert.equal(
+        result.injected,
+        0,
+        'the payload created no element in the rail',
+      );
+      assert.deepEqual(
+        result.reparsedImgs,
+        0,
+        'reparsing the serialized card yields no img',
+      );
+      assert.deepEqual(
+        result.reparsedHandlerAttrs,
+        [],
+        'reparsing the serialized card yields no event-handler attribute',
+      );
+      // On cce038f this payload closes the style attribute, so the parser
+      // builds a real <img onerror> and the assertion above reports it.
+      assert.equal(result.executed, undefined, 'no payload executed');
+      assert.equal(result.cards, 2, 'the card still renders');
+      assert.equal(result.dataId, 'seed:m1', 'data-id survives');
     } finally {
       await page.close();
     }
