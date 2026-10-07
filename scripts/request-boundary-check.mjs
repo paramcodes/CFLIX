@@ -84,7 +84,9 @@ async function rawRequest(port, requestLine, hostHeader) {
       resolve({ ...dead, error });
     };
     socket.setTimeout(4000, () => fail(`no response to ${requestLine}`));
-    socket.once('error', (err) => resolve({ ...dead, error: err.code || err.message }));
+    socket.once('error', (err) =>
+      resolve({ ...dead, error: err.code || err.message }),
+    );
     socket.once('connect', () => {
       socket.write(
         `${requestLine}\r\nHost: ${hostHeader}\r\nConnection: close\r\n\r\n`,
@@ -131,7 +133,10 @@ async function call(method, path, body) {
 }
 
 /** `[status, error.code]`, or `[status, error]` so a dead server is visibly not a 400. */
-const codeOf = (res) => [res.status, envelope(res.body ?? res.raw).error?.code ?? res.error ?? null];
+const codeOf = (res) => [
+  res.status,
+  envelope(res.body ?? res.raw).error?.code ?? res.error ?? null,
+];
 
 try {
   check('before: the server answers 200', (await call('GET', '/')).status, 200);
@@ -150,7 +155,11 @@ try {
     [400, 'BAD_REQUEST'],
   );
 
-  check('after: the server still answers 200', (await call('GET', '/')).status, 200);
+  check(
+    'after: the server still answers 200',
+    (await call('GET', '/')).status,
+    200,
+  );
 
   // A real route end to end, because a 200 on a static page can come from a server that is alive
   // but has already lost its API.
@@ -170,13 +179,21 @@ try {
     return circular;
   };
   const boom = await call('GET', '/__boundary-probe/circular');
-  check('an unserializable body answers 500 INTERNAL', codeOf(boom), [500, 'INTERNAL']);
+  check('an unserializable body answers 500 INTERNAL', codeOf(boom), [
+    500,
+    'INTERNAL',
+  ]);
   // Asserted against the whole literal body, not a scan: on `origin/main` the body never arrives at
   // all, and a substring scan over an empty string would pass on it.
   check(
     'the 500 body is the internal envelope, leaking no Node error code or message',
     [boom.raw, LEAKS.filter((leak) => boom.raw.includes(leak))],
-    [JSON.stringify({ error: { code: 'INTERNAL', message: 'internal error' } }), []],
+    [
+      JSON.stringify({
+        error: { code: 'INTERNAL', message: 'internal error' },
+      }),
+      [],
+    ],
   );
   check(
     'the server answers 200 again after the unserializable body',
