@@ -556,25 +556,35 @@ await page.click('#profile-list .avatar-tile[data-id]');
 await page.waitForFunction(
   () => document.querySelector('#who')?.textContent === 'Watching as Kid',
 );
-const beforeGoogle = await page.evaluate(() =>
+const beforeReuse = await page.evaluate(() =>
   sessionStorage.getItem('cflix_profile'),
 );
 await page.goto(`${B}/signin`);
-await page.click('#btn-google');
+const googleControls = await page.locator('#btn-google').count();
+check(
+  'signin page exposes no #btn-google',
+  googleControls === 0,
+  `count=${googleControls}`,
+);
+await page.fill('#in-email', `nav-check2-${stamp}@test.dev`);
+await page.fill('#in-password', 'pw123456');
+await page.click('#btn-signin');
 await page.waitForURL('**/profiles');
-const afterGoogle = await page.evaluate(() =>
+const afterReuse = await page.evaluate(() =>
   sessionStorage.getItem('cflix_profile'),
 );
 check(
-  'a profile exists before the google login',
-  beforeGoogle !== null,
-  String(beforeGoogle),
+  'a profile exists before the second login',
+  beforeReuse !== null,
+  String(beforeReuse),
 );
 check(
-  'google login does not leave a stale profile',
-  afterGoogle === null,
-  String(afterGoogle),
+  'signing in again does not leave a stale profile',
+  afterReuse === null,
+  String(afterReuse),
 );
+// The filename keeps its old name so this gate continues to refresh the tracked artifact it
+// always wrote, rather than orphaning it and adding a new path under artifacts/.
 await shot('09-google-login-no-stale-profile.png');
 
 await browser.close();

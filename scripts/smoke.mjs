@@ -39,10 +39,23 @@ r = await req('POST', '/api/auth/signin', {
 });
 check('bad password rejected', r.status === 400);
 
+// An unverified `google:<email>` is an attacker-chosen email: nothing signs it, so the server
+// must refuse it. Asserting the refusal here keeps the only over-HTTP stage on the safe default.
 r = await req('POST', '/api/auth/google', { idToken: `google:${smokeEmail}` });
 check(
-  'google merges same email',
-  r.data.user?.email === smokeEmail && r.status === 200,
+  'unverified google token refused',
+  r.status === 400 &&
+    r.data.error?.code === 'INVALID_GOOGLE_TOKEN' &&
+    !r.data.session?.token &&
+    !r.data.user,
+);
+r = await req('POST', '/api/auth/signin', {
+  email: smokeEmail,
+  password: 'pw123',
+});
+check(
+  'refused google sign-in leaves the account untouched',
+  r.status === 200 && r.data.user?.provider === 'email',
 );
 
 r = await req(
@@ -65,7 +78,7 @@ check('two profiles listed', r.data.items.length === 2);
 r = await req('POST', '/api/catalog/search', { text: '' }, token, kidId);
 check(
   'child profile sees no adult titles',
-  r.data.items.every((i) => i.maturity !== 'adult'),
+  r.data.items.length > 0 && r.data.items.every((i) => i.maturity !== 'adult'),
 );
 r = await req('POST', '/api/catalog/search', { text: '' }, token, adultId);
 check(

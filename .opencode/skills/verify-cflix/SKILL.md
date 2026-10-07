@@ -47,7 +47,7 @@ npm run check:player
 Drives authentication, profile switching, lazy rails, and video playback on a real browser.
 
 Stable handles:
-- **Sign in**: `#in-email`, `#in-password`, `#btn-signin`, `#btn-signup`, `#btn-google`.
+- **Sign in**: `#in-email`, `#in-password`, `#btn-signin`, `#btn-signup`.
 - **Profiles**: `#profile-list .avatar-tile[data-id]`, `#add-profile` opens dialog `#dlg-add`.
 - **Home**: `#hero`, `#row-trending`, `#row-movies`, `#row-series`, `#row-anime`, `#row-continue`.
 - **Detail**: `#detail-title`, `#episodes .episode-link`, `#btn-play`.
@@ -55,7 +55,10 @@ Stable handles:
 - **Browse**: `#browse-grid`, `#browse-tabs`, `#browse-genre`.
 
 ### 3. API (plain HTTP)
-`POST /api/auth/signup|signin|google`, `GET|POST /api/profiles`, `GET /api/catalog/browse|get`, `POST /api/catalog/search`, `POST /api/play`, `POST /api/progress`, `GET /api/history`.
+`POST /api/auth/signup|signin`, `GET|POST /api/profiles`, `GET /api/catalog/browse|get`, `POST /api/catalog/search`, `POST /api/play`, `POST /api/progress`, `GET /api/history`.
+
+`POST /api/auth/google` still exists but has no UI behind it and no way to pass verification, so a
+default server answers `400 INVALID_GOOGLE_TOKEN` for every token. Do not expect a session from it.
 
 ## Helpers
 

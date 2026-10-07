@@ -34,20 +34,4 @@ export default async function signin() {
       errEl.textContent = e.message;
     }
   };
-  document.querySelector('#btn-google').onclick = async () => {
-    const email = prompt('Google stub: email for idToken ("google:<email>")');
-    if (!email) return;
-    try {
-      const { session } = await api('/api/auth/google', {
-        method: 'POST',
-        auth: false,
-        body: { idToken: `google:${email}` },
-      });
-      ses.token = session.token;
-      ses.profile = null;
-      location.href = '/profiles';
-    } catch (e) {
-      errEl.textContent = e.message;
-    }
-  };
 }
