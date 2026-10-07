@@ -383,10 +383,13 @@ try {
         offToken,
         offProfile.data.id,
       );
+      // Six literal 'seed' values, not `items.map(() => 'seed')`: mapping the actual passes on an
+      // empty rail, and this is the only gate over the PR #47/#58 routing invariant. Six is
+      // `seedBrowseItems`' whole fixture, so a partial rail fails too.
       check(
         'PROVIDER=off forces the fixture even for a kind-routed browse',
         offRail.data.items.map((i) => i.source),
-        offRail.data.items.map(() => 'seed'),
+        ['seed', 'seed', 'seed', 'seed', 'seed', 'seed'],
       );
     });
     check(

@@ -24,6 +24,14 @@ const eq = (name, actual, expected) =>
     actual === expected,
     `got ${JSON.stringify(actual)}, want ${JSON.stringify(expected)}`,
   );
+/**
+ * For a condition rather than a value. Pair it with a count assertion so a check over a
+ * collection cannot pass on the empty collection: `[].includes(x)` is false and `[].every()`
+ * is true, so "none of them were bad" and "all of them were good" both hold over nothing.
+ */
+function truthy(name, cond, detail = '') {
+  check(name, Boolean(cond), detail);
+}
 
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
@@ -189,10 +197,11 @@ if (!live)
   await settle();
   eq('reload restores the query', await page.inputValue('#browse-q'), 'naruto');
   eq('reload restores the kind tab', (await selectedTab()).trim(), 'Anime');
-  eq(
+  const animeIds = await ids();
+  truthy(
     'reload restores the anime provider, not the active one',
-    (await ids()).every((id) => String(id).startsWith('kitsu:')),
-    true,
+    animeIds.length > 0 && animeIds.every((id) => String(id).startsWith('kitsu:')),
+    animeIds.join(',') || '(no rows)',
   );
   eq('reload still renders titles', (await titles()).length > 0, true);
   await shot('03-browse-reload-anime');
@@ -553,10 +562,12 @@ const isRemoteAsset = (url) => url.origin !== new URL(B).origin;
   await page.goto(B + '/browse?q=naruto&kind=anime');
   await settle();
   const art = page.locator('#browse-grid .browse__card .card__art').first();
+  const cards = await page.locator('#browse-grid .browse__card').count();
+  truthy('the poster fallback probe renders rows to look at', cards > 0, `${cards} cards`);
   eq(
     'every card carries a placeholder gradient under its poster',
     await page.locator('#browse-grid .browse__card .card__art.ph').count(),
-    await page.locator('#browse-grid .browse__card').count(),
+    cards,
   );
 
   await page.route(isRemoteAsset, (route) =>
@@ -620,9 +631,16 @@ const isRemoteAsset = (url) => url.origin !== new URL(B).origin;
   });
   await page.goto(B + '/browse');
   await settle();
+  const rows = await titles();
+  truthy(
+    'a child profile is still offered a catalog (the gate is non-vacuous)',
+    rows.length > 0,
+    `${rows.length} rows`,
+  );
   const badges = await page
     .locator('#browse-grid .badge-maturity')
     .allTextContents();
+  eq('every rendered row carries a maturity badge', badges.length, rows.length);
   check(
     'a child profile is never offered an R title',
     !badges.includes('R'),
