@@ -421,7 +421,6 @@ async function liveChecks(base) {
       season: seriesPlay.data.item.seasonNumber,
       number: seriesPlay.data.item.episodeNumber,
       durationSeconds: seriesPlay.data.item.durationSeconds,
-      manifestUrl: seriesPlay.data.manifestUrl,
     })}`,
   );
 
@@ -456,9 +455,9 @@ async function liveChecks(base) {
     8520,
   );
   check(
-    'provider movie manifestUrl',
-    moviePlay.data.manifestUrl,
-    '/stream/tt0111161.m3u8',
+    'the play response names no manifestUrl',
+    Object.hasOwn(moviePlay.data, 'manifestUrl'),
+    false,
   );
 
   const seedPlay = await api.post(

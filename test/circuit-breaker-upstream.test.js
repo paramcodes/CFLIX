@@ -292,7 +292,11 @@ describe('a healthy upstream that legitimately has nothing', () => {
     });
     const episodeId = `${t.seriesId}:1:1`;
     assert.equal(played.item.id, episodeId);
-    assert.equal(played.manifestUrl, `/stream/${episodeId}.m3u8`);
+    assert.equal(
+      Object.hasOwn(played, 'manifestUrl'),
+      false,
+      'the play response named a manifestUrl again, and /stream/<id>.m3u8 is not a route',
+    );
 
     const progress = await CatalogService.recordProgress(PROFILE, {
       itemId: episodeId,
