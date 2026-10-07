@@ -30,11 +30,15 @@ const MIME = {
 };
 
 function json(res, status, body) {
+  // Serialize before any header is written: a body that cannot be stringified must leave the
+  // response untouched, or the error path that reports it re-enters writeHead and dies with
+  // ERR_HTTP_HEADERS_SENT from inside the catch.
+  const payload = JSON.stringify(body);
   res.writeHead(status, {
     'content-type': 'application/json',
     'cache-control': 'no-store',
   });
-  res.end(JSON.stringify(body));
+  res.end(payload);
 }
 
 async function readBody(req) {
@@ -67,6 +71,10 @@ function requestUrl(req) {
 }
 
 function sendError(res, err) {
+  if (res.headersSent) {
+    res.destroy();
+    return;
+  }
   if (err instanceof DomainError) {
     json(res, DOMAIN_STATUS[err.code] ?? 400, {
       error: { code: err.code, message: err.message },
@@ -246,7 +254,8 @@ export const server = createServer(async (req, res) => {
 
     // 1. API routes are always handled by backend services & Boundary
     if (routes[key]) {
-      return handleRequest(req, res);
+      await handleRequest(req, res);
+      return;
     }
 
     // 2. Next.js App Router handles pages when FRONTEND=next or USE_NEXT=true
@@ -254,16 +263,13 @@ export const server = createServer(async (req, res) => {
       nextHandler &&
       (process.env.FRONTEND === 'next' || process.env.USE_NEXT === 'true')
     ) {
-      return nextHandler(req, res);
+      await nextHandler(req, res);
+      return;
     }
 
     // 3. Fallback to static prototype
-    return handleRequest(req, res);
+    await handleRequest(req, res);
   } catch (err) {
-    if (res.headersSent) {
-      res.destroy();
-      return;
-    }
     sendError(res, err);
   }
 });
