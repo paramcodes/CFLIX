@@ -41,20 +41,32 @@ export async function api(path, { method = 'GET', body, auth = true } = {}) {
 export function fillRow(id, items, short = false) {
   const el = document.getElementById(id);
   if (!el) return;
-  el.innerHTML = items
-    .map(
-      (item) => `
-    <article class="card ${short ? 'card--short' : 'card--landscape'}" data-id="${item.id}" style="cursor:pointer">
-      <div class="card__art${item.posterUrl ? '' : ` ph ph--${'abcdefgh'[Math.floor(Math.random() * 8)]}`}"${item.posterUrl ? ` style="background-image:url('${item.posterUrl}')"` : ''}></div>
-      <div class="card__title">${item.title}</div>
-    </article>`,
-    )
-    .join('');
-  for (const c of el.children) {
-    c.onclick = () => {
-      location.href = `/title?id=${c.dataset.id}`;
+  const cards = items.map((item) => {
+    // Built with DOM calls rather than an innerHTML template: the values are
+    // provider metadata, and no attribute, text, or url() string context exists
+    // here for one to escape from.
+    const card = document.createElement('article');
+    card.className = `card ${short ? 'card--short' : 'card--landscape'}`;
+    card.dataset.id = item.id;
+    card.style.cursor = 'pointer';
+
+    const art = document.createElement('div');
+    art.className = item.posterUrl
+      ? 'card__art'
+      : `card__art ph ph--${'abcdefgh'[Math.floor(Math.random() * 8)]}`;
+    if (item.posterUrl) art.style.backgroundImage = `url("${item.posterUrl}")`;
+
+    const title = document.createElement('div');
+    title.className = 'card__title';
+    title.textContent = item.title;
+
+    card.append(art, title);
+    card.onclick = () => {
+      location.href = `/title?id=${encodeURIComponent(card.dataset.id)}`;
     };
-  }
+    return card;
+  });
+  el.replaceChildren(...cards);
 }
 
 export async function startPlay(ref) {
