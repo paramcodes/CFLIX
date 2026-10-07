@@ -26,8 +26,15 @@ function eq(name, actual, expected) {
   const ok = JSON.stringify(actual) === JSON.stringify(expected);
   check(ok ? name : `${name} (got ${show(actual)})`, ok);
 }
-const jsonFiles = async (dir) =>
-  (await readdir(dir)).filter((f) => f.endsWith('.json'));
+/** A directory that was never created holds no files, which is what "wrote nothing" means. */
+const jsonFiles = async (dir) => {
+  try {
+    return (await readdir(dir)).filter((f) => f.endsWith('.json'));
+  } catch (err) {
+    if (err.code === 'ENOENT') return [];
+    throw err;
+  }
+};
 const within = async (ms, promise) =>
   Promise.race([promise, sleep(ms).then(() => 'did not settle')]);
 
@@ -82,20 +89,29 @@ const within = async (ms, promise) =>
 {
   const dir = join(scratch, 'ttl');
   const store = createCacheStore({ dir, ttlMs: 30 });
+  const reader = createCacheStore({ dir, ttlMs: 60_000 });
   await store.put('k', { v: 'stale-me' });
   await sleep(5);
   eq('an entry inside the TTL is served', await store.get('k'), {
     v: 'stale-me',
   });
   await sleep(60);
-  eq('an expired entry still returns the stale value', await store.get('k'), {
-    v: 'stale-me',
+  eq(
+    'an expired entry still returns the stale value',
+    await store.get('k', async () => ({ v: 'revalidated' })),
+    { v: 'stale-me' },
+  );
+  await sleep(50);
+  eq('the expired entry revalidated in the background', await reader.get('k'), {
+    v: 'revalidated',
   });
 }
 
 {
   const dir = join(scratch, 'swr');
-  const store = createCacheStore({ dir, ttlMs: 0 });
+  // A TTL of 1ms rather than 0: 0 means the cache is disabled, so a store built with it serves
+  // nothing and there is no stale entry left to revalidate.
+  const store = createCacheStore({ dir, ttlMs: 1 });
   const reader = createCacheStore({ dir, ttlMs: 60_000 });
   let calls = 0;
   const loader = async () => {
@@ -109,6 +125,7 @@ const within = async (ms, promise) =>
   const gate = new Promise((r) => {
     release = r;
   });
+  await sleep(20);
   eq(
     'get settles while a loader is still pending',
     await within(
@@ -124,6 +141,7 @@ const within = async (ms, promise) =>
   });
 
   await store.put('k', { title: 'stale' });
+  await sleep(20);
   calls = 0;
   const [first, second] = await Promise.all([
     store.get('k', loader),
@@ -143,9 +161,10 @@ const within = async (ms, promise) =>
 
 {
   const dir = join(scratch, 'broken-refresh');
-  const store = createCacheStore({ dir, ttlMs: 0 });
+  const store = createCacheStore({ dir, ttlMs: 1 });
   const reader = createCacheStore({ dir, ttlMs: 60_000 });
   await store.put('k', { title: 'stale' });
+  await sleep(20);
   eq(
     'a failing loader does not reach the caller',
     await within(
@@ -159,6 +178,37 @@ const within = async (ms, promise) =>
   await sleep(50);
   eq('a failed refresh leaves the entry intact', await reader.get('k'), {
     title: 'stale',
+  });
+}
+
+{
+  const dir = join(scratch, 'uncacheable-refresh');
+  const store = createCacheStore({ dir, ttlMs: 1 });
+  const reader = createCacheStore({ dir, ttlMs: 60_000 });
+  await store.put('k', { title: 'stale' });
+  await sleep(20);
+  await store.get('k', async () => []);
+  await sleep(50);
+  eq(
+    'an empty list is not stored by a refresh',
+    await reader.get('k'),
+    { title: 'stale' },
+  );
+}
+
+{
+  const dir = join(scratch, 'eviction');
+  const store = createCacheStore({ dir, ttlMs: 60_000, maxEntries: 5 });
+  const keys = Array.from({ length: 30 }, (_, i) => `cinemeta:search:all:term ${i}`);
+  for (const key of keys) {
+    await store.put(key, { title: key });
+    await sleep(2);
+  }
+  await sleep(200);
+  const left = (await readdir(dir)).filter((f) => f.endsWith('.json'));
+  check(`the directory stops at its cap (${left.length} files)`, left.length <= 5);
+  eq('the newest entry survives the sweep', await store.get(keys.at(-1)), {
+    title: keys.at(-1),
   });
 }
 
@@ -232,11 +282,12 @@ const within = async (ms, promise) =>
 {
   const envDir = join(scratch, 'env');
   process.env.CFLIX_CACHE_DIR = envDir;
-  process.env.CFLIX_CACHE_TTL_MS = '0';
+  process.env.CFLIX_CACHE_TTL_MS = '1';
   const store = createCacheStore();
   let refreshed = false;
   await store.put('k', { v: 'env' });
   eq('CFLIX_CACHE_DIR takes the files', (await jsonFiles(envDir)).length, 1);
+  await sleep(20);
   eq(
     'CFLIX_CACHE_TTL_MS is honoured',
     await store.get('k', async () => {
@@ -254,6 +305,16 @@ const within = async (ms, promise) =>
       v: 'from-env-ttl',
     },
   );
+
+  // 0 is what an operator setting a TTL of 0 means: cache nothing. It used to mean "always
+  // expired", which served the value anyway and so meant cache forever.
+  const offDir = join(scratch, 'env-off');
+  process.env.CFLIX_CACHE_DIR = offDir;
+  process.env.CFLIX_CACHE_TTL_MS = '0';
+  const off = createCacheStore();
+  await off.put('k', { v: 'never-stored' });
+  eq('a TTL of 0 writes no file', await jsonFiles(offDir), []);
+  eq('a TTL of 0 serves nothing', await off.get('k'), null);
   delete process.env.CFLIX_CACHE_DIR;
   delete process.env.CFLIX_CACHE_TTL_MS;
 }
