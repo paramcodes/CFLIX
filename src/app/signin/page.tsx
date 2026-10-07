@@ -42,28 +42,6 @@ export default function SignInPage() {
     }
   };
 
-  const handleGoogleSignIn = async () => {
-    setError('');
-    setLoading(true);
-    try {
-      const googleEmail = email.trim() || 'google_user@test.dev';
-      const res = await fetchApi<AuthResponse>(`/api/auth/google`, {
-        method: 'POST',
-        body: { idToken: `google:${googleEmail}` },
-      });
-      if (res.session?.token) {
-        sessionStorage.setItem('cflix_token', res.session.token);
-        router.push('/profiles');
-      }
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : 'Google sign-in failed';
-      setError(message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="relative min-h-screen flex items-center justify-center p-4 bg-black">
       {/* Background Graphic / Dimmer */}
@@ -123,26 +101,6 @@ export default function SignInPage() {
             {loading ? 'Please wait...' : isSignUp ? 'Sign Up' : 'Sign In'}
           </button>
         </form>
-
-        <div className="relative my-6">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-neutral-800" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-black/75 px-3 text-neutral-400">
-              Or continue with
-            </span>
-          </div>
-        </div>
-
-        <button
-          type="button"
-          onClick={handleGoogleSignIn}
-          disabled={loading}
-          className="w-full py-2.5 bg-neutral-900 hover:bg-neutral-800 border border-neutral-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
-        >
-          Google
-        </button>
 
         <div className="mt-8 text-center text-sm text-neutral-400">
           {isSignUp ? 'Already have an account? ' : 'New to CFLIX? '}
