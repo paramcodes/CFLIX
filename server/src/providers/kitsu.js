@@ -44,8 +44,13 @@ function clampInt(value, { min, max, fallback }) {
  * The single seam every call goes through, so A1 can add its cache here without this file
  * knowing about it. Swallows every failure: a provider outage reads as "no data", never as a
  * thrown error at a page.
+ *
+ * `@param {(reason: string) => void} [onUpstreamFailure]` reports the failures that are NOT
+ *   "no data": a transport error, a timeout, a 5xx or a 429. A 404 is the upstream answering
+ *   that the id exists nowhere and an empty `data` array is it answering that nothing matched,
+ *   so neither is reported. Both are a miss, and a page must not be taken offline for one.
  */
-async function kit(path) {
+async function kit(path, onUpstreamFailure) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
@@ -53,9 +58,15 @@ async function kit(path) {
       signal: controller.signal,
       headers: { accept: 'application/vnd.api+json' },
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      if (res.status >= 500 || res.status === 429) {
+        onUpstreamFailure?.(`HTTP ${res.status}`);
+      }
+      return null;
+    }
     return await res.json();
-  } catch {
+  } catch (err) {
+    onUpstreamFailure?.(err?.name || 'transport error');
     return null;
   } finally {
     clearTimeout(timer);
@@ -210,6 +221,7 @@ async function listRecords({
   genre,
   skip = 0,
   limit = DEFAULT_LIMIT,
+  onUpstreamFailure,
 }) {
   const pageSize = clampInt(limit, {
     min: 1,
@@ -241,6 +253,7 @@ async function listRecords({
         'page[limit]': MAX_PAGE_SIZE,
         'page[offset]': offset,
       })}`,
+      onUpstreamFailure,
     );
     const records = body?.data;
     if (!Array.isArray(records) || records.length === 0) break;
@@ -258,27 +271,40 @@ async function listRecords({
 /**
  * @type {import('./contract.js').ProviderAdapter}
  */
-export async function browse({ kind, genre, skip, limit, rail } = {}) {
-  return listRecords({ kind, genre, skip, limit, rail });
+export async function browse({
+  kind,
+  genre,
+  skip,
+  limit,
+  rail,
+  onUpstreamFailure,
+} = {}) {
+  return listRecords({ kind, genre, skip, limit, rail, onUpstreamFailure });
 }
 
-export async function get(id) {
+export async function get(id, { onUpstreamFailure } = {}) {
   const numeric = numericId(id);
   if (!numeric) return null;
-  const body = await kit(`/anime/${numeric}${query({ include: 'genres' })}`);
+  const body = await kit(
+    `/anime/${numeric}${query({ include: 'genres' })}`,
+    onUpstreamFailure,
+  );
   const record = body?.data;
   if (!record || record.type !== 'anime') return null;
   return toItem(record, body.included);
 }
 
-export async function search(text, { kind, limit } = {}) {
+export async function search(text, { kind, limit, onUpstreamFailure } = {}) {
   const q = typeof text === 'string' ? text.trim() : '';
   // A blank query has no filter to send, so it rides the popularity rail instead of returning
   // nothing, which is what a search box showing suggestions wants.
-  return listRecords({ text: q || null, kind, limit });
+  return listRecords({ text: q || null, kind, limit, onUpstreamFailure });
 }
 
-export async function episodes(item, { limit = MAX_EPISODES } = {}) {
+export async function episodes(
+  item,
+  { limit = MAX_EPISODES, onUpstreamFailure } = {},
+) {
   const numeric = numericId(item?.id ?? item);
   if (!numeric) return [];
   const seriesId = `kitsu:${numeric}`;
@@ -298,6 +324,7 @@ export async function episodes(item, { limit = MAX_EPISODES } = {}) {
         'page[limit]': MAX_PAGE_SIZE,
         'page[offset]': offset,
       })}`,
+      onUpstreamFailure,
     );
     const records = body?.data;
     if (!Array.isArray(records) || records.length === 0) break;
