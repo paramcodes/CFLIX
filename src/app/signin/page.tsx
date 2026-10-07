@@ -9,6 +9,18 @@ interface AuthResponse {
   user?: { id: string; email: string; provider: string };
 }
 
+/**
+ * A new session must not inherit the previous account's profile. On a shared
+ * device a stale `cflix_profile` would ride into the new session beside the new
+ * token, and every catalog call would name a profile the new account does not
+ * own. The vanilla signin page clears it on every path
+ * (`public/js/pages/signin.js`); this page has to as well.
+ */
+function beginSession(token: string) {
+  sessionStorage.setItem('cflix_token', token);
+  sessionStorage.removeItem('cflix_profile');
+}
+
 export default function SignInPage() {
   const router = useRouter();
   const [isSignUp, setIsSignUp] = useState(false);
@@ -30,7 +42,7 @@ export default function SignInPage() {
       });
 
       if (res.session?.token) {
-        sessionStorage.setItem('cflix_token', res.session.token);
+        beginSession(res.session.token);
         router.push('/profiles');
       }
     } catch (err) {
@@ -52,7 +64,7 @@ export default function SignInPage() {
         body: { idToken: `google:${googleEmail}` },
       });
       if (res.session?.token) {
-        sessionStorage.setItem('cflix_token', res.session.token);
+        beginSession(res.session.token);
         router.push('/profiles');
       }
     } catch (err) {
