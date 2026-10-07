@@ -45,7 +45,7 @@
     "capture": "node scripts/capture.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "lint": "eslint .",
+    "lint": "eslint . && biome lint src",
     "lint:fix": "eslint . --fix"
   },
   "devDependencies": {
