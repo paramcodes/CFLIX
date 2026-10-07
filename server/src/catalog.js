@@ -105,6 +105,17 @@ function requireProfile(profileId) {
   return p;
 }
 
+/**
+ * A profile is only ever reachable by the account that owns it. `no such profile` is reused
+ * deliberately: a foreign id and an absent id must answer identically, or the difference tells an
+ * attacker the id exists and the ids are guessable (`newId` in store.js encodes creation time).
+ */
+export function requireOwnedProfile(accountId, profileId) {
+  const p = requireProfile(profileId);
+  if (p.accountId !== accountId) throw notFound('no such profile');
+  return p;
+}
+
 function assertCanWatch(profile, item) {
   if (!maturityAllowed(profile.maturity, item.maturity)) {
     throw new DomainError('MATURITY_BLOCKED', 'not available for this profile');
@@ -461,7 +472,7 @@ export const CatalogService = {
   },
 
   async play(accountId, profileId, ref) {
-    const profile = requireProfile(profileId);
+    const profile = requireOwnedProfile(accountId, profileId);
     if (!ref || typeof ref !== 'object') {
       throw new DomainError('VALIDATION', 'unknown media kind');
     }
