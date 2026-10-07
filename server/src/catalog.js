@@ -370,6 +370,35 @@ async function playProvider(profile, profileId, ref) {
   return playback(profile, profileId, episode, owner.source);
 }
 
+/** The cache is the only source a history row may read, so a page render never fans out upstream. */
+const cachedItem = (id) => {
+  const name = providerForId(id);
+  return adapterFor(name) ? cache.get(cacheKey(name, 'get', id)) : null;
+};
+
+/**
+ * A provider id resolves from the cache only. `play` already cached the item it handed back, so
+ * a title the profile actually watched resolves here, and a continue-watching rail never fans
+ * out one upstream request per row on a page render.
+ */
+async function historyItem(id) {
+  const seeded = findSeed(id);
+  if (seeded) {
+    return {
+      item: withInheritedMaturity(seeded, episodeOwner(seeded.seriesId)),
+      source: 'seed',
+    };
+  }
+  const cached = await cachedItem(id);
+  if (!cached) return null;
+  // An episode carries no rating of its own, so it inherits the owning series the same way
+  // `resolveItem` inherits it. `play` cached that series on its way to the episode, and the
+  // cached episode names its owner, so this costs a cache read and not an upstream round trip.
+  const ownerId = cached.seriesId ?? episodeOwnerId(id);
+  const owner = ownerId ? await cachedItem(ownerId) : null;
+  return { item: withInheritedMaturity(cached, owner), source: 'provider' };
+}
+
 /* ------------------------------------------------------------------ service */
 
 export const CatalogService = {
@@ -442,9 +471,23 @@ export const CatalogService = {
       : playProvider(profile, profileId, ref);
   },
 
-  recordProgress(profileId, { itemId, seconds }) {
-    requireProfile(profileId);
+  /**
+   * A progress row is a claim that this profile watched the item, so it is gated exactly as a
+   * read is: the item is resolved first and the write happens only if the same `resolveItem` the
+   * read paths use says the profile may see it. An id that resolves to nothing is refused with
+   * the same error as a gated one, so this endpoint cannot be used to ask which titles exist.
+   */
+  async recordProgress(profileId, { itemId, seconds }) {
+    const profile = requireProfile(profileId);
     const id = String(itemId);
+    const found = await resolveItem(id);
+    if (!found) {
+      throw new DomainError(
+        'MATURITY_BLOCKED',
+        'not available for this profile',
+      );
+    }
+    assertCanWatch(profile, found.item);
     const entry = {
       profileId,
       itemId: id,
@@ -456,25 +499,27 @@ export const CatalogService = {
   },
 
   /**
-   * A provider id resolves from the cache only. `play` already cached the item it handed back, so
-   * a title the profile actually watched resolves here, and a continue-watching rail never fans
-   * out one upstream request per row on a page render.
+   * Every row is gated through `visibleTo` before it is returned, and a row that resolves to
+   * nothing this profile may see is dropped rather than returned with a null item: the stored
+   * watch position survives either way, and a kept row would name a title the profile is not
+   * allowed to know about while spending one of the `limit` slots.
    */
   async history(profileId, { limit = 20 } = {}) {
-    requireProfile(profileId);
-    const rows = progressOf(profileId)
-      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
-      .slice(0, limit);
-    return Promise.all(
-      rows.map(async (row) => {
-        const seeded = findSeed(row.itemId);
-        if (seeded) return { ...row, item: sourced('seed')(seeded) };
-        const name = providerForId(row.itemId);
-        const cached = adapterFor(name)
-          ? await cache.get(cacheKey(name, 'get', row.itemId))
-          : null;
-        return { ...row, item: cached ? sourced('provider')(cached) : null };
-      }),
+    const profile = requireProfile(profileId);
+    const rows = progressOf(profileId).sort((a, b) =>
+      b.updatedAt.localeCompare(a.updatedAt),
     );
+    const entries = await Promise.all(
+      rows.map(async (row) => ({ row, found: await historyItem(row.itemId) })),
+    );
+    return entries
+      .filter(
+        ({ found }) => found && visibleTo(profile, [found.item]).length > 0,
+      )
+      .map(({ row, found }) => ({
+        ...row,
+        item: sourced(found.source)(found.item),
+      }))
+      .slice(0, limit);
   },
 };
