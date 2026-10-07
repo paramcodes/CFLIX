@@ -59,7 +59,7 @@ export function EpisodeList({ _seriesId, episodes = [] }: EpisodeListProps) {
         {currentEpisodes.map((ep) => (
           <Link
             key={ep.id}
-            href={`/watch?id=${encodeURIComponent(ep.id)}`}
+            href={`/watch?id=${encodeURIComponent(ep.id)}&kind=episode`}
             className="group flex gap-4 p-3 rounded-lg hover:bg-neutral-800/60 transition-colors border border-transparent hover:border-neutral-700/50"
           >
             {/* Episode Still / Thumbnail */}

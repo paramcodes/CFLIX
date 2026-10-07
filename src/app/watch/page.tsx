@@ -18,18 +18,32 @@ function WatchContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const id = searchParams.get('id');
+  const kind = searchParams.get('kind');
 
   const {
     data: playback,
     isLoading,
     error,
   } = useQuery<PlaybackResponse>({
-    queryKey: ['play', id],
+    queryKey: ['play', id, kind],
     queryFn: async () => {
       if (!id) throw new Error('No title to play');
+      // `POST /api/play` keys every branch on `ref.kind`, so the title and
+      // episode screens pass it in the URL. A bare link - a bookmark, or an
+      // older share - carries no kind to send; resolve the item once to learn
+      // it rather than guessing, because a missing kind answers "unknown media
+      // kind" and the player can never start.
+      let resolvedKind: string | null | undefined = kind;
+      if (!resolvedKind) {
+        const item = await fetchApi<{ kind?: string }>(
+          `/api/catalog/get?id=${encodeURIComponent(id)}`,
+        );
+        resolvedKind = item.kind;
+      }
+      if (!resolvedKind) throw new Error('Unknown media kind');
       return fetchApi<PlaybackResponse>('/api/play', {
         method: 'POST',
-        body: { ref: { id } },
+        body: { ref: { id, kind: resolvedKind } },
       });
     },
     enabled: !!id,
