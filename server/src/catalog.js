@@ -399,6 +399,17 @@ async function browseItems(profile, kind, genre) {
 const nextUnwatched = (watched, episodes) =>
   episodes.find((ep) => !watched.has(ep.id)) ?? episodes[0] ?? null;
 
+/**
+ * The play response: the item that will play, and where to resume it.
+ *
+ * This used to also answer `manifestUrl: /stream/<id>.m3u8`. That was a
+ * phantom: there is no `/stream` route anywhere in the server, so the URL
+ * 404ed, and the two players never read it - `public/js/pages/player.js`
+ * passes only `{ trailerYtId }` to `createPlayerEngine`, and the Next watch
+ * page reads `item` and `resumeFromSeconds`. The only readers were two
+ * assertions that had pinned the dead value. A play response that names a URL
+ * that does not resolve is worse than one that names nothing.
+ */
 async function playback(profile, profileId, item, source) {
   if (source !== 'seed') {
     // The concrete thing that plays becomes resolvable by its own id, so history and any later
@@ -410,7 +421,6 @@ async function playback(profile, profileId, item, source) {
   }
   return {
     item: sourced(source)(item),
-    manifestUrl: `/stream/${item.id}.m3u8`,
     resumeFromSeconds: savedSeconds(profileId, item.id),
   };
 }
