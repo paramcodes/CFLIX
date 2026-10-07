@@ -63,7 +63,6 @@ for (const sel of [
   '#in-password',
   '#btn-signin',
   '#btn-signup',
-  '#btn-google',
   '#in-error',
 ]) {
   check(
@@ -72,6 +71,13 @@ for (const sel of [
     `count=${await cards(sel)}`,
   );
 }
+// The Google control was a prompt() for an email posted as google:<email>, so it could only ever
+// log the visitor in as whoever they typed. Asserting it is gone keeps that out of the page.
+check(
+  'signin no longer offers #btn-google',
+  (await cards('#btn-google')) === 0,
+  `count=${await cards('#btn-google')}`,
+);
 
 await page.fill('#in-email', EMAIL);
 await page.fill('#in-password', PASSWORD);
@@ -123,18 +129,21 @@ check(
   `cflix_token=${(await ses('cflix_token')) ? 'set' : 'null'}`,
 );
 
-const google = await context.newPage();
-await google.goto(`${B}/signin`);
-google.once('dialog', (d) => d.accept('google@stub.dev'));
-await google.click('#btn-google');
-await google.waitForURL('**/profiles');
+// A page opened through the split wiring must still log in and store a token on its own; the
+// second page is the point, not which control was clicked.
+const second = await context.newPage();
+await second.goto(`${B}/signin`);
+await second.fill('#in-email', EMAIL);
+await second.fill('#in-password', PASSWORD);
+await second.click('#btn-signin');
+await second.waitForURL('**/profiles');
 check(
-  '#btn-google prompt stub redirects to /profiles with a token',
-  new URL(google.url()).pathname === '/profiles' &&
-    !!(await google.evaluate(() => sessionStorage.getItem('cflix_token'))),
-  google.url(),
+  'a second signin page redirects to /profiles with a token',
+  new URL(second.url()).pathname === '/profiles' &&
+    !!(await second.evaluate(() => sessionStorage.getItem('cflix_token'))),
+  second.url(),
 );
-await google.close();
+await second.close();
 
 check(
   'profiles dispatches on data-page=profiles',

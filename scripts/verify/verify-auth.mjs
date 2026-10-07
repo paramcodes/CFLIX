@@ -45,18 +45,25 @@ await runWithServerAndBrowser(async ({ baseUrl, page }) => {
     page.url().includes('/profiles'),
   );
 
-  // 4. Google stub flow
+  // 4. The page offers no Google control
   await page.goto(`${baseUrl}/signin`);
-  const googleEmail = `google_${Date.now()}@test.dev`;
-  page.once('dialog', async (dialog) => {
-    await dialog.accept(googleEmail);
-  });
-  await page.click('#btn-google');
-  await page.waitForURL('**/profiles', { timeout: 5000 });
-  check('google stub redirects to /profiles', page.url().includes('/profiles'));
-  const googleToken = await page.evaluate(() =>
-    sessionStorage.getItem('cflix_token'),
+  const googleControls = await page.locator('#btn-google').count();
+  check(
+    'signin offers no google control',
+    googleControls === 0,
+    `count=${googleControls}`,
   );
-  check('google login sets cflix_token', !!googleToken);
-  await saveScreenshot(page, 'auth-google-profiles');
+  await saveScreenshot(page, 'auth-signin-no-google');
+
+  // 5. A fresh page load still signs in and stores a token
+  await page.fill('#in-email', testEmail);
+  await page.fill('#in-password', password);
+  await page.click('#btn-signin');
+  await page.waitForURL('**/profiles', { timeout: 5000 });
+  check('signin redirects to /profiles', page.url().includes('/profiles'));
+  check(
+    'signin sets cflix_token',
+    !!(await page.evaluate(() => sessionStorage.getItem('cflix_token'))),
+  );
+  await saveScreenshot(page, 'auth-signin-profiles');
 });
