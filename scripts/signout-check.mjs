@@ -27,6 +27,9 @@ async function req(method, path, body, token) {
 
 const stamp = Date.now();
 
+/** The profiles this script creates. Expectations name them from here, never from the page. */
+const PROFILES = ['Alpha', 'Beta'];
+
 let r = await req('POST', '/api/auth/signup', {
   email: `api-signout-${stamp}@test.dev`,
   password: 'pw123',
@@ -84,7 +87,7 @@ await page.fill('#in-email', `nav-check-${stamp}@test.dev`);
 await page.fill('#in-password', 'pw123456');
 await page.click('#btn-signup');
 await page.waitForURL('**/profiles');
-for (const name of ['Alpha', 'Beta']) {
+for (const name of PROFILES) {
   await page.click('#add-profile');
   await page.fill('#dlg-name', name);
   await page.click('#dlg-create');
@@ -455,11 +458,27 @@ await page.waitForFunction(
 check('logo links back to /home', page.url().endsWith('/home'));
 
 await openNavMenu();
-await page.getByRole('menuitem', { name: 'Alpha', exact: true }).click();
-await page.waitForFunction(
-  () => document.querySelector('#who')?.textContent === 'Watching as Alpha',
+await page.getByRole('menuitem', { name: PROFILES[0], exact: true }).click();
+// The wait is bounded and its failure is swallowed so the check below reports the mismatch as a
+// FAIL. An unbounded `waitForFunction` here would exit on an unhandled timeout instead, which
+// never names the assertion that broke.
+const who = `Watching as ${PROFILES[0]}`;
+await page
+  .waitForFunction(
+    (text) => document.querySelector('#who')?.textContent === text,
+    who,
+    { timeout: 10_000 },
+  )
+  .catch(() => {});
+const switched = await page.evaluate(() => ({
+  path: location.pathname,
+  who: document.querySelector('#who')?.textContent ?? '',
+}));
+check(
+  'menu switch navigates to /home with the right #who',
+  switched.path === '/home' && switched.who === who,
+  `got ${JSON.stringify(switched)}, want {"path":"/home","who":"${who}"}`,
 );
-check('menu switch navigates to /home with the right #who', true);
 const alphaNav = await picStyle('.nav__avatar-pic');
 check(
   'nav avatar matches the untinted first profile tile',
