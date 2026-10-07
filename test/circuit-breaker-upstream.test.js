@@ -27,8 +27,12 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-/** `TIMEOUT_MS` in cinemeta.js and `REQUEST_TIMEOUT_MS` in kitsu.js, the shipped ceiling. */
-const ADAPTER_CEILING_MS = 8000;
+/** One upstream request's ceiling, as every adapter declares it: `TIMEOUT_MS` in cinemeta.js. */
+const ADAPTER_REQUEST_MS = 8000;
+/** `cinemeta.get` asks `meta/series/{id}` then `meta/movie/{id}`, so a miss costs two of those. */
+const MAX_UPSTREAM_ASKS = 2;
+/** What catalog.js floors the budget at. Asserted against a literal in the suite below. */
+const FLOOR_MS = ADAPTER_REQUEST_MS * MAX_UPSTREAM_ASKS;
 
 /** `down` answers 503 like a sick CDN. `ok` answers a catalog built from the request. */
 let mode = 'down';
@@ -126,6 +130,10 @@ const { CatalogService, callTimeoutMs, CALL_TIMEOUT_MS } =
 const { db } = await import('../server/src/store.js');
 const { CircuitBreaker, getCircuitBreaker, resetAllCircuitBreakers } =
   await import('../server/src/resilience/circuit-breaker.js');
+const { cinemeta: cinemetaAdapter } =
+  await import('../server/src/providers/cinemeta.js');
+const kitsuAdapter = await import('../server/src/providers/kitsu.js');
+const tvmazeAdapter = await import('../server/src/providers/tvmaze.js');
 
 const PROFILE = 'p_circuit_test';
 const ACCOUNT = 'u_circuit_test';
@@ -161,6 +169,76 @@ const missFive = async (missing) => {
   }
   return codes;
 };
+
+describe('every adapter reports a 429 as an outage and never a 4xx', () => {
+  // tvmaze.js has no BASE env seam, so this drives all three through a fetch interceptor rather
+  // than giving one adapter an env var the other two do not have. Each call goes through the
+  // adapter's real public method, so its real fetch seam and real status handling run.
+  const realFetch = globalThis.fetch;
+  afterAll(() => {
+    globalThis.fetch = realFetch;
+  });
+
+  const collect = async (fn) => {
+    const reasons = [];
+    await fn((reason) => reasons.push(reason));
+    return reasons;
+  };
+
+  const withStatus = async (status, fn) => {
+    globalThis.fetch = async () =>
+      new Response(status === 404 ? '{"errors":[]}' : '{}', {
+        status,
+        headers: { 'content-type': 'application/json' },
+      });
+    return fn();
+  };
+
+  const adapters = () => [
+    [
+      'cinemeta',
+      (c) => cinemetaAdapter.get('tt0000001', { onUpstreamFailure: c }),
+    ],
+    ['kitsu', (c) => kitsuAdapter.get('1', { onUpstreamFailure: c })],
+    ['tvmaze', (c) => tvmazeAdapter.get('1', { onUpstreamFailure: c })],
+  ];
+
+  it('reports 429 on all three', async () => {
+    for (const [name, call] of adapters()) {
+      const reasons = await withStatus(429, () => collect(call));
+      // Non-empty is the claim under test: an adapter that reports nothing leaves a rate-limit
+      // storm invisible, so every request keeps paying the retry budget. `cinemeta.get` makes two
+      // `meta` calls and each reports once, so the count is per fetch, not per public call.
+      assert.ok(
+        reasons.length > 0,
+        `${name} did not report a 429 as an outage, so a rate-limit storm never trips the circuit`,
+      );
+      assert.deepEqual(
+        [...new Set(reasons)],
+        ['HTTP 429'],
+        `${name} reported something other than the 429 it received`,
+      );
+    }
+  });
+
+  it('reports a 5xx on all three', async () => {
+    for (const [name, call] of adapters()) {
+      const reasons = await withStatus(503, () => collect(call));
+      assert.ok(reasons.length > 0, `${name} did not report a 503`);
+    }
+  });
+
+  it('reports a 404 on none of them, because a 404 is a legitimate miss', async () => {
+    for (const [name, call] of adapters()) {
+      const reasons = await withStatus(404, () => collect(call));
+      assert.deepEqual(
+        reasons,
+        [],
+        `${name} reported a 404 as an outage, so five ordinary misses open the circuit`,
+      );
+    }
+  });
+});
 
 describe('a healthy upstream that legitimately has nothing', () => {
   beforeEach(() => {
@@ -237,8 +315,15 @@ describe('a healthy upstream that legitimately has nothing', () => {
       'a healthy browse must still answer from the provider',
     );
 
+    // `related` returns the anchor's own kind-mates, and the stub serves exactly one series, so
+    // the honest expectation is a list carrying that one id. Asserting only Array.isArray would
+    // pass on [], which is the answer a tripped circuit produces.
     const related = await CatalogService.related(PROFILE, t.seriesId);
-    assert.ok(Array.isArray(related.items));
+    assert.deepEqual(
+      related.items.map((i) => i.id),
+      ['tt9000002'],
+      'related must answer with provider data, not an empty list',
+    );
   });
 });
 
@@ -310,9 +395,11 @@ describe('circuit breaker against a failing upstream', () => {
     });
 
     const breaker = getCircuitBreaker('cinemeta');
+    // The shipped budget has to clear what a legitimate read costs, which is every request the
+    // worst adapter makes at its own full timeout, not one request.
     assert.ok(
-      breaker.callTimeoutMs > ADAPTER_CEILING_MS,
-      `budget ${breaker.callTimeoutMs}ms does not clear the adapter's own ${ADAPTER_CEILING_MS}ms`,
+      breaker.callTimeoutMs >= FLOOR_MS,
+      `budget ${breaker.callTimeoutMs}ms does not clear the ${FLOOR_MS}ms a legitimate read costs`,
     );
     assert.equal(
       items[0].source,
@@ -386,7 +473,7 @@ describe('HALF_OPEN admits one probe', () => {
     assert.equal(cb.probeInFlight, false);
   });
 
-  it('admits a fresh probe after a failed one, rather than staying stuck', async () => {
+  it('reopens on a probe that fails, and admits a fresh probe after it', async () => {
     const cb = new CircuitBreaker('probe-retry', {
       failureThreshold: 2,
       resetTimeoutMs: 20,
@@ -399,15 +486,37 @@ describe('HALF_OPEN admits one probe', () => {
     }
     await new Promise((resolve) => setTimeout(resolve, 40));
 
+    // This probe REJECTS. Resolving here would have tested the opposite of what the name says,
+    // and would have proved nothing about what happens after a failed probe.
     assert.equal(
-      await cb.execute(async () => 'still down', 'fallback'),
-      'still down',
+      await cb.execute(async () => {
+        throw new Error('still down');
+      }, 'fallback'),
+      'fallback',
+      'a rejected probe must hand back the fallback',
     );
-    assert.equal(cb.state, 'CLOSED');
+    assert.equal(cb.state, 'OPEN', 'a failed probe must reopen the circuit');
+    assert.equal(
+      cb.probeInFlight,
+      false,
+      'the slot must be released after the probe',
+    );
+
+    // The circuit is OPEN and still cooling, so this must not reach the upstream at all.
+    let reached = false;
+    await cb.execute(async () => {
+      reached = true;
+      return 'back';
+    }, 'fast-fail');
+    assert.equal(reached, false, 'a cooling circuit let a call through');
 
     await new Promise((resolve) => setTimeout(resolve, 40));
     assert.equal(await cb.execute(async () => 'back', 'fallback'), 'back');
-    assert.equal(cb.state, 'CLOSED');
+    assert.equal(
+      cb.state,
+      'CLOSED',
+      'a successful probe must close the circuit',
+    );
   });
 });
 
@@ -416,19 +525,28 @@ describe('CFLIX_CALL_TIMEOUT_MS is validated', () => {
     for (const raw of ['abc', '0', '-1', '', '  ', undefined, 'NaN', '1e']) {
       const budget = callTimeoutMs(raw);
       assert.ok(
-        Number.isFinite(budget) && budget > ADAPTER_CEILING_MS,
-        `CFLIX_CALL_TIMEOUT_MS='${raw}' yielded ${budget}`,
+        Number.isFinite(budget) && budget >= FLOOR_MS,
+        `CFLIX_CALL_TIMEOUT_MS='${raw}' yielded ${budget}, under the ${FLOOR_MS}ms floor`,
       );
     }
   });
 
-  it('never returns a budget below the adapter ceiling, however it is set', () => {
-    // `Number('')` is 0 and `Number('-1')` is negative, both of which setTimeout treats as
-    // "fire immediately" or "never", so either would disable every read.
-    for (const raw of ['1', '250', String(ADAPTER_CEILING_MS)]) {
+  it('floors at what the worst adapter legitimately costs, not at one request', () => {
+    // 8000 is one upstream request, which is what every adapter declares as its own ceiling, but
+    // `cinemeta.get` asks twice on a legitimate miss. A budget of 8000 therefore expires while a
+    // healthy upstream is still answering: measured against a stub replying 200 after 5000ms, it
+    // turned six legitimate misses into five recorded failures and left the circuit OPEN.
+    //
+    // Both sides are literals so this cannot pass by both sides drifting together.
+    assert.equal(
+      FLOOR_MS,
+      16000,
+      'the floor is 8000 per request times the two requests cinemeta.get makes',
+    );
+    for (const raw of ['1', '250', '8000', '16000']) {
       assert.equal(
         callTimeoutMs(raw),
-        ADAPTER_CEILING_MS,
+        16000,
         `CFLIX_CALL_TIMEOUT_MS='${raw}' yielded ${callTimeoutMs(raw)}`,
       );
     }
@@ -439,7 +557,10 @@ describe('CFLIX_CALL_TIMEOUT_MS is validated', () => {
   });
 
   it('is the value providerCall actually installs on the breaker', () => {
-    assert.equal(getCircuitBreaker('cinemeta').callTimeoutMs, CALL_TIMEOUT_MS);
-    assert.ok(CALL_TIMEOUT_MS > ADAPTER_CEILING_MS);
+    // `getCircuitBreaker` applies options only on FIRST creation, so this must read the breaker
+    // providerCall built rather than one a test pinned to class defaults. Both sides are literals
+    // because comparing CALL_TIMEOUT_MS to itself would pass no matter what it was.
+    assert.equal(getCircuitBreaker('cinemeta').callTimeoutMs, 20000);
+    assert.equal(CALL_TIMEOUT_MS, 20000);
   });
 });

@@ -177,8 +177,11 @@ function request(path, onUpstreamFailure) {
         }
         if (!res.ok) {
           await res.body?.cancel();
-          // A 404 is the upstream saying there is no such show, which is a miss.
-          if (res.status >= 500) fail(`HTTP ${res.status}`);
+          // A 429 reaches here only on the last attempt; the first one `continue`s above. It is
+          // a rate limit rather than a miss, and this adapter exists to respect a rate limit, so
+          // it has to count as one. A 404 is the upstream saying there is no such show.
+          if (res.status >= 500 || res.status === 429)
+            fail(`HTTP ${res.status}`);
           return null;
         }
         const text = await res.text();

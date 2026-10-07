@@ -186,23 +186,44 @@ async function throughCache(key, loader) {
   return value;
 }
 
-/** Every adapter caps one upstream request at this. See `TIMEOUT_MS` in cinemeta.js. */
-const ADAPTER_CEILING_MS = 8000;
+/**
+ * One upstream request's ceiling, as every adapter declares it: `TIMEOUT_MS` in cinemeta.js,
+ * `REQUEST_TIMEOUT_MS` in kitsu.js and tvmaze.js. A read costs one of these per request it makes,
+ * so this is the unit the budget below is measured in.
+ */
+const ADAPTER_REQUEST_MS = 8000;
+
+/**
+ * The most requests one guarded call makes. `cinemeta.get` probes `meta/series/{id}` and then
+ * `meta/movie/{id}`, because upstream answers a kind mismatch with 200 and a different title, so
+ * a legitimate miss costs two round trips. Nothing else asks more.
+ */
+const MAX_UPSTREAM_ASKS = 2;
+
+/**
+ * What one guarded call may cost before the upstream is treated as unreachable: every request the
+ * worst adapter makes, at its own full timeout. A budget under this records successful reads as
+ * failures — a healthy-but-slow upstream crosses it, and the breaker opens on traffic that
+ * succeeded. Measured with a stub answering 200 after 5000ms: a budget of 8000 turned six
+ * legitimate misses into five recorded failures and left the circuit OPEN.
+ */
+const FLOOR_MS = ADAPTER_REQUEST_MS * MAX_UPSTREAM_ASKS;
 
 /**
  * `CFLIX_CALL_TIMEOUT_MS` overrides the breaker budget, guarded the way the TTL is guarded in
  * `createCacheStore`: `Number('abc')` is NaN, `Number('-1')` is negative and `Number('0')` is
- * zero, and any of those handed to `setTimeout` breaks every read instead of bounding one. The
- * floor is the adapters' own ceiling, below which a budget cannot cap anything — it cannot abort
- * a fetch — so it would only record successful reads as failures.
+ * zero, and any of those handed to `setTimeout` breaks every read instead of bounding one. It is
+ * floored at `FLOOR_MS` rather than honoured literally, because a budget that low cannot cap
+ * anything — `withTimeout` settles the caller but cannot abort the fetch — so it would only ever
+ * book reads that succeeded as failures.
  *
  * @param {string|undefined} raw
- * @returns {number} A finite budget no smaller than `ADAPTER_CEILING_MS`.
+ * @returns {number} A finite budget no smaller than `FLOOR_MS`.
  */
 export function callTimeoutMs(raw) {
   const parsed = Number(raw);
   if (!Number.isFinite(parsed) || parsed <= 0) return 20000;
-  return Math.max(parsed, ADAPTER_CEILING_MS);
+  return Math.max(parsed, FLOOR_MS);
 }
 
 export const CALL_TIMEOUT_MS = callTimeoutMs(process.env.CFLIX_CALL_TIMEOUT_MS);
