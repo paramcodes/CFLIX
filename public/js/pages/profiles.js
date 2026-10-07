@@ -2,32 +2,49 @@ import { api, ses } from '../core.js';
 
 export default async function profiles() {
   const list = document.querySelector('#profile-list');
-  const avatarStyle = (id) => {
+  const applyTint = (picEl, id) => {
     let h = 2166136261;
     for (const ch of id) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
     const hue = (h >>> 0) % 360;
-    return `--tint-a:${hue};--tint-b:${(hue + 47) % 360}`;
+    picEl.style.setProperty('--tint-a', String(hue));
+    picEl.style.setProperty('--tint-b', String((hue + 47) % 360));
   };
   async function load() {
     const { items } = await api('/api/profiles');
-    list.innerHTML =
-      items
-        .map(
-          (p, i) =>
-            `<button class="avatar-tile" data-id="${p.id}" data-name="${p.name}">
-           <span class="avatar-tile__pic${i === 0 ? '' : ' avatar-tile__pic--tint'}" style="${i === 0 ? '' : avatarStyle(p.id)}"></span>
-           <span>${p.name} · ${p.maturity}</span>
-         </button>`,
-        )
-        .join('') +
-      `<button class="avatar-tile" id="add-profile"><span class="avatar-tile__pic avatar-tile__pic--add">+</span><span>Add</span></button>`;
+    const tiles = items.map((p, i) => {
+      const tile = document.createElement('button');
+      tile.className = 'avatar-tile';
+      tile.dataset.id = p.id;
+      tile.dataset.name = p.name;
+
+      const pic = document.createElement('span');
+      pic.className = `avatar-tile__pic${i === 0 ? '' : ' avatar-tile__pic--tint'}`;
+      if (i !== 0) applyTint(pic, p.id);
+
+      const label = document.createElement('span');
+      label.textContent = `${p.name} · ${p.maturity}`;
+
+      tile.append(pic, label);
+      return tile;
+    });
+    const add = document.createElement('button');
+    add.className = 'avatar-tile';
+    add.id = 'add-profile';
+    const addPic = document.createElement('span');
+    addPic.className = 'avatar-tile__pic avatar-tile__pic--add';
+    addPic.textContent = '+';
+    const addLabel = document.createElement('span');
+    addLabel.textContent = 'Add';
+    add.append(addPic, addLabel);
+
+    list.replaceChildren(...tiles, add);
     for (const b of list.querySelectorAll('.avatar-tile[data-id]')) {
       b.onclick = () => {
         ses.profile = { id: b.dataset.id, name: b.dataset.name };
         location.href = '/home';
       };
     }
-    document.querySelector('#add-profile').onclick = () => openAddDialog();
+    add.onclick = () => openAddDialog();
   }
   const backdrop = document.querySelector('#dlg-add');
   const nameEl = document.querySelector('#dlg-name');
